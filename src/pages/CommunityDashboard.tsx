@@ -202,7 +202,8 @@ const CommunityDashboard = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-1 bg-card/50 p-2 sm:p-1 h-auto">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 gap-2 bg-card/50 p-2 h-auto">
+            {/* First row - 3 items */}
             <TabsTrigger value="agent" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
               <Bot className="w-6 h-6 text-primary" />
               <span className="text-xs">Agent</span>
@@ -215,11 +216,12 @@ const CommunityDashboard = () => {
               <Zap className="w-6 h-6 text-primary" />
               <span className="text-xs">Workflows</span>
             </TabsTrigger>
-            <TabsTrigger value="memory" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
+            {/* Second row - 2 items centered */}
+            <TabsTrigger value="memory" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm col-start-1 sm:col-start-1">
               <Brain className="w-6 h-6 text-primary" />
               <span className="text-xs">Memory</span>
             </TabsTrigger>
-            <TabsTrigger value="community" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
+            <TabsTrigger value="community" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm col-start-2 sm:col-start-3">
               <Users className="w-6 h-6 text-primary" />
               <span className="text-xs">Settings</span>
             </TabsTrigger>

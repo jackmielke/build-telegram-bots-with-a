@@ -142,48 +142,59 @@ const CommunityDashboard = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b border-border/50 bg-card/50 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14 sm:h-16">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={() => navigate('/communities')}
-                className="hover:bg-primary/10"
+                className="hover:bg-primary/10 p-2"
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
+                <ArrowLeft className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Back</span>
               </Button>
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
                   {community.agent_avatar_url ? (
                     <img 
                       src={community.agent_avatar_url} 
                       alt={community.agent_name || community.name}
-                      className="w-6 h-6 rounded-md"
+                      className="w-5 h-5 sm:w-6 sm:h-6 rounded-md"
                     />
                   ) : (
-                    <Bot className="w-4 h-4 text-primary" />
+                    <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
                   )}
                 </div>
                 <div>
-                  <h1 className="text-xl font-semibold">{community.name}</h1>
+                  <h1 className="text-lg sm:text-xl font-semibold truncate max-w-[180px] sm:max-w-none">{community.name}</h1>
                   {community.agent_name && (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
                       Agent: {community.agent_name}
                     </p>
                   )}
                 </div>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
-              <Badge variant={isAdmin ? 'default' : 'outline'}>
-                {community.user_role}
+          </div>
+        </div>
+      </div>
+
+      {/* Community Info Bar */}
+      <div className="border-b border-border/30 bg-muted/30">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2">
+          <div className="flex items-center justify-center sm:justify-start space-x-3">
+            <Badge variant={isAdmin ? 'default' : 'outline'} className="text-xs">
+              {community.user_role}
+            </Badge>
+            <Badge variant="secondary" className="text-xs">
+              {community.member_count} members
+            </Badge>
+            {community.agent_name && (
+              <Badge variant="outline" className="text-xs sm:hidden">
+                {community.agent_name}
               </Badge>
-              <Badge variant="secondary">
-                {community.member_count} members
-              </Badge>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -191,26 +202,26 @@ const CommunityDashboard = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 gap-1 bg-card/50 p-1 h-auto">
-            <TabsTrigger value="agent" className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2 px-1 sm:px-3 text-xs sm:text-sm">
-              <Bot className="w-4 h-4 flex-shrink-0" />
-              <span className="hidden sm:inline">Agent</span>
+          <TabsList className="grid w-full grid-cols-1 sm:grid-cols-5 gap-2 sm:gap-1 bg-card/50 p-2 sm:p-1 h-auto">
+            <TabsTrigger value="agent" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
+              <Bot className="w-6 h-6 text-primary" />
+              <span className="text-xs">Agent</span>
             </TabsTrigger>
-            <TabsTrigger value="analytics" className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2 px-1 sm:px-3 text-xs sm:text-sm">
-              <BarChart3 className="w-4 h-4 flex-shrink-0" />
-              <span className="hidden sm:inline">Activity</span>
+            <TabsTrigger value="analytics" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
+              <BarChart3 className="w-6 h-6 text-primary" />
+              <span className="text-xs">Activity</span>
             </TabsTrigger>
-            <TabsTrigger value="workflows" className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2 px-1 sm:px-3 text-xs sm:text-sm">
-              <Zap className="w-4 h-4 flex-shrink-0" />
-              <span className="hidden sm:inline">Workflows</span>
+            <TabsTrigger value="workflows" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
+              <Zap className="w-6 h-6 text-primary" />
+              <span className="text-xs">Workflows</span>
             </TabsTrigger>
-            <TabsTrigger value="memory" className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2 px-1 sm:px-3 text-xs sm:text-sm">
-              <Brain className="w-4 h-4 flex-shrink-0" />
-              <span className="hidden sm:inline">Memory</span>
+            <TabsTrigger value="memory" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
+              <Brain className="w-6 h-6 text-primary" />
+              <span className="text-xs">Memory</span>
             </TabsTrigger>
-            <TabsTrigger value="community" className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2 px-1 sm:px-3 text-xs sm:text-sm">
-              <Users className="w-4 h-4 flex-shrink-0" />
-              <span className="hidden sm:inline">Settings</span>
+            <TabsTrigger value="community" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
+              <Users className="w-6 h-6 text-primary" />
+              <span className="text-xs">Settings</span>
             </TabsTrigger>
           </TabsList>
 

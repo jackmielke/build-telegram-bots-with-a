@@ -182,37 +182,31 @@ const Communities = () => {
                   className="group cursor-pointer hover:shadow-glow transition-all duration-300 border-border/50 hover:border-primary/50"
                   onClick={() => navigate(`/community/${community.id}`)}
                 >
-                  <CardHeader className="space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                          {community.cover_image_url ? (
-                            <img 
-                              src={community.cover_image_url} 
-                              alt={community.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <Users className="w-6 h-6 text-primary" />
-                          )}
-                        </div>
-                        <div>
-                          <CardTitle className="text-lg group-hover:text-primary transition-colors">
-                            {community.name}
-                          </CardTitle>
-                          {community.agent_name && (
-                            <p className="text-sm text-muted-foreground">
-                              Agent: {community.agent_name}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <Badge variant={getRoleBadgeVariant(community.role)} className="flex items-center space-x-1">
-                        {getRoleIcon(community.role)}
-                        <span className="capitalize">{community.role}</span>
-                      </Badge>
+                <CardHeader className="space-y-3">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-16 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center flex-shrink-0">
+                      {community.cover_image_url ? (
+                        <img 
+                          src={community.cover_image_url} 
+                          alt={community.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Users className="w-6 h-6 text-primary" />
+                      )}
                     </div>
-                  </CardHeader>
+                    <div className="min-w-0 flex-1">
+                      <CardTitle className="text-lg group-hover:text-primary transition-colors truncate">
+                        {community.name}
+                      </CardTitle>
+                      {community.agent_name && (
+                        <p className="text-sm text-muted-foreground truncate">
+                          Agent: {community.agent_name}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
 
                   <CardContent>
                     <CardDescription className="line-clamp-2">
@@ -220,9 +214,15 @@ const Communities = () => {
                     </CardDescription>
                     
                     <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
-                      <Badge variant="outline" className="text-xs">
-                        {community.privacy_level}
-                      </Badge>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="outline" className="text-xs">
+                          {community.privacy_level}
+                        </Badge>
+                        <Badge variant={getRoleBadgeVariant(community.role)} className="flex items-center space-x-1 text-xs">
+                          {getRoleIcon(community.role)}
+                          <span className="capitalize">{community.role}</span>
+                        </Badge>
+                      </div>
                       <div className="text-xs text-muted-foreground">
                         Click to manage →
                       </div>

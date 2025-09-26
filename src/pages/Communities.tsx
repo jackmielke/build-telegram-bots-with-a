@@ -137,21 +137,12 @@ const Communities = () => {
       {/* Header */}
       <div className="border-b border-border/50 bg-card/50 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-center h-16">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
                 <Settings className="w-4 h-4 text-primary-foreground" />
               </div>
               <h1 className="text-xl font-semibold">Your Communities</h1>
-            </div>
-            <div className="flex items-center space-x-3">
-              <span className="text-sm text-muted-foreground">
-                {user?.email}
-              </span>
-              <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Sign Out
-              </Button>
             </div>
           </div>
         </div>
@@ -159,6 +150,15 @@ const Communities = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* User info section */}
+        {user?.email && (
+          <div className="mb-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              Signed in as <span className="font-medium">{user.email}</span>
+            </p>
+          </div>
+        )}
+
         {communities.length === 0 ? (
           <div className="text-center py-12">
             <div className="w-16 h-16 mx-auto rounded-full bg-muted flex items-center justify-center mb-4">
@@ -174,62 +174,72 @@ const Communities = () => {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {communities.map((community) => (
-              <Card 
-                key={community.id}
-                className="group cursor-pointer hover:shadow-glow transition-all duration-300 border-border/50 hover:border-primary/50"
-                onClick={() => navigate(`/community/${community.id}`)}
-              >
-                <CardHeader className="space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                        {community.agent_avatar_url ? (
-                          <img 
-                            src={community.agent_avatar_url} 
-                            alt={community.agent_name || community.name}
-                            className="w-8 h-8 rounded-lg"
-                          />
-                        ) : (
-                          <Users className="w-6 h-6 text-primary" />
-                        )}
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {communities.map((community) => (
+                <Card 
+                  key={community.id}
+                  className="group cursor-pointer hover:shadow-glow transition-all duration-300 border-border/50 hover:border-primary/50"
+                  onClick={() => navigate(`/community/${community.id}`)}
+                >
+                  <CardHeader className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                          {community.agent_avatar_url ? (
+                            <img 
+                              src={community.agent_avatar_url} 
+                              alt={community.agent_name || community.name}
+                              className="w-8 h-8 rounded-lg"
+                            />
+                          ) : (
+                            <Users className="w-6 h-6 text-primary" />
+                          )}
+                        </div>
+                        <div>
+                          <CardTitle className="text-lg group-hover:text-primary transition-colors">
+                            {community.name}
+                          </CardTitle>
+                          {community.agent_name && (
+                            <p className="text-sm text-muted-foreground">
+                              Agent: {community.agent_name}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <CardTitle className="text-lg group-hover:text-primary transition-colors">
-                          {community.name}
-                        </CardTitle>
-                        {community.agent_name && (
-                          <p className="text-sm text-muted-foreground">
-                            Agent: {community.agent_name}
-                          </p>
-                        )}
-                      </div>
+                      <Badge variant={getRoleBadgeVariant(community.role)} className="flex items-center space-x-1">
+                        {getRoleIcon(community.role)}
+                        <span className="capitalize">{community.role}</span>
+                      </Badge>
                     </div>
-                    <Badge variant={getRoleBadgeVariant(community.role)} className="flex items-center space-x-1">
-                      {getRoleIcon(community.role)}
-                      <span className="capitalize">{community.role}</span>
-                    </Badge>
-                  </div>
-                </CardHeader>
+                  </CardHeader>
 
-                <CardContent>
-                  <CardDescription className="line-clamp-2">
-                    {community.description || "No description available"}
-                  </CardDescription>
-                  
-                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
-                    <Badge variant="outline" className="text-xs">
-                      {community.privacy_level}
-                    </Badge>
-                    <div className="text-xs text-muted-foreground">
-                      Click to manage →
+                  <CardContent>
+                    <CardDescription className="line-clamp-2">
+                      {community.description || "No description available"}
+                    </CardDescription>
+                    
+                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
+                      <Badge variant="outline" className="text-xs">
+                        {community.privacy_level}
+                      </Badge>
+                      <div className="text-xs text-muted-foreground">
+                        Click to manage →
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Sign out button at bottom */}
+            <div className="flex justify-center pt-6 border-t border-border/30">
+              <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-muted-foreground hover:text-foreground">
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
+          </>
         )}
       </div>
     </div>

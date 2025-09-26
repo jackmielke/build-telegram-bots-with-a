@@ -1,0 +1,322 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
+import { Brain, Plus, Search, Trash2, Edit, User, Calendar } from 'lucide-react';
+
+interface Memory {
+  id: string;
+  content: string;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  metadata: any;
+}
+
+interface MemoryManagementProps {
+  communityId: string;
+  isAdmin: boolean;
+}
+
+const MemoryManagement = ({ communityId, isAdmin }: MemoryManagementProps) => {
+  const [memories, setMemories] = useState<Memory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    content: '',
+    tags: ''
+  });
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchMemories();
+  }, [communityId]);
+
+  const fetchMemories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('memories')
+        .select('*')
+        .eq('community_id', communityId)
+        .order('updated_at', { ascending: false });
+
+      if (error) throw error;
+      setMemories(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to load memories",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveMemory = async () => {
+    try {
+      const tagsArray = formData.tags
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0);
+
+      if (selectedMemory) {
+        // Update existing memory
+        const { error } = await supabase
+          .from('memories')
+          .update({
+            content: formData.content,
+            tags: tagsArray,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', selectedMemory.id);
+
+        if (error) throw error;
+        
+        toast({
+          title: "Memory Updated",
+          description: "Memory has been updated successfully.",
+        });
+      } else {
+        // Create new memory
+        const { error } = await supabase
+          .from('memories')
+          .insert({
+            community_id: communityId,
+            content: formData.content,
+            tags: tagsArray,
+            metadata: {}
+          });
+
+        if (error) throw error;
+        
+        toast({
+          title: "Memory Created",
+          description: "New memory has been added successfully.",
+        });
+      }
+
+      setFormData({ content: '', tags: '' });
+      setSelectedMemory(null);
+      setIsEditing(false);
+      fetchMemories();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to save memory",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteMemory = async (memoryId: string) => {
+    try {
+      const { error } = await supabase
+        .from('memories')
+        .delete()
+        .eq('id', memoryId);
+
+      if (error) throw error;
+      
+      toast({
+        title: "Memory Deleted",
+        description: "Memory has been removed successfully.",
+      });
+      
+      fetchMemories();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to delete memory",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const openEditDialog = (memory?: Memory) => {
+    if (memory) {
+      setSelectedMemory(memory);
+      setFormData({
+        content: memory.content || '',
+        tags: (memory.tags || []).join(', ')
+      });
+    } else {
+      setSelectedMemory(null);
+      setFormData({ content: '', tags: '' });
+    }
+    setIsEditing(true);
+  };
+
+  const filteredMemories = memories.filter(memory =>
+    memory.content?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    memory.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const isAutoBio = (memory: Memory) => {
+    return memory.metadata?.type === 'bio' && memory.metadata?.auto_generated;
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <Card className="gradient-card border-border/50">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Brain className="w-5 h-5 text-primary" />
+            <span>Memory Management</span>
+          </CardTitle>
+          <CardDescription>
+            Manage your AI agent's knowledge base and context memories
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center space-x-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  placeholder="Search memories..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            {isAdmin && (
+              <Dialog open={isEditing} onOpenChange={setIsEditing}>
+                <DialogTrigger asChild>
+                  <Button onClick={() => openEditDialog()} className="gradient-primary">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Memory
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {selectedMemory ? 'Edit Memory' : 'Add New Memory'}
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="content">Content</Label>
+                      <Textarea
+                        id="content"
+                        value={formData.content}
+                        onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                        placeholder="Enter memory content..."
+                        rows={6}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tags">Tags (comma-separated)</Label>
+                      <Input
+                        id="tags"
+                        value={formData.tags}
+                        onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                        placeholder="ai, community, knowledge"
+                      />
+                    </div>
+                    <div className="flex justify-end space-x-2">
+                      <Button variant="outline" onClick={() => setIsEditing(false)}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleSaveMemory}>
+                        {selectedMemory ? 'Update' : 'Create'} Memory
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Memories List */}
+      <div className="space-y-4">
+        {filteredMemories.length === 0 ? (
+          <Card className="gradient-card border-border/50">
+            <CardContent className="text-center py-12">
+              <Brain className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">No memories found</h3>
+              <p className="text-muted-foreground mb-4">
+                {searchTerm ? 'No memories match your search.' : 'Start building your AI agent\'s knowledge base.'}
+              </p>
+              {isAdmin && !searchTerm && (
+                <Button onClick={() => openEditDialog()} variant="outline">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add First Memory
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          filteredMemories.map((memory) => (
+            <Card key={memory.id} className="gradient-card border-border/50">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-2">
+                      {isAutoBio(memory) && (
+                        <Badge variant="secondary" className="flex items-center space-x-1">
+                          <User className="w-3 h-3" />
+                          <span>Auto Bio</span>
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="flex items-center space-x-1">
+                        <Calendar className="w-3 h-3" />
+                        <span>{new Date(memory.updated_at).toLocaleDateString()}</span>
+                      </Badge>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {memory.tags?.map((tag, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  {isAdmin && (
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditDialog(memory)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteMemory(memory.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-foreground/90 whitespace-pre-wrap">
+                  {memory.content}
+                </p>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default MemoryManagement;

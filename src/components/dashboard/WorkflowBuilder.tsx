@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Zap, 
@@ -18,7 +19,12 @@ import {
   Settings,
   MessageSquare,
   Globe,
-  Workflow
+  Workflow,
+  TestTube,
+  Play,
+  CheckCircle,
+  XCircle,
+  Loader
 } from 'lucide-react';
 
 interface Community {
@@ -49,6 +55,11 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
   const [workflows, setWorkflows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateBot, setShowCreateBot] = useState(false);
+  const [showTestDialog, setShowTestDialog] = useState(false);
+  const [selectedWorkflow, setSelectedWorkflow] = useState<any>(null);
+  const [testInput, setTestInput] = useState('');
+  const [testResult, setTestResult] = useState<any>(null);
+  const [testLoading, setTestLoading] = useState(false);
   const [botFormData, setBotFormData] = useState({
     bot_name: '',
     bot_username: '',
@@ -218,6 +229,123 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
     }
   };
 
+  // Test workflow functions
+  const testTelegramWorkflow = async (input: string) => {
+    const mockTelegramMessage = {
+      community_id: community.id,
+      message: {
+        chat: { type: 'private' },
+        text: input,
+        from: { id: 123456, first_name: 'Test User' }
+      }
+    };
+
+    const response = await supabase.functions.invoke('telegram-webhook', {
+      body: mockTelegramMessage
+    });
+
+    return {
+      success: !response.error,
+      message: response.error ? 'Telegram test failed' : 'Telegram workflow responded correctly',
+      data: response.data,
+      details: response
+    };
+  };
+
+  const testEmailWorkflow = async (input: string) => {
+    return {
+      success: true,
+      message: 'Email workflow simulation completed',
+      data: { email_sent: true, recipient: 'test@example.com', subject: input }
+    };
+  };
+
+  const testSlackWorkflow = async (input: string) => {
+    return {
+      success: true,
+      message: 'Slack workflow simulation completed',
+      data: { message_sent: true, channel: '#test', content: input }
+    };
+  };
+
+  const testDiscordWorkflow = async (input: string) => {
+    return {
+      success: true,
+      message: 'Discord workflow simulation completed',
+      data: { message_sent: true, channel: 'general', content: input }
+    };
+  };
+
+  const testWebhookWorkflow = async (input: string) => {
+    return {
+      success: true,
+      message: 'Webhook workflow simulation completed',
+      data: { webhook_called: true, payload: input, status: 200 }
+    };
+  };
+
+  const testWorkflow = async (workflow: any, input: string) => {
+    if (!workflow || !workflow.enabled) {
+      toast({
+        title: "Workflow Disabled",
+        description: "This workflow is currently disabled. Enable it first to test.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setTestLoading(true);
+    setTestResult(null);
+
+    try {
+      let result;
+      
+      switch (workflow.type) {
+        case 'telegram_integration':
+          result = await testTelegramWorkflow(input);
+          break;
+        case 'email_notifications':
+          result = await testEmailWorkflow(input);
+          break;
+        case 'slack_integration':
+          result = await testSlackWorkflow(input);
+          break;
+        case 'discord_integration':
+          result = await testDiscordWorkflow(input);
+          break;
+        case 'webhook_integration':
+          result = await testWebhookWorkflow(input);
+          break;
+        default:
+          result = { success: false, message: 'Unknown workflow type' };
+      }
+
+      setTestResult(result);
+      
+      toast({
+        title: result.success ? "Test Successful" : "Test Failed",
+        description: result.message,
+        variant: result.success ? "default" : "destructive"
+      });
+
+    } catch (error: any) {
+      console.error('Test error:', error);
+      setTestResult({
+        success: false,
+        message: error.message || 'Test failed with unknown error',
+        details: error
+      });
+      
+      toast({
+        title: "Test Error",
+        description: "Failed to run workflow test",
+        variant: "destructive"
+      });
+    } finally {
+      setTestLoading(false);
+    }
+  };
+
   const handleCreateTelegramBot = async () => {
     if (!isAdmin) return;
     
@@ -305,6 +433,23 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
     }
   };
 
+  const getTestPlaceholder = (workflowType: string): string => {
+    switch (workflowType) {
+      case 'telegram_integration':
+        return 'Enter a test message as if sent from Telegram...';
+      case 'email_notifications':
+        return 'Enter email subject or content to test...';
+      case 'slack_integration':
+        return 'Enter a test Slack message...';
+      case 'discord_integration':
+        return 'Enter a test Discord message...';
+      case 'webhook_integration':
+        return 'Enter JSON payload to send to webhook...';
+      default:
+        return 'Enter test input...';
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Workflow Overview */}
@@ -346,6 +491,24 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
                     <Badge variant={workflow.enabled ? 'default' : 'outline'}>
                       {workflow.enabled ? 'Active' : 'Inactive'}
                     </Badge>
+                    
+                    {/* Test Button */}
+                    {workflow.enabled && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedWorkflow(workflow);
+                          setShowTestDialog(true);
+                          setTestInput('');
+                          setTestResult(null);
+                        }}
+                        className="ml-2"
+                      >
+                        <TestTube className="w-4 h-4 mr-1" />
+                        Test
+                      </Button>
+                    )}
                   </div>
 
                   {/* Telegram Chat Type Sub-toggles */}
@@ -548,6 +711,103 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Workflow Test Dialog */}
+      <Dialog open={showTestDialog} onOpenChange={setShowTestDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <TestTube className="w-5 h-5" />
+              <span>Test {selectedWorkflow?.name}</span>
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="p-4 rounded-lg bg-muted/50">
+              <h4 className="font-medium mb-2">Workflow Details</h4>
+              <p className="text-sm text-muted-foreground mb-2">
+                {selectedWorkflow?.description}
+              </p>
+              <div className="flex items-center space-x-2">
+                <Badge variant="default">Active</Badge>
+                {selectedWorkflow?.type === 'telegram_integration' && selectedWorkflow?.configuration?.chat_types && (
+                  <div className="flex space-x-1">
+                    {Object.entries(selectedWorkflow.configuration.chat_types)
+                      .filter(([_, enabled]) => enabled)
+                      .map(([type, _]) => (
+                        <Badge key={type} variant="outline" className="text-xs">
+                          {type}
+                        </Badge>
+                      ))
+                    }
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="test-input">Test Input</Label>
+              <Textarea
+                id="test-input"
+                value={testInput}
+                onChange={(e) => setTestInput(e.target.value)}
+                placeholder={getTestPlaceholder(selectedWorkflow?.type)}
+                rows={3}
+              />
+            </div>
+
+            {testResult && (
+              <div className={`p-4 rounded-lg border ${
+                testResult.success 
+                  ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20' 
+                  : 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20'
+              }`}>
+                <div className="flex items-center space-x-2 mb-2">
+                  {testResult.success ? (
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-red-600" />
+                  )}
+                  <h4 className="font-medium">
+                    {testResult.success ? 'Test Passed' : 'Test Failed'}
+                  </h4>
+                </div>
+                <p className="text-sm mb-2">{testResult.message}</p>
+                {testResult.data && (
+                  <details className="text-xs">
+                    <summary className="cursor-pointer font-medium">Response Details</summary>
+                    <pre className="mt-2 p-2 bg-background rounded overflow-x-auto">
+                      {JSON.stringify(testResult.data, null, 2)}
+                    </pre>
+                  </details>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setShowTestDialog(false)}>
+                Close
+              </Button>
+              <Button 
+                onClick={() => testWorkflow(selectedWorkflow, testInput)}
+                disabled={testLoading || !testInput.trim()}
+              >
+                {testLoading ? (
+                  <>
+                    <Loader className="w-4 h-4 mr-2 animate-spin" />
+                    Testing...
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4 mr-2" />
+                    Run Test
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

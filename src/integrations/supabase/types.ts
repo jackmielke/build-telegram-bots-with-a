@@ -238,6 +238,7 @@ export type Database = {
           created_by: string | null
           description: string | null
           experiences: string[] | null
+          game_design_sky_color: string | null
           id: string
           invite_code: string | null
           last_activity_at: string | null
@@ -265,6 +266,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           experiences?: string[] | null
+          game_design_sky_color?: string | null
           id?: string
           invite_code?: string | null
           last_activity_at?: string | null
@@ -292,6 +294,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           experiences?: string[] | null
+          game_design_sky_color?: string | null
           id?: string
           invite_code?: string | null
           last_activity_at?: string | null
@@ -304,6 +307,27 @@ export type Database = {
           total_tokens_used?: number | null
           universal_id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      community_favorites: {
+        Row: {
+          community_id: string
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          community_id: string
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          community_id?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -405,6 +429,44 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_workflows: {
+        Row: {
+          community_id: string
+          configuration: Json | null
+          created_at: string
+          id: string
+          is_enabled: boolean
+          updated_at: string
+          workflow_type: string
+        }
+        Insert: {
+          community_id: string
+          configuration?: Json | null
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          updated_at?: string
+          workflow_type: string
+        }
+        Update: {
+          community_id?: string
+          configuration?: Json | null
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          updated_at?: string
+          workflow_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_workflows_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
             referencedColumns: ["id"]
           },
         ]
@@ -743,6 +805,51 @@ export type Database = {
         }
         Relationships: []
       }
+      player_positions: {
+        Row: {
+          character_glb_url: string | null
+          community_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          last_seen_at: string
+          position_x: number
+          position_y: number
+          position_z: number
+          rotation: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          character_glb_url?: string | null
+          community_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_seen_at?: string
+          position_x?: number
+          position_y?: number
+          position_z?: number
+          rotation?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          character_glb_url?: string | null
+          community_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_seen_at?: string
+          position_x?: number
+          position_y?: number
+          position_z?: number
+          rotation?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       push_subscriptions: {
         Row: {
           auth: string
@@ -1061,6 +1168,54 @@ export type Database = {
         }
         Relationships: []
       }
+      world_objects: {
+        Row: {
+          community_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          object_type: string
+          position: Json
+          properties: Json
+          updated_at: string
+        }
+        Insert: {
+          community_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          object_type: string
+          position?: Json
+          properties?: Json
+          updated_at?: string
+        }
+        Update: {
+          community_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          object_type?: string
+          position?: Json
+          properties?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_objects_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_objects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       conversations: {
@@ -1105,6 +1260,17 @@ export type Database = {
       generate_universal_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_communities_with_favorites: {
+        Args: { limit_count?: number; user_auth_id?: string }
+        Returns: {
+          cover_image_url: string
+          description: string
+          game_design_sky_color: string
+          id: string
+          is_favorited: boolean
+          name: string
+        }[]
       }
       get_communities_with_member_count: {
         Args: {

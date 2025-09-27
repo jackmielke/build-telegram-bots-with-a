@@ -46,6 +46,7 @@ interface WorkflowBuilderProps {
 
 const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
   const [telegramBots, setTelegramBots] = useState<TelegramBot[]>([]);
+  const [workflows, setWorkflows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateBot, setShowCreateBot] = useState(false);
   const [botFormData, setBotFormData] = useState({
@@ -53,40 +54,45 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
     bot_username: '',
     bot_token: ''
   });
-  const [workflows, setWorkflows] = useState([
-    {
-      id: 'telegram-chat',
-      name: 'Telegram Chat',
-      description: 'Enable AI responses in Telegram',
-      enabled: false,
-      type: 'telegram'
-    },
-    {
-      id: 'proactive-messages',
-      name: 'Proactive Messages',
-      description: 'Send scheduled AI messages',
-      enabled: false,
-      type: 'scheduler'
-    },
-    {
-      id: 'memory-chat',
-      name: 'Memory Chat',
-      description: 'Reusable memory-based conversations',
-      enabled: false,
-      type: 'memory'
-    },
-    {
-      id: 'vector-search',
-      name: 'Member Matching',
-      description: 'Find similar members via AI',
-      enabled: false,
-      type: 'search'
-    }
-  ]);
   const { toast } = useToast();
+
+  // Define available workflow types
+  const workflowTypes = [
+    {
+      type: 'telegram_integration',
+      name: 'Telegram Integration',
+      description: 'Enable AI responses in Telegram chats',
+      icon: 'telegram'
+    },
+    {
+      type: 'email_notifications',
+      name: 'Email Notifications',
+      description: 'Send AI-powered email updates',
+      icon: 'scheduler'
+    },
+    {
+      type: 'slack_integration',
+      name: 'Slack Integration', 
+      description: 'Connect AI agent to Slack channels',
+      icon: 'memory'
+    },
+    {
+      type: 'discord_integration',
+      name: 'Discord Integration',
+      description: 'Enable AI interactions in Discord',
+      icon: 'search'
+    },
+    {
+      type: 'webhook_integration',
+      name: 'Webhook Integration',
+      description: 'Connect with external APIs and services',
+      icon: 'default'
+    }
+  ];
 
   useEffect(() => {
     fetchTelegramBots();
+    fetchWorkflows();
   }, [community.id]);
 
   const fetchTelegramBots = async () => {
@@ -103,6 +109,64 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
       console.error('Error fetching telegram bots:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWorkflows = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('community_workflows')
+        .select('*')
+        .eq('community_id', community.id);
+
+      if (error) throw error;
+
+      // Merge with workflow types to get display info
+      const workflowsWithInfo = workflowTypes.map(type => {
+        const dbWorkflow = data?.find(w => w.workflow_type === type.type);
+        return {
+          ...type,
+          id: dbWorkflow?.id || `${type.type}-${community.id}`,
+          enabled: dbWorkflow?.is_enabled || false,
+          configuration: dbWorkflow?.configuration || {}
+        };
+      });
+
+      setWorkflows(workflowsWithInfo);
+    } catch (error: any) {
+      console.error('Error fetching workflows:', error);
+    }
+  };
+
+  const toggleWorkflow = async (workflowType: string, currentEnabled: boolean) => {
+    if (!isAdmin) return;
+    
+    try {
+      const { error } = await supabase
+        .from('community_workflows')
+        .upsert({
+          community_id: community.id,
+          workflow_type: workflowType,
+          is_enabled: !currentEnabled
+        }, {
+          onConflict: 'community_id,workflow_type'
+        });
+
+      if (error) throw error;
+      
+      toast({
+        title: currentEnabled ? "Workflow Disabled" : "Workflow Enabled",
+        description: `${workflowTypes.find(w => w.type === workflowType)?.name} has been ${currentEnabled ? 'disabled' : 'enabled'}.`,
+      });
+      
+      fetchWorkflows();
+    } catch (error: any) {
+      console.error('Error toggling workflow:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update workflow status",
+        variant: "destructive"
+      });
     }
   };
 
@@ -214,7 +278,7 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-3">
                       <div className="p-2 rounded-lg bg-primary/10">
-                        {getWorkflowIcon(workflow.type)}
+                        {getWorkflowIcon(workflow.icon)}
                       </div>
                       <div>
                         <h4 className="font-medium">{workflow.name}</h4>
@@ -225,7 +289,7 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
                     </div>
                     <Switch 
                       checked={workflow.enabled}
-                      onCheckedChange={() => {/* Handle workflow toggle */}}
+                      onCheckedChange={() => toggleWorkflow(workflow.type, workflow.enabled)}
                       disabled={!isAdmin}
                     />
                   </div>

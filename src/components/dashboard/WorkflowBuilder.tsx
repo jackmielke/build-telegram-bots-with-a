@@ -62,7 +62,8 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
       type: 'telegram_integration',
       name: 'Telegram Integration',
       description: 'Enable AI responses in Telegram chats',
-      icon: 'telegram'
+      icon: 'telegram',
+      hasSubToggles: true // This workflow has sub-toggles for chat types
     },
     {
       type: 'email_notifications',
@@ -165,6 +166,53 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
       toast({
         title: "Error",
         description: "Failed to update workflow status",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const toggleChatType = async (workflowType: string, chatType: string, currentEnabled: boolean) => {
+    if (!isAdmin) return;
+    
+    try {
+      // Get current workflow configuration
+      const workflow = workflows.find(w => w.type === workflowType);
+      const currentConfig = workflow?.configuration || {};
+      const chatTypes = currentConfig.chat_types || {};
+      
+      // Update the specific chat type
+      const newChatTypes = {
+        ...chatTypes,
+        [chatType]: !currentEnabled
+      };
+
+      const { error } = await supabase
+        .from('community_workflows')
+        .upsert({
+          community_id: community.id,
+          workflow_type: workflowType,
+          is_enabled: workflow?.enabled || false,
+          configuration: {
+            ...currentConfig,
+            chat_types: newChatTypes
+          }
+        }, {
+          onConflict: 'community_id,workflow_type'
+        });
+
+      if (error) throw error;
+      
+      toast({
+        title: currentEnabled ? "Chat Type Disabled" : "Chat Type Enabled",
+        description: `${chatType} chats have been ${currentEnabled ? 'disabled' : 'enabled'} for Telegram integration.`,
+      });
+      
+      fetchWorkflows();
+    } catch (error: any) {
+      console.error('Error toggling chat type:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update chat type setting",
         variant: "destructive"
       });
     }
@@ -293,9 +341,41 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
                       disabled={!isAdmin}
                     />
                   </div>
-                  <Badge variant={workflow.enabled ? 'default' : 'outline'}>
-                    {workflow.enabled ? 'Active' : 'Inactive'}
-                  </Badge>
+                  
+                  <div className="flex items-center justify-between mb-3">
+                    <Badge variant={workflow.enabled ? 'default' : 'outline'}>
+                      {workflow.enabled ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </div>
+
+                  {/* Telegram Chat Type Sub-toggles */}
+                  {workflow.type === 'telegram_integration' && workflow.enabled && (
+                    <div className="mt-4 pt-3 border-t border-border/30">
+                      <p className="text-xs font-medium text-muted-foreground mb-3">Chat Types</p>
+                      <div className="space-y-2">
+                        {[
+                          { type: 'private', label: 'Private Chats', desc: '1-on-1 conversations' },
+                          { type: 'group', label: 'Groups', desc: 'Regular group chats' },
+                          { type: 'supergroup', label: 'Supergroups', desc: 'Large groups with admin features' }
+                        ].map((chatType) => {
+                          const isEnabled = workflow.configuration?.chat_types?.[chatType.type] || false;
+                          return (
+                            <div key={chatType.type} className="flex items-center justify-between p-2 rounded bg-background/50">
+                              <div>
+                                <p className="text-sm font-medium">{chatType.label}</p>
+                                <p className="text-xs text-muted-foreground">{chatType.desc}</p>
+                              </div>
+                              <Switch 
+                                checked={isEnabled}
+                                onCheckedChange={() => toggleChatType(workflow.type, chatType.type, isEnabled)}
+                                disabled={!isAdmin}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}

@@ -8,7 +8,29 @@ const corsHeaders = {
 
 interface WorkflowCheck {
   is_enabled: boolean;
-  configuration: any;
+  configuration: {
+    chat_types?: {
+      private?: boolean;
+      group?: boolean;
+      supergroup?: boolean;
+    };
+  };
+}
+
+// Get chat type from Telegram message
+function getChatType(message: any): 'private' | 'group' | 'supergroup' | 'unknown' {
+  if (!message?.chat) return 'unknown';
+  
+  switch (message.chat.type) {
+    case 'private':
+      return 'private';
+    case 'group':
+      return 'group';
+    case 'supergroup':
+      return 'supergroup';
+    default:
+      return 'unknown';
+  }
 }
 
 // Circuit breaker function - checks if workflow is enabled
@@ -75,20 +97,62 @@ serve(async (req) => {
       });
     }
 
-    console.log('Telegram integration is enabled, processing message...');
+    console.log('Telegram integration is enabled, checking chat type permissions...');
     
     // Only process if workflow is enabled
     if (body.message) {
-      // Your existing telegram bot logic here
-      console.log('Processing message:', body.message.text);
+      // Get the chat type from the message
+      const chatType = getChatType(body.message);
+      console.log('Message chat type:', chatType);
       
-      // Example: Save message to database, generate AI response, etc.
+      // Handle unknown chat types
+      if (chatType === 'unknown') {
+        console.log('Unknown chat type, rejecting message for community:', communityId);
+        return new Response(JSON.stringify({ 
+          ok: true, 
+          message: 'Unknown chat type',
+          chat_type: chatType,
+          workflow_enabled: true,
+          chat_type_enabled: false
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        });
+      }
+      
+      // Check if this specific chat type is enabled
+      const chatTypeEnabled = workflowStatus.configuration?.chat_types?.[chatType];
+      
+      if (!chatTypeEnabled) {
+        console.log(`Chat type '${chatType}' is disabled for community:`, communityId);
+        
+        // Return success to Telegram but don't process the message
+        return new Response(JSON.stringify({ 
+          ok: true, 
+          message: `Chat type '${chatType}' disabled`,
+          chat_type: chatType,
+          workflow_enabled: true,
+          chat_type_enabled: false
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        });
+      }
+
+      console.log(`Processing ${chatType} message:`, body.message.text);
+      
+      // Your existing telegram bot logic here
       // This is where you'd put your actual telegram bot logic
+      // - Save message to database
+      // - Generate AI response 
+      // - Send response back to Telegram
       
       return new Response(JSON.stringify({ 
         ok: true,
         processed: true,
-        workflow_enabled: true
+        workflow_enabled: true,
+        chat_type_enabled: true,
+        chat_type: chatType
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200

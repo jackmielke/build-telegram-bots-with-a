@@ -24,7 +24,10 @@ import {
   Play,
   CheckCircle,
   XCircle,
-  Loader
+  Loader,
+  Edit3,
+  Save,
+  X
 } from 'lucide-react';
 
 interface Community {
@@ -65,6 +68,9 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
     bot_username: '',
     bot_token: ''
   });
+  const [editingBot, setEditingBot] = useState<string | null>(null);
+  const [editingBotData, setEditingBotData] = useState<any>({});
+  const [testingBot, setTestingBot] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Define available workflow types
@@ -282,6 +288,93 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
       message: 'Webhook workflow simulation completed',
       data: { webhook_called: true, payload: input, status: 200 }
     };
+  };
+
+  // Bot management functions
+  const testBotConnection = async (botToken: string) => {
+    try {
+      setTestingBot('test');
+      const response = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
+      const data = await response.json();
+      
+      if (data.ok) {
+        return {
+          success: true,
+          botInfo: data.result,
+          message: 'Bot connection successful'
+        };
+      } else {
+        return {
+          success: false,
+          message: data.description || 'Invalid bot token'
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to connect to Telegram API'
+      };
+    } finally {
+      setTestingBot(null);
+    }
+  };
+
+  const startEditingBot = (bot: TelegramBot) => {
+    setEditingBot(bot.id);
+    setEditingBotData({
+      bot_name: bot.bot_name || '',
+      bot_token: bot.bot_token,
+      bot_username: bot.bot_username
+    });
+  };
+
+  const saveBot = async (botId: string) => {
+    try {
+      // Test the connection first
+      const testResult = await testBotConnection(editingBotData.bot_token);
+      
+      if (!testResult.success) {
+        toast({
+          title: "Invalid Bot Token",
+          description: testResult.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Update bot with real info from Telegram API
+      const { error } = await supabase
+        .from('telegram_bots')
+        .update({
+          bot_name: editingBotData.bot_name || testResult.botInfo.first_name,
+          bot_username: testResult.botInfo.username,
+          bot_token: editingBotData.bot_token
+        })
+        .eq('id', botId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Bot Updated",
+        description: `Bot @${testResult.botInfo.username} updated successfully!`
+      });
+
+      setEditingBot(null);
+      setEditingBotData({});
+      fetchTelegramBots(); // Refresh the list
+    } catch (error: any) {
+      console.error('Error updating bot:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update bot",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const cancelEditingBot = () => {
+    setEditingBot(null);
+    setEditingBotData({});
   };
 
   const testWorkflow = async (workflow: any, input: string) => {
@@ -632,37 +725,140 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
               {telegramBots.map((bot) => (
                 <Card key={bot.id} className="border-border/30">
                   <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                          <Bot className="w-5 h-5 text-primary" />
+                    {editingBot === bot.id ? (
+                      // Edit mode
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium">Edit Bot</h4>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              size="sm"
+                              onClick={() => saveBot(bot.id)}
+                              disabled={testingBot === 'test'}
+                            >
+                              {testingBot === 'test' ? (
+                                <Loader className="w-4 h-4 animate-spin mr-2" />
+                              ) : (
+                                <Save className="w-4 h-4 mr-2" />
+                              )}
+                              Save
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={cancelEditingBot}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="font-medium">
-                            {bot.bot_name || bot.bot_username}
-                          </h4>
-                          <p className="text-sm text-muted-foreground">
-                            @{bot.bot_username}
-                          </p>
-                          {bot.last_activity_at && (
-                            <p className="text-xs text-muted-foreground">
-                              Last active: {new Date(bot.last_activity_at).toLocaleString()}
-                            </p>
+                        
+                        <div className="grid grid-cols-1 gap-4">
+                          <div>
+                            <Label htmlFor={`bot-name-${bot.id}`}>Bot Name</Label>
+                            <Input
+                              id={`bot-name-${bot.id}`}
+                              value={editingBotData.bot_name || ''}
+                              onChange={(e) => setEditingBotData({
+                                ...editingBotData,
+                                bot_name: e.target.value
+                              })}
+                              placeholder="Enter bot name"
+                            />
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor={`bot-token-${bot.id}`}>Bot Token</Label>
+                            <Input
+                              id={`bot-token-${bot.id}`}
+                              type="password"
+                              value={editingBotData.bot_token || ''}
+                              onChange={(e) => setEditingBotData({
+                                ...editingBotData,
+                                bot_token: e.target.value
+                              })}
+                              placeholder="Enter bot token from @BotFather"
+                            />
+                          </div>
+                          
+                          <Button
+                            variant="outline"
+                            onClick={async () => {
+                              if (editingBotData.bot_token) {
+                                const result = await testBotConnection(editingBotData.bot_token);
+                                toast({
+                                  title: result.success ? "Connection Successful" : "Connection Failed",
+                                  description: result.success 
+                                    ? `Bot @${result.botInfo.username} is valid!`
+                                    : result.message,
+                                  variant: result.success ? "default" : "destructive"
+                                });
+                                if (result.success) {
+                                  setEditingBotData({
+                                    ...editingBotData,
+                                    bot_username: result.botInfo.username
+                                  });
+                                }
+                              }
+                            }}
+                            disabled={!editingBotData.bot_token || testingBot === 'test'}
+                          >
+                            {testingBot === 'test' ? (
+                              <Loader className="w-4 h-4 animate-spin mr-2" />
+                            ) : (
+                              <TestTube className="w-4 h-4 mr-2" />
+                            )}
+                            Test Connection
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      // Display mode
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="p-2 rounded-lg bg-primary/10">
+                            <Bot className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <div className="flex items-center space-x-2">
+                              <h4 className="font-medium">
+                                {bot.bot_name || bot.bot_username}
+                              </h4>
+                              {bot.bot_username && (
+                                <Badge variant="outline" className="text-xs">
+                                  @{bot.bot_username}
+                                </Badge>
+                              )}
+                            </div>
+                            {bot.last_activity_at && (
+                              <p className="text-xs text-muted-foreground">
+                                Last active: {new Date(bot.last_activity_at).toLocaleString()}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <Badge variant={bot.is_active ? 'default' : 'outline'}>
+                            {bot.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                          {isAdmin && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => startEditingBot(bot)}
+                              >
+                                <Edit3 className="w-4 h-4" />
+                              </Button>
+                              <Switch 
+                                checked={bot.is_active}
+                                onCheckedChange={() => toggleBotStatus(bot.id, bot.is_active)}
+                              />
+                            </>
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center space-x-3">
-                        <Badge variant={bot.is_active ? 'default' : 'outline'}>
-                          {bot.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                        {isAdmin && (
-                          <Switch 
-                            checked={bot.is_active}
-                            onCheckedChange={() => toggleBotStatus(bot.id, bot.is_active)}
-                          />
-                        )}
-                      </div>
-                    </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}

@@ -139,9 +139,9 @@ const CommunityDashboard = () => {
   const isAdmin = community.user_role === 'admin';
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-primary via-primary/80 to-accent bg-fixed bg-cover">
       {/* Header */}
-      <div className="border-b border-border/50 bg-card/50 backdrop-blur-md sticky top-0 z-50">
+      <div className="border-b border-white/10 bg-black/20 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14 sm:h-16">
             <div className="flex items-center space-x-2 sm:space-x-4">

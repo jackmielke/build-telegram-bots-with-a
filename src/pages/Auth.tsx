@@ -69,19 +69,17 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
-      
-      <Card className="w-full max-w-md relative z-10 shadow-elevated border-border/50">
+    <div className="min-h-screen bg-gradient-to-br from-primary via-primary/80 to-accent bg-fixed bg-cover flex items-center justify-center p-4">
+      <Card className="w-full max-w-md relative z-10 shadow-elevated bg-white/10 backdrop-blur-md border-white/20">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 rounded-full gradient-primary flex items-center justify-center shadow-glow">
-            <Bot className="w-8 h-8 text-primary-foreground" />
+          <div className="mx-auto w-16 h-16 rounded-full bg-white/20 flex items-center justify-center shadow-glow">
+            <Bot className="w-8 h-8 text-white" />
           </div>
           <div>
-            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
+            <CardTitle className="text-2xl font-bold text-white">
               AI Agent Builder
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-white/70">
               {isLogin ? 'Welcome back! Sign in to your account.' : 'Create your account to get started.'}
             </CardDescription>
           </div>
@@ -118,7 +116,7 @@ const Auth = () => {
             
             <Button 
               type="submit" 
-              className="w-full gradient-primary hover:shadow-glow transition-all duration-300"
+              className="w-full bg-white/20 hover:bg-white/30 text-white border-white/30 hover:shadow-glow transition-all duration-300"
               disabled={loading}
             >
               {loading ? (
@@ -134,7 +132,7 @@ const Auth = () => {
             <Button
               variant="ghost"
               onClick={() => setIsLogin(!isLogin)}
-              className="text-muted-foreground hover:text-foreground"
+              className="text-white/70 hover:text-white hover:bg-white/10"
             >
               {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
             </Button>

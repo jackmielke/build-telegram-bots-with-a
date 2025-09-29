@@ -209,16 +209,16 @@ const Communities = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-primary via-primary/80 to-accent bg-fixed bg-cover">
       {/* Header */}
-      <div className="border-b border-border/50 bg-card/50 backdrop-blur-md sticky top-0 z-50">
+      <div className="border-b border-white/10 bg-black/20 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-center h-16">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-                <Settings className="w-4 h-4 text-primary-foreground" />
+              <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+                <Settings className="w-4 h-4 text-white" />
               </div>
-              <h1 className="text-xl font-semibold">Your Communities</h1>
+              <h1 className="text-xl font-semibold text-white">Your Communities</h1>
             </div>
           </div>
         </div>
@@ -226,25 +226,47 @@ const Communities = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* User info section */}
+        {/* Welcome Section */}
         {user?.email && (
-          <div className="mb-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              Signed in as <span className="font-medium">{user.email}</span>
-            </p>
+          <div className="mb-12 space-y-8">
+            {/* Welcome Card */}
+            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-normal text-white mb-1">
+                  Welcome back, {user.email.split('@')[0]}!
+                </h2>
+                <p className="text-base font-light text-white/70">
+                  Ready for your next adventure?
+                </p>
+              </div>
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-white/20 to-white/10 flex items-center justify-center border border-white/30">
+                <Users className="w-8 h-8 text-white" />
+              </div>
+            </div>
+
+            {/* Hero Section */}
+            <div className="text-center space-y-4">
+              <h1 className="text-5xl sm:text-6xl font-bold text-white">
+                Choose Your Adventure
+              </h1>
+              <p className="text-lg font-light text-white/80 max-w-2xl mx-auto">
+                Step into immersive worlds where every choice shapes your journey. 
+                Select a community and become part of an evolving story.
+              </p>
+            </div>
           </div>
         )}
 
         {communities.length === 0 ? (
           <div className="text-center py-12">
-            <div className="w-16 h-16 mx-auto rounded-full bg-muted flex items-center justify-center mb-4">
-              <Users className="w-8 h-8 text-muted-foreground" />
+            <div className="w-16 h-16 mx-auto rounded-full bg-white/10 flex items-center justify-center mb-4">
+              <Users className="w-8 h-8 text-white/70" />
             </div>
-            <h3 className="text-lg font-medium mb-2">No communities yet</h3>
-            <p className="text-muted-foreground mb-6">
+            <h3 className="text-lg font-medium mb-2 text-white">No communities yet</h3>
+            <p className="text-white/70 mb-6">
               You're not a member of any communities. Contact an admin to get invited.
             </p>
-            <Button onClick={() => window.location.reload()}>
+            <Button onClick={() => window.location.reload()} className="bg-white/20 hover:bg-white/30 text-white border-white/30">
               <Plus className="w-4 h-4 mr-2" />
               Refresh
             </Button>
@@ -255,76 +277,76 @@ const Communities = () => {
               {communities.map((community) => (
                 <Card 
                   key={community.id}
-                  className="group cursor-pointer hover:shadow-glow transition-all duration-300 border-border/50 hover:border-primary/50"
+                  className="group cursor-pointer hover:shadow-glow transition-all duration-300 bg-white/10 backdrop-blur-md border-white/20 hover:border-white/40"
                   onClick={() => navigate(`/community/${community.id}`)}
                 >
-                <CardHeader className="space-y-3">
-                  <div className="flex items-start space-x-3">
-                    <div className="w-16 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center flex-shrink-0">
-                      {community.cover_image_url ? (
-                        <img 
-                          src={community.cover_image_url} 
-                          alt={community.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <Users className="w-6 h-6 text-primary" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg group-hover:text-primary transition-colors truncate">
-                          {community.name}
-                        </CardTitle>
-                        <button
-                          onClick={(e) => handleToggleFavorite(e, community.id)}
-                          className="p-1 hover:bg-muted rounded-md transition-colors"
-                        >
-                          <Heart 
-                            className={`w-4 h-4 transition-colors ${
-                              community.is_favorited 
-                                ? 'fill-red-500 text-red-500' 
-                                : 'text-muted-foreground hover:text-red-500'
-                            }`}
-                          />
-                        </button>
-                      </div>
-                      {community.agent_name && (
-                        <p className="text-sm text-muted-foreground truncate">
-                          Agent: {community.agent_name}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
+                 <CardHeader className="space-y-3">
+                   <div className="flex items-start space-x-3">
+                     <div className="w-16 h-12 rounded-xl overflow-hidden bg-white/10 flex items-center justify-center flex-shrink-0">
+                       {community.cover_image_url ? (
+                         <img 
+                           src={community.cover_image_url} 
+                           alt={community.name}
+                           className="w-full h-full object-cover"
+                         />
+                       ) : (
+                         <Users className="w-6 h-6 text-white" />
+                       )}
+                     </div>
+                     <div className="min-w-0 flex-1">
+                       <div className="flex items-center justify-between">
+                         <CardTitle className="text-lg text-white group-hover:text-white/80 transition-colors truncate">
+                           {community.name}
+                         </CardTitle>
+                         <button
+                           onClick={(e) => handleToggleFavorite(e, community.id)}
+                           className="p-1 hover:bg-white/10 rounded-md transition-colors"
+                         >
+                           <Heart 
+                             className={`w-4 h-4 transition-colors ${
+                               community.is_favorited 
+                                 ? 'fill-red-500 text-red-500' 
+                                 : 'text-white/70 hover:text-red-500'
+                             }`}
+                           />
+                         </button>
+                       </div>
+                       {community.agent_name && (
+                         <p className="text-sm text-white/70 truncate">
+                           Agent: {community.agent_name}
+                         </p>
+                       )}
+                     </div>
+                   </div>
+                 </CardHeader>
 
-                  <CardContent>
-                    <CardDescription className="line-clamp-2">
-                      {community.description || "No description available"}
-                    </CardDescription>
-                    
-                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="outline" className="text-xs">
-                          {community.privacy_level}
-                        </Badge>
-                        <Badge variant={getRoleBadgeVariant(community.role)} className="flex items-center space-x-1 text-xs">
-                          {getRoleIcon(community.role)}
-                          <span className="capitalize">{community.role}</span>
-                        </Badge>
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Click to manage →
-                      </div>
-                    </div>
-                  </CardContent>
+                   <CardContent>
+                     <CardDescription className="line-clamp-2 text-white/60">
+                       {community.description || "No description available"}
+                     </CardDescription>
+                     
+                     <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/20">
+                       <div className="flex items-center space-x-2">
+                         <Badge variant="outline" className="text-xs bg-white/10 border-white/30 text-white">
+                           {community.privacy_level}
+                         </Badge>
+                         <Badge variant="outline" className="flex items-center space-x-1 text-xs bg-white/10 border-white/30 text-white">
+                           {getRoleIcon(community.role)}
+                           <span className="capitalize">{community.role}</span>
+                         </Badge>
+                       </div>
+                       <div className="text-xs text-white/60">
+                         Click to manage →
+                       </div>
+                     </div>
+                   </CardContent>
                 </Card>
               ))}
             </div>
 
             {/* Sign out button at bottom */}
-            <div className="flex justify-center pt-6 border-t border-border/30">
-              <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-muted-foreground hover:text-foreground">
+            <div className="flex justify-center pt-6 border-t border-white/20">
+              <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-white/70 hover:text-white hover:bg-white/10">
                 <LogOut className="w-4 h-4 mr-2" />
                 Sign Out
               </Button>

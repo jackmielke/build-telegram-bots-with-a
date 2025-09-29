@@ -108,9 +108,17 @@ serve(async (req) => {
     const body = await req.json();
     console.log('Telegram webhook received:', body);
 
-    // Extract community info from the webhook data
-    // In a real implementation, you'd get this from bot registration
-    const communityId = body.community_id || 'your-community-id-here';
+    // Determine community from querystring or body
+    const url = new URL(req.url);
+    const communityId = url.searchParams.get('community_id') || body.community_id || null;
+
+    if (!communityId) {
+      console.log('Missing community_id in webhook URL');
+      return new Response(JSON.stringify({ ok: true, message: 'Missing community_id' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      });
+    }
     
     // CIRCUIT BREAKER: Check if telegram integration is enabled
     const workflowStatus = await isWorkflowEnabled(

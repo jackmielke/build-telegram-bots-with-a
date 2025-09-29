@@ -63,6 +63,7 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
   const [testInput, setTestInput] = useState('');
   const [testResult, setTestResult] = useState<any>(null);
   const [testLoading, setTestLoading] = useState(false);
+  const EDGE_FUNCTION_URL = 'https://efdqqnubowgwsnwvlalp.supabase.co/functions/v1/telegram-webhook';
   const [botFormData, setBotFormData] = useState({
     bot_name: '',
     bot_username: '',
@@ -375,6 +376,45 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
   const cancelEditingBot = () => {
     setEditingBot(null);
     setEditingBotData({});
+  };
+
+  const connectBotWebhook = async (bot: TelegramBot) => {
+    try {
+      setTestingBot(bot.id);
+      const webhookUrl = `${EDGE_FUNCTION_URL}?community_id=${community.id}`;
+      const resp = await fetch(`https://api.telegram.org/bot${bot.bot_token}/setWebhook`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: webhookUrl,
+          allowed_updates: ['message'],
+          drop_pending_updates: false
+        })
+      });
+      const data = await resp.json();
+      if (!data.ok) {
+        throw new Error(data.description || 'Failed to set webhook');
+      }
+
+      await supabase
+        .from('telegram_bots')
+        .update({ webhook_url: webhookUrl })
+        .eq('id', bot.id);
+
+      toast({
+        title: 'Webhook Connected',
+        description: `Telegram will now send updates to this community.`
+      });
+      fetchTelegramBots?.();
+    } catch (err: any) {
+      toast({
+        title: 'Webhook Error',
+        description: err?.message || 'Failed to connect webhook',
+        variant: 'destructive'
+      });
+    } finally {
+      setTestingBot(null);
+    }
   };
 
   const testWorkflow = async (workflow: any, input: string) => {
@@ -843,6 +883,19 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
                           </Badge>
                           {isAdmin && (
                             <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => connectBotWebhook(bot)}
+                                disabled={testingBot === bot.id}
+                              >
+                                {testingBot === bot.id ? (
+                                  <Loader className="w-4 h-4 animate-spin mr-2" />
+                                ) : (
+                                  <Globe className="w-4 h-4 mr-2" />
+                                )}
+                                Connect Webhook
+                              </Button>
                               <Button
                                 size="sm"
                                 variant="ghost"

@@ -452,6 +452,81 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
 
   return (
     <div className="space-y-6">
+      {/* Telegram Bot Configuration - Show at top if not configured */}
+      {!botInfo && (
+        <Card className="gradient-card border-border/50 border-primary/30">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Send className="w-5 h-5 text-primary" />
+              <span>Connect Telegram Bot</span>
+            </CardTitle>
+            <CardDescription>
+              Set up your Telegram bot to enable AI interactions
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="bot_token">Bot Token</Label>
+              <Input
+                id="bot_token"
+                type="password"
+                value={botToken}
+                onChange={(e) => setBotToken(e.target.value)}
+                placeholder="Enter bot token from @BotFather"
+              />
+              <p className="text-xs text-muted-foreground">
+                Get a bot token from <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">@BotFather</a> on Telegram
+              </p>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Button
+                onClick={async () => {
+                  if (botToken.trim()) {
+                    setTestingConnection(true);
+                    const result = await testBotConnection(botToken);
+                    toast({
+                      title: result.success ? "Connection Successful" : "Connection Failed",
+                      description: result.success 
+                        ? `Bot @${result.botInfo.username} is valid!`
+                        : result.message,
+                      variant: result.success ? "default" : "destructive"
+                    });
+                    if (result.success) {
+                      setBotInfo(result.botInfo);
+                    }
+                    setTestingConnection(false);
+                  }
+                }}
+                variant="outline"
+                size="sm"
+                disabled={!botToken.trim() || testingConnection}
+              >
+                {testingConnection ? (
+                  <Loader className="w-4 h-4 animate-spin mr-2" />
+                ) : (
+                  <TestTube className="w-4 h-4 mr-2" />
+                )}
+                Test Connection
+              </Button>
+              
+              <Button
+                onClick={saveBotToken}
+                size="sm"
+                disabled={!botToken.trim() || savingBot}
+              >
+                {savingBot ? (
+                  <Loader className="w-4 h-4 animate-spin mr-2" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                Save & Connect
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Workflow Overview */}
       <Card className="gradient-card border-border/50">
         <CardHeader>
@@ -546,19 +621,19 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
         </CardContent>
       </Card>
 
-      {/* Telegram Bot Configuration */}
-      <Card className="gradient-card border-border/50">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Send className="w-5 h-5 text-primary" />
-            <span>Telegram Bot</span>
-          </CardTitle>
-          <CardDescription>
-            Configure your Telegram bot for AI interactions
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {botInfo ? (
+      {/* Telegram Bot Configuration - Show here if already configured */}
+      {botInfo && (
+        <Card className="gradient-card border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Send className="w-5 h-5 text-primary" />
+              <span>Telegram Bot</span>
+            </CardTitle>
+            <CardDescription>
+              Your connected Telegram bot
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg border">
               <div className="flex items-center space-x-3">
                 <div className="p-2 rounded-lg bg-primary/10">
@@ -578,71 +653,9 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
               </div>
               <Badge variant="default">Connected</Badge>
             </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="bot_token">Bot Token</Label>
-                <Input
-                  id="bot_token"
-                  type="password"
-                  value={botToken}
-                  onChange={(e) => setBotToken(e.target.value)}
-                  placeholder="Enter bot token from @BotFather"
-                  disabled={!isAdmin}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Get a bot token from <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">@BotFather</a> on Telegram
-                </p>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Button
-                  onClick={async () => {
-                    if (botToken.trim()) {
-                      setTestingConnection(true);
-                      const result = await testBotConnection(botToken);
-                      toast({
-                        title: result.success ? "Connection Successful" : "Connection Failed",
-                        description: result.success 
-                          ? `Bot @${result.botInfo.username} is valid!`
-                          : result.message,
-                        variant: result.success ? "default" : "destructive"
-                      });
-                      if (result.success) {
-                        setBotInfo(result.botInfo);
-                      }
-                      setTestingConnection(false);
-                    }
-                  }}
-                  variant="outline"
-                  size="sm"
-                  disabled={!botToken.trim() || testingConnection || !isAdmin}
-                >
-                  {testingConnection ? (
-                    <Loader className="w-4 h-4 animate-spin mr-2" />
-                  ) : (
-                    <TestTube className="w-4 h-4 mr-2" />
-                  )}
-                  Test Connection
-                </Button>
-                
-                <Button
-                  onClick={saveBotToken}
-                  size="sm"
-                  disabled={!botToken.trim() || savingBot || !isAdmin}
-                >
-                  {savingBot ? (
-                    <Loader className="w-4 h-4 animate-spin mr-2" />
-                  ) : (
-                    <Save className="w-4 h-4 mr-2" />
-                  )}
-                  Save & Connect
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Coming Soon Features */}
       <Card className="gradient-card border-border/50">

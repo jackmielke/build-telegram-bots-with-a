@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Users, Crown, Shield, Plus, LogOut, Settings } from 'lucide-react';
+import { Loader2, Users, Crown, Shield, Plus, LogOut, Settings, Heart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Community {
@@ -17,6 +17,7 @@ interface Community {
   privacy_level: string;
   role: string;
   member_count?: number;
+  is_favorited: boolean;
 }
 
 const Communities = () => {
@@ -62,7 +63,7 @@ const Communities = () => {
         return;
       }
 
-      // Fetch communities user is a member of
+      // Fetch communities user is a member of with favorites info
       const { data, error } = await supabase
         .from('community_members')
         .select(`
@@ -81,10 +82,25 @@ const Communities = () => {
 
       if (error) throw error;
 
-      const formattedCommunities = data?.map(member => ({
+      // Get favorites for the user
+      const { data: favoritesData } = await supabase
+        .from('community_favorites')
+        .select('community_id')
+        .eq('user_id', userData.id);
+
+      const favoriteIds = new Set(favoritesData?.map(f => f.community_id) || []);
+
+      const formattedCommunities = (data?.map(member => ({
         ...member.communities,
-        role: member.role
-      })) || [];
+        role: member.role,
+        is_favorited: favoriteIds.has(member.communities.id)
+      })) || [])
+      .sort((a, b) => {
+        // Sort favorites first
+        if (a.is_favorited && !b.is_favorited) return -1;
+        if (!a.is_favorited && b.is_favorited) return 1;
+        return a.name.localeCompare(b.name);
+      });
 
       setCommunities(formattedCommunities as Community[]);
     } catch (error: any) {
@@ -100,6 +116,66 @@ const Communities = () => {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
+  };
+
+  const handleToggleFavorite = async (e: React.MouseEvent, communityId: string) => {
+    e.stopPropagation();
+    
+    if (!user) return;
+
+    try {
+      // Get user's internal ID
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .single();
+
+      if (!userData) return;
+
+      const community = communities.find(c => c.id === communityId);
+      if (!community) return;
+
+      if (community.is_favorited) {
+        // Remove from favorites
+        await supabase
+          .from('community_favorites')
+          .delete()
+          .eq('community_id', communityId)
+          .eq('user_id', userData.id);
+      } else {
+        // Add to favorites
+        await supabase
+          .from('community_favorites')
+          .insert({
+            community_id: communityId,
+            user_id: userData.id
+          });
+      }
+
+      // Update local state
+      setCommunities(prev => {
+        const updated = prev.map(c => 
+          c.id === communityId 
+            ? { ...c, is_favorited: !c.is_favorited }
+            : c
+        );
+        
+        // Re-sort with favorites first
+        return updated.sort((a, b) => {
+          if (a.is_favorited && !b.is_favorited) return -1;
+          if (!a.is_favorited && b.is_favorited) return 1;
+          return a.name.localeCompare(b.name);
+        });
+      });
+
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to update favorite",
+        variant: "destructive"
+      });
+    }
   };
 
   const getRoleIcon = (role: string) => {
@@ -196,9 +272,23 @@ const Communities = () => {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <CardTitle className="text-lg group-hover:text-primary transition-colors truncate">
-                        {community.name}
-                      </CardTitle>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg group-hover:text-primary transition-colors truncate">
+                          {community.name}
+                        </CardTitle>
+                        <button
+                          onClick={(e) => handleToggleFavorite(e, community.id)}
+                          className="p-1 hover:bg-muted rounded-md transition-colors"
+                        >
+                          <Heart 
+                            className={`w-4 h-4 transition-colors ${
+                              community.is_favorited 
+                                ? 'fill-red-500 text-red-500' 
+                                : 'text-muted-foreground hover:text-red-500'
+                            }`}
+                          />
+                        </button>
+                      </div>
                       {community.agent_name && (
                         <p className="text-sm text-muted-foreground truncate">
                           Agent: {community.agent_name}

@@ -121,6 +121,8 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
       setWorkflows(workflowsWithInfo);
     } catch (error: any) {
       console.error('Error fetching workflows:', error);
+    } finally {
+      setLoading(false);
     }
   };
 

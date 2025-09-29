@@ -11,23 +11,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Zap, 
-  Plus, 
   Send, 
   Bot, 
-  Users, 
   Search,
-  Settings,
   MessageSquare,
-  Globe,
   Workflow,
   TestTube,
-  Play,
   CheckCircle,
   XCircle,
   Loader,
-  Edit3,
   Save,
-  X
+  Globe,
+  Play
 } from 'lucide-react';
 
 interface Community {
@@ -37,41 +32,24 @@ interface Community {
   telegram_bot_url: string | null;
 }
 
-interface TelegramBot {
-  id: string;
-  bot_name: string | null;
-  bot_username: string;
-  bot_token: string;
-  is_active: boolean;
-  webhook_url: string | null;
-  last_activity_at: string | null;
-  created_at: string;
-}
-
 interface WorkflowBuilderProps {
   community: Community;
   isAdmin: boolean;
 }
 
 const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
-  const [telegramBots, setTelegramBots] = useState<TelegramBot[]>([]);
   const [workflows, setWorkflows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreateBot, setShowCreateBot] = useState(false);
   const [showTestDialog, setShowTestDialog] = useState(false);
   const [selectedWorkflow, setSelectedWorkflow] = useState<any>(null);
   const [testInput, setTestInput] = useState('');
   const [testResult, setTestResult] = useState<any>(null);
   const [testLoading, setTestLoading] = useState(false);
+  const [botToken, setBotToken] = useState(community.telegram_bot_token || '');
+  const [botInfo, setBotInfo] = useState<any>(null);
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [savingBot, setSavingBot] = useState(false);
   const EDGE_FUNCTION_URL = 'https://efdqqnubowgwsnwvlalp.supabase.co/functions/v1/telegram-webhook';
-  const [botFormData, setBotFormData] = useState({
-    bot_name: '',
-    bot_username: '',
-    bot_token: ''
-  });
-  const [editingBot, setEditingBot] = useState<string | null>(null);
-  const [editingBotData, setEditingBotData] = useState<any>({});
-  const [testingBot, setTestingBot] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Define available workflow types
@@ -110,26 +88,15 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
   ];
 
   useEffect(() => {
-    fetchTelegramBots();
     fetchWorkflows();
-  }, [community.id]);
-
-  const fetchTelegramBots = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('telegram_bots')
-        .select('*')
-        .eq('community_id', community.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setTelegramBots(data || []);
-    } catch (error: any) {
-      console.error('Error fetching telegram bots:', error);
-    } finally {
-      setLoading(false);
+    if (community.telegram_bot_token) {
+      testBotConnection(community.telegram_bot_token).then(result => {
+        if (result.success) {
+          setBotInfo(result.botInfo);
+        }
+      });
     }
-  };
+  }, [community.id, community.telegram_bot_token]);
 
   const fetchWorkflows = async () => {
     try {
@@ -292,10 +259,9 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
   };
 
   // Bot management functions
-  const testBotConnection = async (botToken: string) => {
+  const testBotConnection = async (token: string) => {
     try {
-      setTestingBot('test');
-      const response = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
+      const response = await fetch(`https://api.telegram.org/bot${token}/getMe`);
       const data = await response.json();
       
       if (data.ok) {
@@ -315,25 +281,17 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
         success: false,
         message: 'Failed to connect to Telegram API'
       };
-    } finally {
-      setTestingBot(null);
     }
   };
 
-  const startEditingBot = (bot: TelegramBot) => {
-    setEditingBot(bot.id);
-    setEditingBotData({
-      bot_name: bot.bot_name || '',
-      bot_token: bot.bot_token,
-      bot_username: bot.bot_username
-    });
-  };
-
-  const saveBot = async (botId: string) => {
+  const saveBotToken = async () => {
+    if (!botToken.trim()) return;
+    
     try {
-      // Test the connection first
-      const testResult = await testBotConnection(editingBotData.bot_token);
+      setSavingBot(true);
       
+      // Test connection first
+      const testResult = await testBotConnection(botToken);
       if (!testResult.success) {
         toast({
           title: "Invalid Bot Token",
@@ -343,46 +301,41 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
         return;
       }
 
-      // Update bot with real info from Telegram API
-      const { error } = await supabase
-        .from('telegram_bots')
-        .update({
-          bot_name: editingBotData.bot_name || testResult.botInfo.first_name,
-          bot_username: testResult.botInfo.username,
-          bot_token: editingBotData.bot_token
+      // Save to community
+      const { error: updateError } = await supabase
+        .from('communities')
+        .update({ 
+          telegram_bot_token: botToken,
+          telegram_bot_url: `https://t.me/${testResult.botInfo.username}`
         })
-        .eq('id', botId);
+        .eq('id', community.id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
+      // Set up webhook
+      await setupWebhook(botToken);
+
+      setBotInfo(testResult.botInfo);
       toast({
-        title: "Bot Updated",
-        description: `Bot @${testResult.botInfo.username} updated successfully!`
+        title: "Bot Connected",
+        description: `@${testResult.botInfo.username} connected successfully!`
       });
-
-      setEditingBot(null);
-      setEditingBotData({});
-      fetchTelegramBots(); // Refresh the list
     } catch (error: any) {
-      console.error('Error updating bot:', error);
+      console.error('Error saving bot token:', error);
       toast({
         title: "Error",
-        description: "Failed to update bot",
+        description: "Failed to save bot token",
         variant: "destructive"
       });
+    } finally {
+      setSavingBot(false);
     }
   };
 
-  const cancelEditingBot = () => {
-    setEditingBot(null);
-    setEditingBotData({});
-  };
-
-  const connectBotWebhook = async (bot: TelegramBot) => {
+  const setupWebhook = async (token: string) => {
     try {
-      setTestingBot(bot.id);
       const webhookUrl = `${EDGE_FUNCTION_URL}?community_id=${community.id}`;
-      const resp = await fetch(`https://api.telegram.org/bot${bot.bot_token}/setWebhook`, {
+      const response = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -391,31 +344,16 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
           drop_pending_updates: false
         })
       });
-      const data = await resp.json();
+      const data = await response.json();
       if (!data.ok) {
         throw new Error(data.description || 'Failed to set webhook');
       }
-
-      await supabase
-        .from('telegram_bots')
-        .update({ webhook_url: webhookUrl })
-        .eq('id', bot.id);
-
-      toast({
-        title: 'Webhook Connected',
-        description: `Telegram will now send updates to this community.`
-      });
-      fetchTelegramBots?.();
-    } catch (err: any) {
-      toast({
-        title: 'Webhook Error',
-        description: err?.message || 'Failed to connect webhook',
-        variant: 'destructive'
-      });
-    } finally {
-      setTestingBot(null);
+    } catch (error) {
+      console.error('Webhook setup error:', error);
+      // Don't fail the whole operation for webhook issues
     }
   };
+
 
   const testWorkflow = async (workflow: any, input: string) => {
     if (!workflow || !workflow.enabled) {
@@ -479,77 +417,6 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
     }
   };
 
-  const handleCreateTelegramBot = async () => {
-    if (!isAdmin) return;
-    
-    try {
-      // Get current user
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
-
-      const { data: userData } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', session.user.id)
-        .single();
-
-      if (!userData) throw new Error('User not found');
-
-      const { error } = await supabase
-        .from('telegram_bots')
-        .insert({
-          community_id: community.id,
-          user_id: userData.id,
-          bot_name: botFormData.bot_name,
-          bot_username: botFormData.bot_username,
-          bot_token: botFormData.bot_token,
-          is_active: true
-        });
-
-      if (error) throw error;
-      
-      toast({
-        title: "Telegram Bot Created",
-        description: "Your Telegram bot has been set up successfully.",
-      });
-      
-      setBotFormData({ bot_name: '', bot_username: '', bot_token: '' });
-      setShowCreateBot(false);
-      fetchTelegramBots();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to create Telegram bot",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const toggleBotStatus = async (botId: string, currentStatus: boolean) => {
-    if (!isAdmin) return;
-    
-    try {
-      const { error } = await supabase
-        .from('telegram_bots')
-        .update({ is_active: !currentStatus })
-        .eq('id', botId);
-
-      if (error) throw error;
-      
-      toast({
-        title: currentStatus ? "Bot Disabled" : "Bot Enabled",
-        description: `Telegram bot has been ${currentStatus ? 'disabled' : 'enabled'}.`,
-      });
-      
-      fetchTelegramBots();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to update bot status",
-        variant: "destructive"
-      });
-    }
-  };
 
   const getWorkflowIcon = (type: string) => {
     switch (type) {
@@ -679,242 +546,99 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
         </CardContent>
       </Card>
 
-      {/* Telegram Integration */}
+      {/* Telegram Bot Configuration */}
       <Card className="gradient-card border-border/50">
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Send className="w-5 h-5 text-primary" />
-              <span>Telegram Bots</span>
-            </div>
-            {isAdmin && (
-              <Dialog open={showCreateBot} onOpenChange={setShowCreateBot}>
-                <DialogTrigger asChild>
-                  <Button size="sm" className="gradient-primary">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Bot
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Create Telegram Bot</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="bot_name">Bot Name</Label>
-                      <Input
-                        id="bot_name"
-                        value={botFormData.bot_name}
-                        onChange={(e) => setBotFormData({ ...botFormData, bot_name: e.target.value })}
-                        placeholder="My Community Bot"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="bot_username">Bot Username</Label>
-                      <Input
-                        id="bot_username"
-                        value={botFormData.bot_username}
-                        onChange={(e) => setBotFormData({ ...botFormData, bot_username: e.target.value })}
-                        placeholder="@mycommunitybot"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="bot_token">Bot Token</Label>
-                      <Input
-                        id="bot_token"
-                        type="password"
-                        value={botFormData.bot_token}
-                        onChange={(e) => setBotFormData({ ...botFormData, bot_token: e.target.value })}
-                        placeholder="Bot token from @BotFather"
-                      />
-                    </div>
-                    <div className="flex justify-end space-x-2">
-                      <Button variant="outline" onClick={() => setShowCreateBot(false)}>
-                        Cancel
-                      </Button>
-                      <Button onClick={handleCreateTelegramBot}>
-                        Create Bot
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            )}
+          <CardTitle className="flex items-center space-x-2">
+            <Send className="w-5 h-5 text-primary" />
+            <span>Telegram Bot</span>
           </CardTitle>
           <CardDescription>
-            Manage Telegram bot integrations for your community
+            Configure your Telegram bot for AI interactions
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          {telegramBots.length === 0 ? (
-            <div className="text-center py-8">
-              <Send className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">No Telegram bots</h3>
-              <p className="text-muted-foreground mb-4">
-                Create a Telegram bot to enable AI interactions on Telegram
-              </p>
-              {isAdmin && (
-                <Button onClick={() => setShowCreateBot(true)} variant="outline">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create First Bot
-                </Button>
-              )}
+        <CardContent className="space-y-4">
+          {botInfo ? (
+            <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg border">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Bot className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h4 className="font-medium">{botInfo.first_name}</h4>
+                    <Badge variant="outline" className="text-xs">
+                      @{botInfo.username}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Bot ID: {botInfo.id}
+                  </p>
+                </div>
+              </div>
+              <Badge variant="default">Connected</Badge>
             </div>
           ) : (
             <div className="space-y-4">
-              {telegramBots.map((bot) => (
-                <Card key={bot.id} className="border-border/30">
-                  <CardContent className="p-4">
-                    {editingBot === bot.id ? (
-                      // Edit mode
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium">Edit Bot</h4>
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              size="sm"
-                              onClick={() => saveBot(bot.id)}
-                              disabled={testingBot === 'test'}
-                            >
-                              {testingBot === 'test' ? (
-                                <Loader className="w-4 h-4 animate-spin mr-2" />
-                              ) : (
-                                <Save className="w-4 h-4 mr-2" />
-                              )}
-                              Save
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={cancelEditingBot}
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 gap-4">
-                          <div>
-                            <Label htmlFor={`bot-name-${bot.id}`}>Bot Name</Label>
-                            <Input
-                              id={`bot-name-${bot.id}`}
-                              value={editingBotData.bot_name || ''}
-                              onChange={(e) => setEditingBotData({
-                                ...editingBotData,
-                                bot_name: e.target.value
-                              })}
-                              placeholder="Enter bot name"
-                            />
-                          </div>
-                          
-                          <div>
-                            <Label htmlFor={`bot-token-${bot.id}`}>Bot Token</Label>
-                            <Input
-                              id={`bot-token-${bot.id}`}
-                              type="password"
-                              value={editingBotData.bot_token || ''}
-                              onChange={(e) => setEditingBotData({
-                                ...editingBotData,
-                                bot_token: e.target.value
-                              })}
-                              placeholder="Enter bot token from @BotFather"
-                            />
-                          </div>
-                          
-                          <Button
-                            variant="outline"
-                            onClick={async () => {
-                              if (editingBotData.bot_token) {
-                                const result = await testBotConnection(editingBotData.bot_token);
-                                toast({
-                                  title: result.success ? "Connection Successful" : "Connection Failed",
-                                  description: result.success 
-                                    ? `Bot @${result.botInfo.username} is valid!`
-                                    : result.message,
-                                  variant: result.success ? "default" : "destructive"
-                                });
-                                if (result.success) {
-                                  setEditingBotData({
-                                    ...editingBotData,
-                                    bot_username: result.botInfo.username
-                                  });
-                                }
-                              }
-                            }}
-                            disabled={!editingBotData.bot_token || testingBot === 'test'}
-                          >
-                            {testingBot === 'test' ? (
-                              <Loader className="w-4 h-4 animate-spin mr-2" />
-                            ) : (
-                              <TestTube className="w-4 h-4 mr-2" />
-                            )}
-                            Test Connection
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      // Display mode
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="p-2 rounded-lg bg-primary/10">
-                            <Bot className="w-5 h-5 text-primary" />
-                          </div>
-                          <div>
-                            <div className="flex items-center space-x-2">
-                              <h4 className="font-medium">
-                                {bot.bot_name || bot.bot_username}
-                              </h4>
-                              {bot.bot_username && (
-                                <Badge variant="outline" className="text-xs">
-                                  @{bot.bot_username}
-                                </Badge>
-                              )}
-                            </div>
-                            {bot.last_activity_at && (
-                              <p className="text-xs text-muted-foreground">
-                                Last active: {new Date(bot.last_activity_at).toLocaleString()}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <Badge variant={bot.is_active ? 'default' : 'outline'}>
-                            {bot.is_active ? 'Active' : 'Inactive'}
-                          </Badge>
-                          {isAdmin && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => connectBotWebhook(bot)}
-                                disabled={testingBot === bot.id}
-                              >
-                                {testingBot === bot.id ? (
-                                  <Loader className="w-4 h-4 animate-spin mr-2" />
-                                ) : (
-                                  <Globe className="w-4 h-4 mr-2" />
-                                )}
-                                Connect Webhook
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => startEditingBot(bot)}
-                              >
-                                <Edit3 className="w-4 h-4" />
-                              </Button>
-                              <Switch 
-                                checked={bot.is_active}
-                                onCheckedChange={() => toggleBotStatus(bot.id, bot.is_active)}
-                              />
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+              <div className="space-y-2">
+                <Label htmlFor="bot_token">Bot Token</Label>
+                <Input
+                  id="bot_token"
+                  type="password"
+                  value={botToken}
+                  onChange={(e) => setBotToken(e.target.value)}
+                  placeholder="Enter bot token from @BotFather"
+                  disabled={!isAdmin}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Get a bot token from <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">@BotFather</a> on Telegram
+                </p>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Button
+                  onClick={async () => {
+                    if (botToken.trim()) {
+                      setTestingConnection(true);
+                      const result = await testBotConnection(botToken);
+                      toast({
+                        title: result.success ? "Connection Successful" : "Connection Failed",
+                        description: result.success 
+                          ? `Bot @${result.botInfo.username} is valid!`
+                          : result.message,
+                        variant: result.success ? "default" : "destructive"
+                      });
+                      if (result.success) {
+                        setBotInfo(result.botInfo);
+                      }
+                      setTestingConnection(false);
+                    }
+                  }}
+                  variant="outline"
+                  size="sm"
+                  disabled={!botToken.trim() || testingConnection || !isAdmin}
+                >
+                  {testingConnection ? (
+                    <Loader className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <TestTube className="w-4 h-4 mr-2" />
+                  )}
+                  Test Connection
+                </Button>
+                
+                <Button
+                  onClick={saveBotToken}
+                  size="sm"
+                  disabled={!botToken.trim() || savingBot || !isAdmin}
+                >
+                  {savingBot ? (
+                    <Loader className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  Save & Connect
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

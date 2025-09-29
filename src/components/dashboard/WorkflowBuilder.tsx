@@ -35,9 +35,10 @@ interface Community {
 interface WorkflowBuilderProps {
   community: Community;
   isAdmin: boolean;
+  onUpdate?: (updatedCommunity: Partial<Community>) => void;
 }
 
-const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
+const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps) => {
   const [workflows, setWorkflows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showTestDialog, setShowTestDialog] = useState(false);
@@ -130,6 +131,11 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
     if (!isAdmin) return;
     
     try {
+      // Optimistically update UI
+      setWorkflows(prev => prev.map(w => 
+        w.type === workflowType ? { ...w, enabled: !currentEnabled } : w
+      ));
+
       const { error } = await supabase
         .from('community_workflows')
         .upsert({
@@ -147,9 +153,12 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
         description: `${workflowTypes.find(w => w.type === workflowType)?.name} has been ${currentEnabled ? 'disabled' : 'enabled'}.`,
       });
       
-      fetchWorkflows();
+      // Refresh to ensure consistency
+      await fetchWorkflows();
     } catch (error: any) {
       console.error('Error toggling workflow:', error);
+      // Revert optimistic update on error
+      await fetchWorkflows();
       toast({
         title: "Error",
         description: "Failed to update workflow status",
@@ -318,6 +327,15 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
       await setupWebhook(botToken);
 
       setBotInfo(testResult.botInfo);
+      
+      // Update parent component
+      if (onUpdate) {
+        onUpdate({
+          telegram_bot_token: botToken,
+          telegram_bot_url: `https://t.me/${testResult.botInfo.username}`
+        });
+      }
+      
       toast({
         title: "Bot Connected",
         description: `@${testResult.botInfo.username} connected successfully!`
@@ -653,7 +671,7 @@ const WorkflowBuilder = ({ community, isAdmin }: WorkflowBuilderProps) => {
                   </p>
                 </div>
               </div>
-              <Badge variant="default">Connected</Badge>
+              <Badge variant="default" className="shrink-0 text-xs sm:text-sm">Connected</Badge>
             </div>
           </CardContent>
         </Card>

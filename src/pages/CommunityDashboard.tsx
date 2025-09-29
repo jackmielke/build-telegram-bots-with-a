@@ -44,7 +44,7 @@ const CommunityDashboard = () => {
   const { toast } = useToast();
   const [community, setCommunity] = useState<Community | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('agent');
+  const [activeTab, setActiveTab] = useState('agent-workflows');
 
   useEffect(() => {
     const checkAuthAndFetchCommunity = async () => {
@@ -202,45 +202,40 @@ const CommunityDashboard = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 gap-2 bg-card/50 p-2 h-auto">
-            {/* First row - 3 items */}
-            <TabsTrigger value="agent" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-2 bg-card/50 p-2 h-auto">
+            <TabsTrigger value="agent-workflows" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
               <Bot className="w-6 h-6 text-primary" />
-              <span className="text-xs">Agent</span>
+              <span className="text-xs">Agent & Workflows</span>
             </TabsTrigger>
             <TabsTrigger value="analytics" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
               <BarChart3 className="w-6 h-6 text-primary" />
               <span className="text-xs">Activity</span>
             </TabsTrigger>
-            <TabsTrigger value="workflows" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
-              <Zap className="w-6 h-6 text-primary" />
-              <span className="text-xs">Workflows</span>
-            </TabsTrigger>
-            {/* Second row - 2 items centered */}
-            <TabsTrigger value="memory" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm col-start-1 sm:col-start-1">
+            <TabsTrigger value="memory" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
               <Brain className="w-6 h-6 text-primary" />
               <span className="text-xs">Memory</span>
             </TabsTrigger>
-            <TabsTrigger value="community" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm col-start-2 sm:col-start-3">
+            <TabsTrigger value="community" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
               <Users className="w-6 h-6 text-primary" />
               <span className="text-xs">Settings</span>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="agent" className="space-y-6">
+          <TabsContent value="agent-workflows" className="space-y-6">
             <AgentConfiguration 
               community={community} 
               isAdmin={isAdmin} 
               onUpdate={(updatedCommunity) => setCommunity(prev => ({ ...prev, ...updatedCommunity }))} 
             />
+            <WorkflowBuilder 
+              community={community} 
+              isAdmin={isAdmin}
+              onUpdate={(updatedCommunity) => setCommunity(prev => ({ ...prev, ...updatedCommunity }))}
+            />
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-6">
             <AnalyticsDashboard community={community} />
-          </TabsContent>
-
-          <TabsContent value="workflows" className="space-y-6">
-            <WorkflowBuilder community={community} isAdmin={isAdmin} />
           </TabsContent>
 
           <TabsContent value="memory" className="space-y-6">

@@ -184,7 +184,7 @@ serve(async (req) => {
 
       console.log(`Processing ${chatType} message:`, body.message.text);
       
-      // Send a basic reply back to Telegram so the bot responds in chat
+      // Get AI response and send back to Telegram
       try {
         const chatId = body.message?.chat?.id;
         if (!chatId) {
@@ -194,10 +194,53 @@ serve(async (req) => {
           if (!botToken) {
             console.error('No Telegram bot token configured for community:', communityId);
           } else {
-            const replyText = body.message?.text
-              ? `Echo: ${body.message.text}`
-              : 'Received your message.';
+            // Get community agent configuration
+            const { data: communityData } = await supabase
+              .from('communities')
+              .select('agent_instructions, agent_name, agent_model')
+              .eq('id', communityId)
+              .single();
 
+            const userMessage = body.message?.text || 'Hello';
+            
+            // Call OpenAI for AI response
+            const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+            if (!openaiApiKey) {
+              console.error('OpenAI API key not configured');
+              throw new Error('AI service not configured');
+            }
+
+            const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${openaiApiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: communityData?.agent_model || 'gpt-4o-mini',
+                messages: [
+                  {
+                    role: 'system',
+                    content: communityData?.agent_instructions || 'You are a helpful community assistant.'
+                  },
+                  {
+                    role: 'user',
+                    content: userMessage
+                  }
+                ],
+                max_completion_tokens: 500,
+              }),
+            });
+
+            if (!aiResponse.ok) {
+              console.error('OpenAI API error:', await aiResponse.text());
+              throw new Error('Failed to get AI response');
+            }
+
+            const aiData = await aiResponse.json();
+            const replyText = aiData.choices?.[0]?.message?.content || 'Sorry, I could not generate a response.';
+
+            // Send AI response to Telegram
             const tgResp = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },

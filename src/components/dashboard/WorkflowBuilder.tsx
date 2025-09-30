@@ -295,18 +295,41 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
     }
   };
 
+  const handleTestConnection = async () => {
+    if (!botToken.trim()) return;
+    
+    setTestingConnection(true);
+    const result = await testBotConnection(botToken);
+    
+    if (result.success) {
+      setBotInfo(result.botInfo);
+      toast({
+        title: "✓ Connection Successful",
+        description: `Bot @${result.botInfo.username} is ready to connect!`,
+      });
+    } else {
+      toast({
+        title: "Connection Failed",
+        description: result.message,
+        variant: "destructive"
+      });
+    }
+    setTestingConnection(false);
+  };
+
   const saveBotToken = async () => {
     if (!botToken.trim()) return;
     
     try {
       setSavingBot(true);
       
-      // Test connection first
-      const testResult = await testBotConnection(botToken);
+      // Test connection first if we haven't already
+      let testResult = botInfo ? { success: true, botInfo } : await testBotConnection(botToken);
+      
       if (!testResult.success) {
         toast({
           title: "Invalid Bot Token",
-          description: testResult.message,
+          description: 'botInfo' in testResult ? 'Connection failed' : testResult.message || 'Connection failed',
           variant: "destructive"
         });
         return;
@@ -337,8 +360,8 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
       }
       
       toast({
-        title: "Bot Connected",
-        description: `@${testResult.botInfo.username} connected successfully!`
+        title: "🎉 Bot Connected!",
+        description: `@${testResult.botInfo.username} is now connected and ready to respond.`
       });
     } catch (error: any) {
       console.error('Error saving bot token:', error);
@@ -499,25 +522,25 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
               </p>
             </div>
             
+            {botInfo && (
+              <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg mb-4">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <div>
+                    <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                      Connected to @{botInfo.username}
+                    </p>
+                    <p className="text-xs text-green-700 dark:text-green-300">
+                      Ready to save and activate
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div className="flex items-center space-x-2">
               <Button
-                onClick={async () => {
-                  if (botToken.trim()) {
-                    setTestingConnection(true);
-                    const result = await testBotConnection(botToken);
-                    toast({
-                      title: result.success ? "Connection Successful" : "Connection Failed",
-                      description: result.success 
-                        ? `Bot @${result.botInfo.username} is valid!`
-                        : result.message,
-                      variant: result.success ? "default" : "destructive"
-                    });
-                    if (result.success) {
-                      setBotInfo(result.botInfo);
-                    }
-                    setTestingConnection(false);
-                  }
-                }}
+                onClick={handleTestConnection}
                 variant="outline"
                 size="sm"
                 disabled={!botToken.trim() || testingConnection}
@@ -540,7 +563,7 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                 ) : (
                   <Save className="w-4 h-4 mr-2" />
                 )}
-                Save & Connect
+                Connect Bot
               </Button>
             </div>
           </CardContent>
@@ -641,37 +664,49 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
         </CardContent>
       </Card>
 
-      {/* Telegram Bot Configuration - Show here if already configured */}
+      {/* Telegram Bot Connection Status - Show here if already configured */}
       {botInfo && (
-        <Card className="gradient-card border-border/50">
+        <Card className="gradient-card border-green-500/30 bg-green-50/5">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Send className="w-5 h-5 text-primary" />
-              <span>Telegram Bot</span>
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <span>Telegram Bot Connected</span>
             </CardTitle>
             <CardDescription>
-              Your connected Telegram bot
+              Your bot is active and responding to messages
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg border">
+            <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg border border-green-500/20">
               <div className="flex items-center space-x-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Bot className="w-5 h-5 text-primary" />
+                <div className="p-3 rounded-lg bg-green-500/10">
+                  <Bot className="w-6 h-6 text-green-600" />
                 </div>
                 <div>
-                  <div className="flex items-center space-x-2">
-                    <h4 className="font-medium">{botInfo.first_name}</h4>
-                    <Badge variant="outline" className="text-xs">
+                  <div className="flex items-center space-x-2 mb-1">
+                    <h4 className="font-semibold text-lg">{botInfo.first_name}</h4>
+                    <Badge variant="default" className="bg-green-600 text-white">
                       @{botInfo.username}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Bot ID: {botInfo.id}
                   </p>
+                  <a 
+                    href={`https://t.me/${botInfo.username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary hover:underline inline-flex items-center mt-1"
+                  >
+                    Open in Telegram →
+                  </a>
                 </div>
               </div>
-              <Badge variant="default" className="shrink-0 text-xs sm:text-sm">Connected</Badge>
+              <div className="flex flex-col items-end gap-2">
+                <Badge variant="default" className="bg-green-600">
+                  ✓ Active
+                </Badge>
+              </div>
             </div>
           </CardContent>
         </Card>

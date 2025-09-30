@@ -251,8 +251,111 @@ const Communities = () => {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {communities.map((community) => (
+            {/* Admin Communities Section */}
+            {communities.filter(c => c.role === 'admin').length > 0 && (
+              <div className="mb-12">
+                <div className="mb-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Crown className="w-5 h-5 text-primary" />
+                    <h2 className="text-xl font-semibold">Your Communities</h2>
+                    <Badge variant="secondary" className="text-xs">
+                      {communities.filter(c => c.role === 'admin').length}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Communities you manage and have full control over
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {communities.filter(c => c.role === 'admin').map((community) => (
+                    <Card 
+                      key={community.id}
+                      className="group cursor-pointer hover:shadow-glow transition-all duration-300 border-border/50 hover:border-primary/50"
+                      onClick={() => navigate(`/community/${community.id}`)}
+                    >
+                      <CardHeader className="space-y-3">
+                        <div className="flex items-start space-x-3">
+                          <div className="w-16 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center flex-shrink-0">
+                            {community.cover_image_url ? (
+                              <img 
+                                src={community.cover_image_url} 
+                                alt={community.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Users className="w-6 h-6 text-primary" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-lg group-hover:text-primary transition-colors truncate">
+                                {community.name}
+                              </CardTitle>
+                              <button
+                                onClick={(e) => handleToggleFavorite(e, community.id)}
+                                className="p-1 hover:bg-muted rounded-md transition-colors"
+                              >
+                                <Heart 
+                                  className={`w-4 h-4 transition-colors ${
+                                    community.is_favorited 
+                                      ? 'fill-red-500 text-red-500' 
+                                      : 'text-muted-foreground hover:text-red-500'
+                                  }`}
+                                />
+                              </button>
+                            </div>
+                            {community.agent_name && (
+                              <p className="text-sm text-muted-foreground truncate">
+                                Agent: {community.agent_name}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </CardHeader>
+
+                      <CardContent>
+                        <CardDescription className="line-clamp-2">
+                          {community.description || "No description available"}
+                        </CardDescription>
+                        
+                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="outline" className="text-xs">
+                              {community.privacy_level}
+                            </Badge>
+                            <Badge variant="default" className="flex items-center space-x-1 text-xs">
+                              <Crown className="w-3 h-3" />
+                              <span>Admin</span>
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Click to manage →
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Member Communities Section */}
+            {communities.filter(c => c.role !== 'admin').length > 0 && (
+              <div className="mb-8">
+                <div className="mb-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Users className="w-5 h-5 text-primary" />
+                    <h2 className="text-xl font-semibold">Joined Communities</h2>
+                    <Badge variant="secondary" className="text-xs">
+                      {communities.filter(c => c.role !== 'admin').length}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Communities you're a member of (view-only access)
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {communities.filter(c => c.role !== 'admin').map((community) => (
                 <Card 
                   key={community.id}
                   className="group cursor-pointer hover:shadow-glow transition-all duration-300 border-border/50 hover:border-primary/50"
@@ -314,13 +417,15 @@ const Communities = () => {
                         </Badge>
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        Click to manage →
+                        Click to view →
                       </div>
                     </div>
                   </CardContent>
-                </Card>
-              ))}
-            </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Sign out button at bottom */}
             <div className="flex justify-center pt-6 border-t border-border/30">

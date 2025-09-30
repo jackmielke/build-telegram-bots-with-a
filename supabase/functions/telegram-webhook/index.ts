@@ -190,6 +190,40 @@ serve(async (req) => {
         if (!chatId) {
           console.log('No chat id found in message, cannot reply');
         } else {
+          const userMessage = body.message?.text || 'Hello';
+          const telegramUserId = body.message?.from?.id;
+          const conversationId = `telegram_${chatId}`;
+          
+          // Store incoming user message
+          const { error: insertUserMsgError } = await supabase
+            .from('messages')
+            .insert({
+              content: userMessage,
+              chat_type: 'telegram_bot',
+              conversation_id: conversationId,
+              community_id: communityId,
+              sent_by: body.message?.from?.username || body.message?.from?.first_name || 'telegram_user',
+              metadata: {
+                telegram_chat_id: chatId,
+                telegram_user_id: telegramUserId,
+                telegram_message_id: body.message?.message_id,
+                chat_type_detail: chatType
+              }
+            });
+          
+          if (insertUserMsgError) {
+            console.error('Error storing user message:', insertUserMsgError);
+          }
+
+          // Fetch conversation history (last 20 messages)
+          const { data: conversationHistory } = await supabase
+            .from('messages')
+            .select('content, sent_by')
+            .eq('conversation_id', conversationId)
+            .eq('community_id', communityId)
+            .order('created_at', { ascending: false })
+            .limit(20);
+
           const botToken = await getBotToken(supabase, communityId);
           
           // Send typing indicator immediately
@@ -229,7 +263,13 @@ serve(async (req) => {
                 memories.map(m => m.content).join('\n---\n');
             }
 
-            const userMessage = body.message?.text || 'Hello';
+            // Build conversation history for OpenAI (reverse to chronological order)
+            const conversationMessages = conversationHistory && conversationHistory.length > 0
+              ? conversationHistory.reverse().map(msg => ({
+                  role: msg.sent_by === 'ai' ? 'assistant' : 'user',
+                  content: msg.content
+                }))
+              : [];
             
             // Call OpenAI for AI response
             const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
@@ -249,6 +289,7 @@ serve(async (req) => {
                   role: 'system',
                   content: systemPrompt
                 },
+                ...conversationMessages.slice(-10), // Last 10 messages for context
                 {
                   role: 'user',
                   content: userMessage
@@ -283,6 +324,27 @@ serve(async (req) => {
             const aiData = await aiResponse.json();
             const replyText = aiData.choices?.[0]?.message?.content || 'Sorry, I could not generate a response.';
             const responseTime = Date.now() - startTime;
+
+            // Store AI response message
+            const { error: insertAiMsgError } = await supabase
+              .from('messages')
+              .insert({
+                content: replyText,
+                chat_type: 'telegram_bot',
+                conversation_id: conversationId,
+                community_id: communityId,
+                sent_by: 'ai',
+                metadata: {
+                  telegram_chat_id: chatId,
+                  model_used: model,
+                  response_time_ms: responseTime,
+                  chat_type_detail: chatType
+                }
+              });
+            
+            if (insertAiMsgError) {
+              console.error('Error storing AI response:', insertAiMsgError);
+            }
 
             // 🚀 SEND TO TELEGRAM IMMEDIATELY (don't wait for analytics)
             const telegramPromise = fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {

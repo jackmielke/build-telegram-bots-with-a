@@ -194,6 +194,15 @@ serve(async (req) => {
           const telegramUserId = body.message?.from?.id;
           const conversationId = `telegram_${chatId}`;
           
+          // Fetch conversation history BEFORE storing new message (last 20 messages)
+          const { data: conversationHistory } = await supabase
+            .from('messages')
+            .select('content, sent_by')
+            .eq('conversation_id', conversationId)
+            .eq('community_id', communityId)
+            .order('created_at', { ascending: false })
+            .limit(20);
+
           // Store incoming user message
           const { error: insertUserMsgError } = await supabase
             .from('messages')
@@ -214,15 +223,6 @@ serve(async (req) => {
           if (insertUserMsgError) {
             console.error('Error storing user message:', insertUserMsgError);
           }
-
-          // Fetch conversation history (last 20 messages)
-          const { data: conversationHistory } = await supabase
-            .from('messages')
-            .select('content, sent_by')
-            .eq('conversation_id', conversationId)
-            .eq('community_id', communityId)
-            .order('created_at', { ascending: false })
-            .limit(20);
 
           const botToken = await getBotToken(supabase, communityId);
           

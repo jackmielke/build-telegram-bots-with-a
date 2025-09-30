@@ -284,37 +284,8 @@ serve(async (req) => {
             const replyText = aiData.choices?.[0]?.message?.content || 'Sorry, I could not generate a response.';
             const responseTime = Date.now() - startTime;
 
-            // Track analytics
-            const tokensUsed = aiData.usage?.total_tokens || 0;
-            const promptTokens = aiData.usage?.prompt_tokens || 0;
-            const completionTokens = aiData.usage?.completion_tokens || 0;
-            
-            // Rough cost estimation (adjust per model pricing)
-            const costPer1kInput = 0.00015; // gpt-4o-mini input
-            const costPer1kOutput = 0.0006; // gpt-4o-mini output
-            const estimatedCost = (promptTokens / 1000 * costPer1kInput) + (completionTokens / 1000 * costPer1kOutput);
-
-            console.log(`Analytics: ${tokensUsed} tokens, ${responseTime}ms, $${estimatedCost.toFixed(6)}`);
-
-            // Insert analytics record
-            await supabase
-              .from('ai_chat_sessions')
-              .insert({
-                community_id: communityId,
-                chat_type: 'telegram',
-                model_used: model,
-                tokens_used: tokensUsed,
-                cost_usd: estimatedCost,
-                message_count: 1,
-                metadata: {
-                  response_time_ms: responseTime,
-                  telegram_chat_id: chatId,
-                  telegram_user_id: body.message?.from?.id
-                }
-              });
-
-            // Send AI response to Telegram
-            const tgResp = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            // 🚀 SEND TO TELEGRAM IMMEDIATELY (don't wait for analytics)
+            const telegramPromise = fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -325,12 +296,67 @@ serve(async (req) => {
               }),
             });
 
+            // 📊 DO ANALYTICS IN BACKGROUND (non-blocking)
+            const analyticsTask = async () => {
+              try {
+                const tokensUsed = aiData.usage?.total_tokens || 0;
+                const promptTokens = aiData.usage?.prompt_tokens || 0;
+                const completionTokens = aiData.usage?.completion_tokens || 0;
+                
+                // Model-specific pricing
+                let costPer1kInput = 0.00015;
+                let costPer1kOutput = 0.0006;
+                
+                if (model.includes('gpt-4o-mini')) {
+                  costPer1kInput = 0.00015;
+                  costPer1kOutput = 0.0006;
+                } else if (model.includes('gpt-4o')) {
+                  costPer1kInput = 0.0025;
+                  costPer1kOutput = 0.01;
+                }
+                
+                const estimatedCost = (promptTokens / 1000 * costPer1kInput) + (completionTokens / 1000 * costPer1kOutput);
+
+                console.log(`📊 Analytics: ${tokensUsed} tokens, ${responseTime}ms, $${estimatedCost.toFixed(6)}`);
+
+                // Insert analytics record
+                const { error: insertError } = await supabase
+                  .from('ai_chat_sessions')
+                  .insert({
+                    community_id: communityId,
+                    chat_type: 'telegram_bot',
+                    model_used: model,
+                    tokens_used: tokensUsed,
+                    cost_usd: estimatedCost,
+                    message_count: 1,
+                    metadata: {
+                      response_time_ms: responseTime,
+                      telegram_chat_id: chatId,
+                      telegram_user_id: body.message?.from?.id,
+                      chat_type_detail: chatType
+                    }
+                  });
+
+                if (insertError) {
+                  console.error('❌ Analytics insert error:', insertError);
+                }
+              } catch (err) {
+                console.error('❌ Analytics background task error:', err);
+              }
+            };
+
+            // Wait for Telegram response and log result
+            const tgResp = await telegramPromise;
             const tgData = await tgResp.json().catch(() => null);
+            
             if (!tgResp.ok) {
-              console.error('Telegram sendMessage failed:', tgData || tgResp.statusText);
+              console.error('❌ Telegram sendMessage failed:', tgData || tgResp.statusText);
             } else {
-              console.log('Telegram sendMessage ok:', tgData);
+              console.log('✅ Telegram sendMessage ok:', tgData);
             }
+
+            // Run analytics in background (don't block response)
+            analyticsTask().catch(err => console.error('Background analytics failed:', err));
           }
         }
       } catch (sendErr) {

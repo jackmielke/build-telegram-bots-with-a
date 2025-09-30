@@ -227,11 +227,6 @@ const CommunityDashboard = () => {
               isAdmin={isAdmin} 
               onUpdate={(updatedCommunity) => setCommunity(prev => ({ ...prev, ...updatedCommunity }))} 
             />
-            <WorkflowBuilder 
-              community={community} 
-              isAdmin={isAdmin}
-              onUpdate={(updatedCommunity) => setCommunity(prev => ({ ...prev, ...updatedCommunity }))}
-            />
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-6">

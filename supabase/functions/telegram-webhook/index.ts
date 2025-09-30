@@ -191,6 +191,18 @@ serve(async (req) => {
           console.log('No chat id found in message, cannot reply');
         } else {
           const botToken = await getBotToken(supabase, communityId);
+          
+          // Send typing indicator immediately
+          if (botToken) {
+            fetch(`https://api.telegram.org/bot${botToken}/sendChatAction`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: chatId,
+                action: 'typing'
+              })
+            }).catch(err => console.log('Error sending typing indicator:', err));
+          }
           if (!botToken) {
             console.error('No Telegram bot token configured for community:', communityId);
           } else {

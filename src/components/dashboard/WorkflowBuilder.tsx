@@ -332,6 +332,7 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
           description: 'botInfo' in testResult ? 'Connection failed' : testResult.message || 'Connection failed',
           variant: "destructive"
         });
+        setSavingBot(false);
         return;
       }
 
@@ -344,11 +345,15 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
         })
         .eq('id', community.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Supabase update error:', updateError);
+        throw updateError;
+      }
 
       // Set up webhook
       await setupWebhook(botToken);
 
+      // Update local state
       setBotInfo(testResult.botInfo);
       
       // Update parent component
@@ -367,7 +372,7 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
       console.error('Error saving bot token:', error);
       toast({
         title: "Error",
-        description: "Failed to save bot token",
+        description: error.message || "Failed to save bot token",
         variant: "destructive"
       });
     } finally {
@@ -495,7 +500,55 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
 
   return (
     <div className="space-y-6">
-      {/* Telegram Bot Configuration - Show at top if not configured */}
+      {/* Telegram Bot Connected Status - Show at top when configured */}
+      {botInfo && (
+        <Card className="gradient-card border-green-500/30 bg-green-50/5">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <span>Telegram Bot Connected</span>
+            </CardTitle>
+            <CardDescription>
+              Your bot is active and responding to messages
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg border border-green-500/20">
+              <div className="flex items-center space-x-3">
+                <div className="p-3 rounded-lg bg-green-500/10">
+                  <Bot className="w-6 h-6 text-green-600" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2 mb-1">
+                    <h4 className="font-semibold text-lg">{botInfo.first_name}</h4>
+                    <Badge variant="default" className="bg-green-600 text-white">
+                      @{botInfo.username}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Bot ID: {botInfo.id}
+                  </p>
+                  <a 
+                    href={`https://t.me/${botInfo.username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary hover:underline inline-flex items-center mt-1"
+                  >
+                    Open in Telegram →
+                  </a>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <Badge variant="default" className="bg-green-600">
+                  ✓ Active
+                </Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Telegram Bot Configuration - Show if not configured */}
       {!botInfo && (
         <Card className="gradient-card border-border/50 border-primary/30">
           <CardHeader>
@@ -663,54 +716,6 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
           </div>
         </CardContent>
       </Card>
-
-      {/* Telegram Bot Connection Status - Show here if already configured */}
-      {botInfo && (
-        <Card className="gradient-card border-green-500/30 bg-green-50/5">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-              <span>Telegram Bot Connected</span>
-            </CardTitle>
-            <CardDescription>
-              Your bot is active and responding to messages
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg border border-green-500/20">
-              <div className="flex items-center space-x-3">
-                <div className="p-3 rounded-lg bg-green-500/10">
-                  <Bot className="w-6 h-6 text-green-600" />
-                </div>
-                <div>
-                  <div className="flex items-center space-x-2 mb-1">
-                    <h4 className="font-semibold text-lg">{botInfo.first_name}</h4>
-                    <Badge variant="default" className="bg-green-600 text-white">
-                      @{botInfo.username}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Bot ID: {botInfo.id}
-                  </p>
-                  <a 
-                    href={`https://t.me/${botInfo.username}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-primary hover:underline inline-flex items-center mt-1"
-                  >
-                    Open in Telegram →
-                  </a>
-                </div>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                <Badge variant="default" className="bg-green-600">
-                  ✓ Active
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Coming Soon Features */}
       <Card className="gradient-card border-border/50">

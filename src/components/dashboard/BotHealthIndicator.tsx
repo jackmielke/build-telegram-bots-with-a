@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Activity, AlertCircle, CheckCircle, Clock, MessageSquare } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Activity, AlertCircle, CheckCircle, Clock, MessageSquare, ChevronDown } from 'lucide-react';
 
 interface BotHealthIndicatorProps {
   communityId: string;
@@ -14,6 +15,10 @@ interface BotHealth {
   messageCount24h: number;
   errorCount24h: number;
   avgResponseTime: number | null;
+  errors: Array<{
+    timestamp: string;
+    error: string;
+  }>;
 }
 
 const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
@@ -22,9 +27,11 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
     lastActivity: null,
     messageCount24h: 0,
     errorCount24h: 0,
-    avgResponseTime: null
+    avgResponseTime: null,
+    errors: []
   });
   const [loading, setLoading] = useState(true);
+  const [errorsOpen, setErrorsOpen] = useState(false);
 
   useEffect(() => {
     fetchBotHealth();
@@ -70,19 +77,28 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
 
       if (messagesError) throw messagesError;
 
-      // Get error count from chat sessions
+      // Get error count and details from chat sessions
       const { data: sessions, error: sessionsError } = await supabase
         .from('ai_chat_sessions')
-        .select('metadata')
+        .select('metadata, created_at')
         .eq('community_id', communityId)
-        .gte('created_at', twentyFourHoursAgo);
+        .gte('created_at', twentyFourHoursAgo)
+        .order('created_at', { ascending: false });
 
       if (sessionsError) throw sessionsError;
 
-      const errorCount = sessions?.filter(s => {
+      const errors: Array<{ timestamp: string; error: string }> = [];
+      sessions?.forEach(s => {
         const metadata = s.metadata as any;
-        return metadata?.error;
-      }).length || 0;
+        if (metadata?.error) {
+          errors.push({
+            timestamp: s.created_at,
+            error: metadata.error
+          });
+        }
+      });
+
+      const errorCount = errors.length;
 
       // Get Telegram bot status if exists
       const { data: botData } = await supabase
@@ -96,7 +112,8 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
         lastActivity: messages?.[0]?.created_at || botData?.last_activity_at || null,
         messageCount24h: messages?.length || 0,
         errorCount24h: errorCount,
-        avgResponseTime: null // Could calculate from session metadata if tracked
+        avgResponseTime: null, // Could calculate from session metadata if tracked
+        errors: errors
       });
     } catch (error) {
       console.error('Error fetching bot health:', error);
@@ -181,12 +198,31 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
           </div>
         </div>
         {health.errorCount24h > 0 && (
-          <div className="p-2 bg-destructive/10 border border-destructive/20 rounded-lg">
-            <p className="text-xs text-destructive flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" />
-              {health.errorCount24h} error{health.errorCount24h !== 1 ? 's' : ''} in the last 24 hours
-            </p>
-          </div>
+          <Collapsible open={errorsOpen} onOpenChange={setErrorsOpen}>
+            <CollapsibleTrigger className="w-full">
+              <div className="p-2 bg-destructive/10 border border-destructive/20 rounded-lg hover:bg-destructive/20 transition-colors cursor-pointer">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-destructive flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {health.errorCount24h} error{health.errorCount24h !== 1 ? 's' : ''} in the last 24 hours
+                  </p>
+                  <ChevronDown className={`w-3 h-3 text-destructive transition-transform ${errorsOpen ? 'rotate-180' : ''}`} />
+                </div>
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2 space-y-2">
+              {health.errors.map((error, index) => (
+                <div key={index} className="p-2 bg-muted rounded-lg text-xs">
+                  <p className="text-muted-foreground mb-1">
+                    {new Date(error.timestamp).toLocaleString()}
+                  </p>
+                  <p className="text-destructive font-mono text-[10px] break-all">
+                    {error.error}
+                  </p>
+                </div>
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
         )}
       </CardContent>
     </Card>

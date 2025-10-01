@@ -582,6 +582,27 @@ serve(async (req) => {
 
                 if (insertError) {
                   console.error('❌ Analytics insert error:', insertError);
+                  // Store error in metadata for health monitoring
+                  const { error: fallbackError } = await supabase
+                    .from('ai_chat_sessions')
+                    .insert({
+                      community_id: communityId,
+                      chat_type: 'ai', // Use 'ai' as fallback if telegram_bot fails
+                      model_used: model,
+                      tokens_used: tokensUsed,
+                      cost_usd: estimatedCost,
+                      message_count: 1,
+                      metadata: {
+                        response_time_ms: responseTime,
+                        telegram_chat_id: chatId,
+                        telegram_user_id: body.message?.from?.id,
+                        chat_type_detail: chatType,
+                        error: `Analytics insert failed: ${insertError.message || JSON.stringify(insertError)}`
+                      }
+                    });
+                  if (fallbackError) {
+                    console.error('Fallback analytics insert also failed:', fallbackError);
+                  }
                 }
               } catch (err) {
                 console.error('❌ Analytics background task error:', err);

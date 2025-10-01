@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { 
+import BotHealthIndicator from './BotHealthIndicator';
+import {
   Zap, 
   Send, 
   Bot, 
@@ -502,6 +503,9 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
 
   return (
     <div className="space-y-6">
+      {/* Bot Health Indicator */}
+      <BotHealthIndicator communityId={community.id} />
+      
       {/* Telegram Bot Connected Status - Show at top when configured */}
       {botInfo && (
         <Card className="gradient-card border-green-500/30 bg-green-50/5">

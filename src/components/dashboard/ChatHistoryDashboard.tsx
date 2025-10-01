@@ -33,10 +33,35 @@ const ChatHistoryDashboard = ({ communityId, isAdmin }: ChatHistoryDashboardProp
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [chatTypeFilter, setChatTypeFilter] = useState<string>('all');
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const CONVERSATIONS_PER_PAGE = 20;
 
   useEffect(() => {
     fetchConversations();
-  }, [communityId]);
+    
+    // Set up real-time subscription for new messages
+    const channel = supabase
+      .channel('messages-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `community_id=eq.${communityId}`
+        },
+        () => {
+          // Refetch conversations when new messages arrive
+          fetchConversations();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [communityId, page]);
 
   useEffect(() => {
     filterConversations();
@@ -44,13 +69,19 @@ const ChatHistoryDashboard = ({ communityId, isAdmin }: ChatHistoryDashboardProp
 
   const fetchConversations = async () => {
     try {
+      const from = page * CONVERSATIONS_PER_PAGE;
+      const to = from + CONVERSATIONS_PER_PAGE - 1;
+      
       const { data, error } = await supabase
         .from('conversations')
         .select('*')
         .eq('community_id', communityId)
-        .order('last_message_at', { ascending: false });
+        .order('last_message_at', { ascending: false })
+        .range(from, to);
 
       if (error) throw error;
+      
+      setHasMore(data && data.length === CONVERSATIONS_PER_PAGE);
       
       // Enrich conversations with display names from messages
       const enrichedConversations = await Promise.all(
@@ -114,12 +145,16 @@ const ChatHistoryDashboard = ({ communityId, isAdmin }: ChatHistoryDashboardProp
         })
       );
       
-      setConversations(enrichedConversations);
+      setConversations(prev => page === 0 ? enrichedConversations : [...prev, ...enrichedConversations]);
     } catch (error) {
       console.error('Error fetching conversations:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadMore = () => {
+    setPage(prev => prev + 1);
   };
 
   const filterConversations = () => {
@@ -338,6 +373,18 @@ const ChatHistoryDashboard = ({ communityId, isAdmin }: ChatHistoryDashboardProp
                     </div>
                   </Button>
                 ))}
+              </div>
+            )}
+            {hasMore && filteredConversations.length > 0 && (
+              <div className="pt-4 text-center">
+                <Button 
+                  onClick={loadMore} 
+                  variant="outline" 
+                  disabled={loading}
+                  className="w-full"
+                >
+                  {loading ? 'Loading...' : 'Load More'}
+                </Button>
               </div>
             )}
           </ScrollArea>

@@ -33,15 +33,42 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [conversationStats, setConversationStats] = useState<any>(null);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const MESSAGES_PER_PAGE = 50;
   const { toast } = useToast();
 
   useEffect(() => {
     fetchConversation();
     fetchConversationStats();
-  }, [conversationId]);
+    
+    // Set up real-time subscription for new messages in this conversation
+    const channel = supabase
+      .channel(`conversation-${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`
+        },
+        (payload) => {
+          setMessages(prev => [...prev, payload.new as Message]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [conversationId, page]);
 
   const fetchConversation = async () => {
     try {
+      const from = page * MESSAGES_PER_PAGE;
+      const to = from + MESSAGES_PER_PAGE - 1;
+      
       const { data, error } = await supabase
         .from('messages')
         .select(`
@@ -53,10 +80,13 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
         `)
         .eq('conversation_id', conversationId)
         .eq('community_id', communityId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .range(from, to);
 
       if (error) throw error;
-      setMessages(data || []);
+      
+      setHasMore(data && data.length === MESSAGES_PER_PAGE);
+      setMessages(prev => page === 0 ? (data || []) : [...prev, ...(data || [])]);
     } catch (error) {
       console.error('Error fetching conversation:', error);
       toast({
@@ -115,6 +145,10 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
       minimumFractionDigits: 2,
       maximumFractionDigits: 4
     }).format(amount);
+  };
+
+  const loadMore = () => {
+    setPage(prev => prev + 1);
   };
 
   return (
@@ -210,9 +244,24 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="h-[600px] pr-4">
-            <div className="space-y-4">
-              {messages.map((message) => {
+          {loading && page === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">Loading messages...</div>
+          ) : (
+            <ScrollArea className="h-[600px] pr-4">
+              {hasMore && messages.length >= MESSAGES_PER_PAGE && (
+                <div className="pb-4 text-center">
+                  <Button 
+                    onClick={loadMore} 
+                    variant="outline" 
+                    size="sm"
+                    disabled={loading}
+                  >
+                    {loading ? 'Loading...' : 'Load Earlier Messages'}
+                  </Button>
+                </div>
+              )}
+              <div className="space-y-4">
+                {messages.map((message) => {
                 const isAI = message.sent_by === 'ai' || message.chat_type === 'ai';
                 const userName = message.users?.name || 'User';
                 const avatarUrl = message.users?.avatar_url;
@@ -265,9 +314,10 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
                     </div>
                   </div>
                 );
-              })}
-            </div>
-          </ScrollArea>
+                })}
+              </div>
+            </ScrollArea>
+          )}
         </CardContent>
       </Card>
     </div>

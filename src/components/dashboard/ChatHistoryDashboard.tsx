@@ -18,6 +18,7 @@ interface Conversation {
   started_at: string;
   last_message_at: string;
   community_id: string;
+  display_name?: string;
 }
 
 interface ChatHistoryDashboardProps {
@@ -50,7 +51,70 @@ const ChatHistoryDashboard = ({ communityId, isAdmin }: ChatHistoryDashboardProp
         .order('last_message_at', { ascending: false });
 
       if (error) throw error;
-      setConversations(data || []);
+      
+      // Enrich conversations with display names from messages
+      const enrichedConversations = await Promise.all(
+        (data || []).map(async (conv) => {
+          // Get the first message to extract metadata
+          const { data: firstMessage } = await supabase
+            .from('messages')
+            .select('metadata, sent_by, sender_id, users(name, telegram_username)')
+            .eq('conversation_id', conv.conversation_id)
+            .eq('community_id', communityId)
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .single();
+
+          let displayName = conv.topic_name || 'Untitled Conversation';
+
+          if (firstMessage) {
+            const metadata = firstMessage.metadata as any;
+            
+            // For Telegram chats, extract chat title or user name
+            if (conv.chat_type === 'telegram_bot') {
+              if (metadata?.chat_type_detail === 'private') {
+                // For private chats, use the user's name
+                const userName = metadata?.telegram_first_name || 
+                                metadata?.telegram_username || 
+                                firstMessage.sent_by || 
+                                'Unknown User';
+                displayName = `DM: ${userName}`;
+              } else if (metadata?.chat_type_detail === 'group' || metadata?.chat_type_detail === 'supergroup') {
+                // For group chats, extract title from conversation_id or metadata
+                const chatId = conv.conversation_id.replace('telegram_', '');
+                displayName = `Group Chat ${chatId}`;
+                
+                // Try to get the actual group name from messages
+                const { data: groupMessages } = await supabase
+                  .from('messages')
+                  .select('metadata')
+                  .eq('conversation_id', conv.conversation_id)
+                  .limit(1);
+                
+                if (groupMessages?.[0]?.metadata) {
+                  const groupMetadata = groupMessages[0].metadata as any;
+                  // The group name might be in various places in metadata
+                  if (groupMetadata?.telegram_chat_title) {
+                    displayName = groupMetadata.telegram_chat_title;
+                  }
+                }
+              }
+            } else if (firstMessage.users?.name) {
+              // For other chat types with linked users
+              displayName = firstMessage.users.name;
+            } else if (firstMessage.sent_by && firstMessage.sent_by !== 'ai') {
+              displayName = firstMessage.sent_by;
+            }
+          }
+
+          return {
+            ...conv,
+            display_name: displayName
+          };
+        })
+      );
+      
+      setConversations(enrichedConversations);
     } catch (error) {
       console.error('Error fetching conversations:', error);
     } finally {
@@ -250,7 +314,7 @@ const ChatHistoryDashboard = ({ communityId, isAdmin }: ChatHistoryDashboardProp
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <h3 className="font-semibold truncate">
-                            {conversation.topic_name || 'Untitled Conversation'}
+                            {conversation.display_name || conversation.topic_name || 'Untitled Conversation'}
                           </h3>
                           <Badge variant="secondary" className="text-xs flex-shrink-0">
                             {getChatTypeLabel(conversation.chat_type)}

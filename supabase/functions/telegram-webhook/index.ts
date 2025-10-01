@@ -363,7 +363,9 @@ serve(async (req) => {
                 chat_type_detail: chatType,
                 telegram_username: telegramUsername,
                 telegram_first_name: firstName,
-                telegram_last_name: lastName
+                telegram_last_name: lastName,
+                telegram_chat_title: body.message?.chat?.title || null, // Store group/supergroup title
+                telegram_chat_username: body.message?.chat?.username || null
               }
             });
           
@@ -515,7 +517,9 @@ serve(async (req) => {
                   telegram_chat_id: chatId,
                   model_used: model,
                   response_time_ms: responseTime,
-                  chat_type_detail: chatType
+                  chat_type_detail: chatType,
+                  telegram_chat_title: body.message?.chat?.title || null,
+                  telegram_chat_username: body.message?.chat?.username || null
                 }
               });
             

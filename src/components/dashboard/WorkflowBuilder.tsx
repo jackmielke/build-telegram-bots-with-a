@@ -222,7 +222,10 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
     const mockTelegramMessage = {
       community_id: community.id,
       message: {
-        chat: { type: 'private' },
+        chat: { 
+          type: 'private',
+          id: 123456  // Required for webhook processing
+        },
         text: input,
         from: { id: 123456, first_name: 'Test User' }
       }

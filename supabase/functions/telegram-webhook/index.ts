@@ -319,7 +319,32 @@ serve(async (req) => {
       try {
         const chatId = body.message?.chat?.id;
         if (!chatId) {
-          console.log('No chat id found in message, cannot reply');
+          const errorMsg = 'No chat id found in message, cannot reply';
+          console.error(errorMsg);
+          
+          // Log error to database for monitoring
+          await supabase.from('ai_chat_sessions').insert({
+            community_id: communityId,
+            user_id: null,
+            chat_type: 'telegram',
+            model_used: 'none',
+            tokens_used: 0,
+            cost_usd: 0,
+            message_count: 0,
+            metadata: { 
+              error: errorMsg,
+              chat_type: getChatType(body.message),
+              timestamp: new Date().toISOString()
+            }
+          });
+          
+          return new Response(JSON.stringify({ 
+            ok: false, 
+            error: errorMsg 
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400
+          });
         } else {
           // Extract message text (support text, captions, photos, documents)
           const message = body.message;

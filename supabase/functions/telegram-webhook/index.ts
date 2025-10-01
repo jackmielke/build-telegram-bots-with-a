@@ -384,9 +384,9 @@ serve(async (req) => {
             const agentName = communityData?.agent_name || 'Assistant';
             const communityName = communityData?.name || 'our community';
             
-            // Use configured intro message or default
-            const introMessage = communityData?.agent_intro_message || 
-              `Hey ${userName}, welcome! How's it going? What can I help you with today at ${communityName.toLowerCase()}?
+            // Build intro message from template (supports placeholders)
+            const templateRaw = (communityData?.agent_intro_message || 
+              `Hey {first_name}, welcome! How's it going? What can I help you with today at {community_name}?
 
 Some quick things I can do:
 - answer questions about the community
@@ -394,7 +394,28 @@ Some quick things I can do:
 - provide info and resources
 - assist with projects and ideas
 
-Tell me what you need and I'll get on it.`;
+Tell me what you need and I'll get on it.`).trim();
+
+            const vars = {
+              first_name: firstName || (telegramUsername || 'there'),
+              last_name: lastName || '',
+              full_name: userName,
+              username: telegramUsername || '',
+              community_name: communityName,
+              agent_name: agentName,
+            } as const;
+
+            const replaced = templateRaw
+              .replace(/\{first_name\}/gi, vars.first_name)
+              .replace(/\{last_name\}/gi, vars.last_name)
+              .replace(/\{full_name\}/gi, vars.full_name)
+              .replace(/\{username\}/gi, vars.username ? `@${vars.username}` : vars.first_name)
+              .replace(/\{community_name\}/gi, vars.community_name)
+              .replace(/\{agent_name\}/gi, vars.agent_name);
+
+            // If no name placeholder was used, prefix a friendly greeting with the user's first name
+            const includesNameToken = /\{(first_name|full_name|username)\}/i.test(templateRaw);
+            const introMessage = includesNameToken ? replaced : `Hey ${vars.first_name}, ${templateRaw}`;
             
             const botToken = await getBotToken(supabase, communityId);
             if (!botToken) {

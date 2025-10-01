@@ -321,7 +321,20 @@ serve(async (req) => {
         if (!chatId) {
           console.log('No chat id found in message, cannot reply');
         } else {
-          const userMessage = body.message?.text || 'Hello';
+          // Extract message text (support text, captions, photos, documents)
+          const message = body.message;
+          let userMessage = message?.text || message?.caption || 'Hello';
+          const hasPhoto = !!message?.photo;
+          const hasDocument = !!message?.document;
+          
+          // Enhance message context for multi-modal content
+          if (hasPhoto) {
+            userMessage = `[Photo${message.caption ? `: ${message.caption}` : ''}]`;
+          } else if (hasDocument) {
+            const fileName = message.document?.file_name || 'document';
+            userMessage = `[Document: ${fileName}${message.caption ? ` - ${message.caption}` : ''}]`;
+          }
+          
           const telegramUserId = body.message?.from?.id;
           const telegramUsername = body.message?.from?.username;
           const firstName = body.message?.from?.first_name;
@@ -337,14 +350,17 @@ serve(async (req) => {
             lastName
           );
           
-          // Fetch conversation history BEFORE storing new message (last 20 messages)
+          // Fetch conversation history BEFORE storing new message (sliding window: last 7 messages)
           const { data: conversationHistory } = await supabase
             .from('messages')
             .select('content, sent_by')
             .eq('conversation_id', conversationId)
             .eq('community_id', communityId)
             .order('created_at', { ascending: false })
-            .limit(20);
+            .limit(7);
+          
+          // Check if this is a new user (first message in conversation)
+          const isNewUser = !conversationHistory || conversationHistory.length === 0;
 
           // Store incoming user message with proper sender_id
           const { error: insertUserMsgError } = await supabase
@@ -421,27 +437,47 @@ serve(async (req) => {
             // Get community agent configuration
             const { data: communityData } = await supabase
               .from('communities')
-              .select('agent_instructions, agent_name, agent_model, agent_max_tokens, agent_temperature')
+              .select('agent_instructions, agent_name, agent_model, agent_max_tokens, agent_temperature, agent_intro_message')
               .eq('id', communityId)
               .single();
 
-            // Fetch community memories/knowledge
+            // Fetch community memories/knowledge with timestamps and IDs
             const { data: memories } = await supabase
               .from('memories')
-              .select('content')
+              .select('id, content, created_at')
               .eq('community_id', communityId)
               .order('created_at', { ascending: false })
               .limit(10);
 
-            // Build system prompt with memories
-            let systemPrompt = communityData?.agent_instructions || 'You are a helpful community assistant.';
+            // Build enhanced system prompt with context
+            const currentTime = new Date().toISOString();
+            const chatTypeLabel = chatType === 'private' ? 'private DM' : `${chatType} chat`;
+            const userName = firstName 
+              ? `${firstName}${lastName ? ' ' + lastName : ''}`
+              : telegramUsername || 'User';
+            const agentName = communityData?.agent_name || 'Assistant';
             
+            let systemPrompt = `Current time: ${currentTime}
+Chat type: ${chatTypeLabel}
+User: ${userName}${telegramUsername ? ` (@${telegramUsername})` : ''}
+Community: ${agentName}
+
+${communityData?.agent_instructions || 'You are a helpful community assistant.'}`;
+            
+            // Add memories in n8n format (timestamp | content | id)
             if (memories && memories.length > 0) {
-              systemPrompt += '\n\nCommunity Knowledge:\n' + 
-                memories.map(m => m.content).join('\n---\n');
+              const memoriesContext = memories
+                .map(m => `${m.created_at} | ${m.content} | ${m.id}`)
+                .join('\n');
+              systemPrompt += `\n\n=== Community Memory ===\n${memoriesContext}`;
+            }
+            
+            // Add first-time user onboarding context
+            if (isNewUser && communityData?.agent_intro_message) {
+              systemPrompt += `\n\n=== Important ===\nThis is the user's first message. Start your response with: ${communityData.agent_intro_message}`;
             }
 
-            // Build conversation history for OpenAI (reverse to chronological order)
+            // Build conversation history for OpenAI (reverse to chronological order for sliding window)
             const conversationMessages = conversationHistory && conversationHistory.length > 0
               ? conversationHistory.reverse().map(msg => ({
                   role: msg.sent_by === 'ai' ? 'assistant' : 'user',
@@ -467,7 +503,7 @@ serve(async (req) => {
                   role: 'system',
                   content: systemPrompt
                 },
-                ...conversationMessages.slice(-10), // Last 10 messages for context
+                ...conversationMessages, // Already limited to 7 messages by sliding window
                 {
                   role: 'user',
                   content: userMessage

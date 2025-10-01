@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Activity, AlertCircle, CheckCircle, Clock, MessageSquare, ChevronDown } from 'lucide-react';
+import { Activity, AlertCircle, CheckCircle, Clock, MessageSquare, ChevronDown, RefreshCw, Unplug } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface BotHealthIndicatorProps {
   communityId: string;
@@ -16,6 +18,10 @@ interface BotHealth {
   messageCount24h: number;
   errorCount24h: number;
   avgResponseTime: number | null;
+  webhookUrl: string | null;
+  webhookError: string | null;
+  webhookErrorDate: number | null;
+  pendingUpdates: number;
   errors: Array<{
     timestamp: string;
     error: string;
@@ -29,10 +35,16 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
     messageCount24h: 0,
     errorCount24h: 0,
     avgResponseTime: null,
+    webhookUrl: null,
+    webhookError: null,
+    webhookErrorDate: null,
+    pendingUpdates: 0,
     errors: []
   });
   const [loading, setLoading] = useState(true);
   const [errorsOpen, setErrorsOpen] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchBotHealth();
@@ -104,16 +116,34 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
       // Get Telegram bot status if exists
       const { data: botData } = await supabase
         .from('telegram_bots')
-        .select('is_active, last_activity_at')
+        .select('is_active, last_activity_at, bot_token')
         .eq('community_id', communityId)
         .maybeSingle();
+
+      // Get webhook info from Telegram
+      let webhookInfo = null;
+      if (botData?.bot_token) {
+        try {
+          const response = await fetch(`https://api.telegram.org/bot${botData.bot_token}/getWebhookInfo`);
+          const data = await response.json();
+          if (data.ok) {
+            webhookInfo = data.result;
+          }
+        } catch (err) {
+          console.error('Failed to fetch webhook info:', err);
+        }
+      }
 
       setHealth({
         isActive: (botData?.is_active ?? true) && (messages?.length || 0) > 0,
         lastActivity: messages?.[0]?.created_at || botData?.last_activity_at || null,
         messageCount24h: messages?.length || 0,
         errorCount24h: errorCount,
-        avgResponseTime: null, // Could calculate from session metadata if tracked
+        avgResponseTime: null,
+        webhookUrl: webhookInfo?.url || null,
+        webhookError: webhookInfo?.last_error_message || null,
+        webhookErrorDate: webhookInfo?.last_error_date || null,
+        pendingUpdates: webhookInfo?.pending_update_count || 0,
         errors: errors
       });
     } catch (error) {
@@ -210,6 +240,58 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
     return `${Math.floor(diffMins / 1440)}d ago`;
   };
 
+  const handleDisconnectBot = async () => {
+    setDisconnecting(true);
+    try {
+      // Get bot data
+      const { data: botData, error: fetchError } = await supabase
+        .from('telegram_bots')
+        .select('bot_token')
+        .eq('community_id', communityId)
+        .maybeSingle();
+
+      if (fetchError || !botData?.bot_token) {
+        throw new Error('Bot not found');
+      }
+
+      // Delete webhook
+      const response = await fetch(
+        `https://api.telegram.org/bot${botData.bot_token}/deleteWebhook`,
+        { method: 'POST' }
+      );
+      
+      const data = await response.json();
+      
+      if (!data.ok) {
+        throw new Error(data.description || 'Failed to disconnect webhook');
+      }
+
+      // Mark bot as inactive in database
+      const { error: updateError } = await supabase
+        .from('telegram_bots')
+        .update({ is_active: false })
+        .eq('community_id', communityId);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Bot Disconnected",
+        description: "The Telegram bot has been disconnected. You can reconnect it from the community settings."
+      });
+      
+      fetchBotHealth();
+    } catch (error) {
+      console.error('Error disconnecting bot:', error);
+      toast({
+        title: "Disconnection Failed",
+        description: error instanceof Error ? error.message : "Failed to disconnect bot",
+        variant: "destructive"
+      });
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
   return (
     <Card className="gradient-card border-border/50">
       <CardHeader>
@@ -240,6 +322,48 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
             </p>
           </div>
         </div>
+
+        {/* Webhook Status */}
+        {health.webhookError && (
+          <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg space-y-2">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-destructive mt-0.5" />
+              <div className="flex-1 space-y-1">
+                <p className="text-xs font-medium text-destructive">Webhook Error</p>
+                <p className="text-xs text-muted-foreground font-mono break-all">
+                  {health.webhookError}
+                </p>
+                {health.webhookErrorDate && (
+                  <p className="text-[10px] text-muted-foreground">
+                    Last error: {new Date(health.webhookErrorDate * 1000).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDisconnectBot}
+              disabled={disconnecting}
+              className="w-full"
+            >
+              <Unplug className="w-3 h-3 mr-2" />
+              {disconnecting ? 'Disconnecting...' : 'Disconnect Bot'}
+            </Button>
+            <p className="text-[10px] text-muted-foreground">
+              Disconnecting will remove the webhook. You can reconnect from community settings to reset the connection.
+            </p>
+          </div>
+        )}
+
+        {health.pendingUpdates > 0 && (
+          <div className="p-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+            <p className="text-xs text-yellow-600 dark:text-yellow-400 flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              {health.pendingUpdates} pending update{health.pendingUpdates !== 1 ? 's' : ''} from Telegram
+            </p>
+          </div>
+        )}
         {health.errorCount24h > 0 && (
           <Collapsible open={errorsOpen} onOpenChange={setErrorsOpen}>
             <CollapsibleTrigger className="w-full" aria-controls="bot-health-errors" aria-expanded={errorsOpen}>

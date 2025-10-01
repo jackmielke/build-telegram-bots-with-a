@@ -59,6 +59,56 @@ async function isWorkflowEnabled(
   }
 }
 
+// Find or create user based on Telegram info
+async function findOrCreateUser(
+  supabase: any,
+  telegramUserId: number,
+  telegramUsername: string | null,
+  firstName: string | null,
+  lastName: string | null
+): Promise<string | null> {
+  try {
+    // First try to find existing user by telegram_username
+    if (telegramUsername) {
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('telegram_username', telegramUsername)
+        .maybeSingle();
+      
+      if (existingUser) {
+        return existingUser.id;
+      }
+    }
+
+    // If not found, create new user
+    const displayName = firstName 
+      ? `${firstName}${lastName ? ' ' + lastName : ''}`
+      : telegramUsername || `telegram_user_${telegramUserId}`;
+
+    const { data: newUser, error } = await supabase
+      .from('users')
+      .insert({
+        name: displayName,
+        telegram_username: telegramUsername,
+        username: telegramUsername || `tg_${telegramUserId}`,
+        bio: `Telegram user (ID: ${telegramUserId})`
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error('Error creating user:', error);
+      return null;
+    }
+
+    return newUser.id;
+  } catch (error) {
+    console.error('Error in findOrCreateUser:', error);
+    return null;
+  }
+}
+
 // Resolve the Telegram bot token for a given community
 async function getBotToken(supabase: any, communityId: string): Promise<string | null> {
   try {
@@ -92,6 +142,35 @@ async function getBotToken(supabase: any, communityId: string): Promise<string |
   const envToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
   if (envToken) return envToken;
   return null;
+}
+
+// Check if bot is mentioned in message
+function isBotMentioned(message: any, botUsername?: string): boolean {
+  if (!message) return false;
+  
+  // Check if message has entities (mentions, commands, etc.)
+  if (message.entities) {
+    for (const entity of message.entities) {
+      if (entity.type === 'mention' || entity.type === 'text_mention') {
+        const text = message.text || '';
+        const mentionText = text.substring(entity.offset, entity.offset + entity.length);
+        if (botUsername && mentionText.includes(botUsername)) {
+          return true;
+        }
+      }
+      // Bot commands are considered as direct mentions
+      if (entity.type === 'bot_command') {
+        return true;
+      }
+    }
+  }
+  
+  // Check for @botusername in text
+  if (botUsername && message.text) {
+    return message.text.includes(`@${botUsername}`);
+  }
+  
+  return false;
 }
 
 serve(async (req) => {
@@ -184,6 +263,23 @@ serve(async (req) => {
 
       console.log(`Processing ${chatType} message:`, body.message.text);
       
+      // Check message age - don't respond to messages older than 2 minutes
+      const messageDate = body.message?.date;
+      if (messageDate) {
+        const messageAge = Date.now() / 1000 - messageDate; // age in seconds
+        if (messageAge > 120) { // 2 minutes
+          console.log(`Message too old (${messageAge}s), skipping response`);
+          return new Response(JSON.stringify({ 
+            ok: true, 
+            message: 'Message too old',
+            skipped: true
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200
+          });
+        }
+      }
+      
       // Get AI response and send back to Telegram
       try {
         const chatId = body.message?.chat?.id;
@@ -192,7 +288,19 @@ serve(async (req) => {
         } else {
           const userMessage = body.message?.text || 'Hello';
           const telegramUserId = body.message?.from?.id;
+          const telegramUsername = body.message?.from?.username;
+          const firstName = body.message?.from?.first_name;
+          const lastName = body.message?.from?.last_name;
           const conversationId = `telegram_${chatId}`;
+          
+          // Find or create user
+          const userId = await findOrCreateUser(
+            supabase,
+            telegramUserId,
+            telegramUsername,
+            firstName,
+            lastName
+          );
           
           // Fetch conversation history BEFORE storing new message (last 20 messages)
           const { data: conversationHistory } = await supabase
@@ -203,7 +311,7 @@ serve(async (req) => {
             .order('created_at', { ascending: false })
             .limit(20);
 
-          // Store incoming user message
+          // Store incoming user message with proper sender_id
           const { error: insertUserMsgError } = await supabase
             .from('messages')
             .insert({
@@ -211,12 +319,16 @@ serve(async (req) => {
               chat_type: 'telegram_bot',
               conversation_id: conversationId,
               community_id: communityId,
-              sent_by: body.message?.from?.username || body.message?.from?.first_name || 'telegram_user',
+              sender_id: userId, // NOW PROPERLY LINKED!
+              sent_by: telegramUsername || firstName || 'telegram_user',
               metadata: {
                 telegram_chat_id: chatId,
                 telegram_user_id: telegramUserId,
                 telegram_message_id: body.message?.message_id,
-                chat_type_detail: chatType
+                chat_type_detail: chatType,
+                telegram_username: telegramUsername,
+                telegram_first_name: firstName,
+                telegram_last_name: lastName
               }
             });
           
@@ -225,21 +337,50 @@ serve(async (req) => {
           }
 
           const botToken = await getBotToken(supabase, communityId);
-          
-          // Send typing indicator immediately
-          if (botToken) {
-            fetch(`https://api.telegram.org/bot${botToken}/sendChatAction`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                chat_id: chatId,
-                action: 'typing'
-              })
-            }).catch(err => console.log('Error sending typing indicator:', err));
-          }
           if (!botToken) {
             console.error('No Telegram bot token configured for community:', communityId);
-          } else {
+            return new Response(JSON.stringify({ ok: true, message: 'Bot token not configured' }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200
+            });
+          }
+
+          // Get bot info to check for mentions in groups
+          let botUsername: string | undefined;
+          if (chatType === 'group' || chatType === 'supergroup') {
+            try {
+              const botInfoResp = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
+              const botInfoData = await botInfoResp.json();
+              botUsername = botInfoData.result?.username;
+            } catch (err) {
+              console.error('Error fetching bot info:', err);
+            }
+          }
+
+          // FOR GROUPS/SUPERGROUPS: Only respond if bot is mentioned or it's a command
+          if ((chatType === 'group' || chatType === 'supergroup') && !isBotMentioned(body.message, botUsername)) {
+            console.log(`Bot not mentioned in ${chatType}, skipping AI response`);
+            return new Response(JSON.stringify({ 
+              ok: true, 
+              message: 'Bot not mentioned in group',
+              skipped: true 
+            }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200
+            });
+          }
+          
+          // Send typing indicator immediately
+          fetch(`https://api.telegram.org/bot${botToken}/sendChatAction`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: chatId,
+              action: 'typing'
+            })
+          }).catch(err => console.log('Error sending typing indicator:', err));
+
+          {
             // Get community agent configuration
             const { data: communityData } = await supabase
               .from('communities')
@@ -325,7 +466,7 @@ serve(async (req) => {
             const replyText = aiData.choices?.[0]?.message?.content || 'Sorry, I could not generate a response.';
             const responseTime = Date.now() - startTime;
 
-            // Store AI response message
+            // Store AI response message (no sender_id for AI messages)
             const { error: insertAiMsgError } = await supabase
               .from('messages')
               .insert({
@@ -333,6 +474,7 @@ serve(async (req) => {
                 chat_type: 'telegram_bot',
                 conversation_id: conversationId,
                 community_id: communityId,
+                sender_id: null, // AI messages don't have a sender_id
                 sent_by: 'ai',
                 metadata: {
                   telegram_chat_id: chatId,

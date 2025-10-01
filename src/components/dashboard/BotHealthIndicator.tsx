@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Activity, AlertCircle, CheckCircle, Clock, MessageSquare, ChevronDown } from 'lucide-react';
 
 interface BotHealthIndicatorProps {
@@ -105,10 +106,10 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
         .from('telegram_bots')
         .select('is_active, last_activity_at')
         .eq('community_id', communityId)
-        .single();
+        .maybeSingle();
 
       setHealth({
-        isActive: messages && messages.length > 0 && (botData?.is_active ?? true),
+        isActive: (botData?.is_active ?? true) && (messages?.length || 0) > 0,
         lastActivity: messages?.[0]?.created_at || botData?.last_activity_at || null,
         messageCount24h: messages?.length || 0,
         errorCount24h: errorCount,
@@ -126,30 +127,72 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
     if (loading) {
       return <Badge variant="outline">Checking...</Badge>;
     }
-    
-    if (!health.isActive || health.errorCount24h > 10) {
-      return (
-        <Badge variant="destructive" className="gap-1">
-          <AlertCircle className="w-3 h-3" />
-          Issues Detected
-        </Badge>
+
+    const hasErrors = health.errorCount24h > 0;
+    const isIdle = health.messageCount24h === 0;
+    const inactive = !health.isActive && !hasErrors && !isIdle;
+
+    const render = (
+      variant: 'default' | 'secondary' | 'destructive' | 'outline',
+      icon: JSX.Element,
+      label: string,
+      tooltip?: string,
+      clickable?: boolean
+    ) => (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge
+            variant={variant}
+            className={`gap-1 ${clickable ? 'cursor-pointer' : ''}`}
+            onClick={clickable ? () => setErrorsOpen(true) : undefined}
+            aria-label={label}
+            title={tooltip}
+          >
+            {icon}
+            {label}
+          </Badge>
+        </TooltipTrigger>
+        {tooltip && (
+          <TooltipContent>
+            <p className="text-xs">{tooltip}</p>
+          </TooltipContent>
+        )}
+      </Tooltip>
+    );
+
+    if (hasErrors) {
+      return render(
+        'destructive',
+        <AlertCircle className="w-3 h-3" />,
+        'Issues Detected',
+        `${health.errorCount24h} error${health.errorCount24h !== 1 ? 's' : ''} in the last 24 hours. Click to view details.`,
+        true
       );
     }
-    
-    if (health.messageCount24h === 0) {
-      return (
-        <Badge variant="secondary" className="gap-1">
-          <Clock className="w-3 h-3" />
-          Idle
-        </Badge>
+
+    if (isIdle) {
+      return render(
+        'secondary',
+        <Clock className="w-3 h-3" />,
+        'Idle',
+        'No messages from the bot in the last 24 hours.'
       );
     }
-    
-    return (
-      <Badge variant="default" className="gap-1 bg-green-500">
-        <CheckCircle className="w-3 h-3" />
-        Healthy
-      </Badge>
+
+    if (inactive) {
+      return render(
+        'outline',
+        <AlertCircle className="w-3 h-3" />,
+        'Inactive',
+        'Bot appears inactive. Check Telegram setup and workflows.'
+      );
+    }
+
+    return render(
+      'default',
+      <CheckCircle className="w-3 h-3" />,
+      'Healthy',
+      'Bot is responding normally.'
     );
   };
 
@@ -199,7 +242,7 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
         </div>
         {health.errorCount24h > 0 && (
           <Collapsible open={errorsOpen} onOpenChange={setErrorsOpen}>
-            <CollapsibleTrigger className="w-full">
+            <CollapsibleTrigger className="w-full" aria-controls="bot-health-errors" aria-expanded={errorsOpen}>
               <div className="p-2 bg-destructive/10 border border-destructive/20 rounded-lg hover:bg-destructive/20 transition-colors cursor-pointer">
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-destructive flex items-center gap-1">
@@ -210,7 +253,7 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
                 </div>
               </div>
             </CollapsibleTrigger>
-            <CollapsibleContent className="mt-2 space-y-2">
+            <CollapsibleContent id="bot-health-errors" className="mt-2 space-y-2">
               {health.errors.map((error, index) => (
                 <div key={index} className="p-2 bg-muted rounded-lg text-xs">
                   <p className="text-muted-foreground mb-1">

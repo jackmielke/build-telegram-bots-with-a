@@ -366,6 +366,69 @@ serve(async (req) => {
           const lastName = body.message?.from?.last_name;
           const conversationId = `telegram_${chatId}`;
           
+          // CHECK FOR /start COMMAND - Return intro message immediately (no LLM call)
+          if (userMessage.trim() === '/start') {
+            console.log('Detected /start command - sending intro message');
+            
+            // Get community agent configuration for intro message
+            const { data: communityData } = await supabase
+              .from('communities')
+              .select('agent_intro_message, agent_name, name')
+              .eq('id', communityId)
+              .single();
+            
+            const userName = firstName 
+              ? `${firstName}${lastName ? ' ' + lastName : ''}`
+              : telegramUsername || 'there';
+            
+            const agentName = communityData?.agent_name || 'Assistant';
+            const communityName = communityData?.name || 'our community';
+            
+            // Use configured intro message or default
+            const introMessage = communityData?.agent_intro_message || 
+              `hey ${userName.toLowerCase()} — welcome! how's it going? what can i help you with today at ${communityName.toLowerCase()}?
+
+some quick things i can do:
+- answer questions about the community
+- help you connect with others
+- provide info and resources
+- assist with projects and ideas
+
+tell me what you need and i'll get on it.`;
+            
+            const botToken = await getBotToken(supabase, communityId);
+            if (!botToken) {
+              console.error('No Telegram bot token configured for community:', communityId);
+              return new Response(JSON.stringify({ ok: true, message: 'Bot token not configured' }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 200
+              });
+            }
+            
+            // Send the intro message
+            const sendMessageResp = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: chatId,
+                text: introMessage,
+                parse_mode: 'Markdown'
+              })
+            });
+            
+            const sendMessageData = await sendMessageResp.json();
+            console.log('✅ Intro message sent:', sendMessageData);
+            
+            return new Response(JSON.stringify({ 
+              ok: true, 
+              message: 'Start command processed',
+              intro_sent: true
+            }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200
+            });
+          }
+          
           // Find or create user
           const userId = await findOrCreateUser(
             supabase,

@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, Bot, User, Calendar, DollarSign, BarChart3, Download } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ArrowLeft, Bot, User, Calendar, DollarSign, BarChart3, Download, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Message {
@@ -35,6 +36,8 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
   const [conversationStats, setConversationStats] = useState<any>(null);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [selectedPrompt, setSelectedPrompt] = useState<any>(null);
+  const [promptDialogOpen, setPromptDialogOpen] = useState(false);
   const MESSAGES_PER_PAGE = 50;
   const { toast } = useToast();
 
@@ -149,6 +152,60 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
 
   const loadMore = () => {
     setPage(prev => prev + 1);
+  };
+
+  const viewPrompt = async (messageId: string) => {
+    try {
+      // Fetch the specific message with all metadata
+      const { data: message, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('id', messageId)
+        .single();
+
+      if (error) throw error;
+
+      // Fetch related ai_chat_session if available
+      const metadata = message.metadata as any;
+      const { data: session } = await supabase
+        .from('ai_chat_sessions')
+        .select('*')
+        .eq('community_id', communityId)
+        .eq('metadata->>telegram_chat_id', metadata?.telegram_chat_id || '')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // Fetch community settings for system prompt
+      const { data: community } = await supabase
+        .from('communities')
+        .select('agent_instructions, agent_name, agent_model')
+        .eq('id', communityId)
+        .single();
+
+      setSelectedPrompt({
+        message,
+        session,
+        community
+      });
+      setPromptDialogOpen(true);
+    } catch (error) {
+      console.error('Error fetching prompt details:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load prompt details",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const redactSecrets = (text: string) => {
+    if (!text) return text;
+    // Redact API keys, tokens, and other secrets
+    return text
+      .replace(/sk-[a-zA-Z0-9]{32,}/g, 'sk-***REDACTED***')
+      .replace(/Bearer [a-zA-Z0-9_-]+/g, 'Bearer ***REDACTED***')
+      .replace(/[0-9]{10,}:[A-Za-z0-9_-]{35}/g, '***REDACTED***'); // Telegram bot tokens
   };
 
   return (
@@ -288,7 +345,7 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
                       )}
                     </Avatar>
 
-                    <div className={`flex-1 ${isAI ? 'mr-12' : 'ml-12'}`}>
+                      <div className={`flex-1 ${isAI ? 'mr-12' : 'ml-12'}`}>
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-sm font-medium">
                           {isAI ? 'AI Assistant' : userName}
@@ -299,6 +356,17 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
                         <Badge variant="outline" className="text-xs">
                           {message.message_type}
                         </Badge>
+                        {isAI && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => viewPrompt(message.id)}
+                            className="h-6 px-2"
+                          >
+                            <Eye className="w-3 h-3 mr-1" />
+                            <span className="text-xs">View Prompt</span>
+                          </Button>
+                        )}
                       </div>
                       <div
                         className={`rounded-lg p-3 ${
@@ -320,6 +388,88 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
           )}
         </CardContent>
       </Card>
+
+      {/* Prompt Viewer Dialog */}
+      <Dialog open={promptDialogOpen} onOpenChange={setPromptDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>AI Prompt Context</DialogTitle>
+            <DialogDescription>
+              Full context sent to the AI model for this message
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedPrompt && (
+            <div className="space-y-4">
+              {/* System Prompt */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Bot className="w-4 h-4" />
+                  System Instructions
+                </h3>
+                <div className="bg-muted p-3 rounded-lg font-mono text-xs whitespace-pre-wrap">
+                  {redactSecrets(selectedPrompt.community?.agent_instructions || 'No system instructions set')}
+                </div>
+              </div>
+
+              {/* Model Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Model</p>
+                  <Badge>{selectedPrompt.session?.model_used || selectedPrompt.community?.agent_model || 'Unknown'}</Badge>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Agent Name</p>
+                  <Badge variant="outline">{selectedPrompt.community?.agent_name || 'AI Assistant'}</Badge>
+                </div>
+              </div>
+
+              {/* Message Metadata */}
+              {selectedPrompt.message?.metadata && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold">Message Metadata</h3>
+                  <div className="bg-muted p-3 rounded-lg font-mono text-xs overflow-x-auto">
+                    <pre>{JSON.stringify(selectedPrompt.message.metadata, null, 2)}</pre>
+                  </div>
+                </div>
+              )}
+
+              {/* Session Analytics */}
+              {selectedPrompt.session && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold">Session Analytics</h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="bg-muted p-2 rounded">
+                      <p className="text-xs text-muted-foreground">Tokens Used</p>
+                      <p className="font-semibold">{selectedPrompt.session.tokens_used}</p>
+                    </div>
+                    <div className="bg-muted p-2 rounded">
+                      <p className="text-xs text-muted-foreground">Cost</p>
+                      <p className="font-semibold">${selectedPrompt.session.cost_usd.toFixed(4)}</p>
+                    </div>
+                    <div className="bg-muted p-2 rounded">
+                      <p className="text-xs text-muted-foreground">Response Time</p>
+                      <p className="font-semibold">
+                        {selectedPrompt.session.metadata?.response_time_ms 
+                          ? `${selectedPrompt.session.metadata.response_time_ms}ms`
+                          : 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Original Message */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold">AI Response</h3>
+                <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg">
+                  <p className="text-sm whitespace-pre-wrap">{selectedPrompt.message?.content}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

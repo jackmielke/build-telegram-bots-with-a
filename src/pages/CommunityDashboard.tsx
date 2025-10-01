@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, BarChart3, Bot, Brain, Users, MessageSquare } from 'lucide-react';
+import { Loader2, ArrowLeft, BarChart3, Bot, Brain, Users, MessageSquare, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 // Import dashboard sections
@@ -183,7 +183,7 @@ const CommunityDashboard = () => {
       {/* Community Info Bar */}
       <div className="border-b border-border/30 bg-muted/30">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2">
-          <div className="flex items-center justify-center sm:justify-start space-x-3">
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
             <Badge variant={isAdmin ? 'default' : 'outline'} className="text-xs">
               {community.user_role}
             </Badge>
@@ -193,6 +193,12 @@ const CommunityDashboard = () => {
             {community.agent_name && (
               <Badge variant="outline" className="text-xs sm:hidden">
                 {community.agent_name}
+              </Badge>
+            )}
+            {community.telegram_bot_token && (
+              <Badge variant="outline" className="text-xs flex items-center gap-1 bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20">
+                <Check className="w-3 h-3" />
+                Telegram
               </Badge>
             )}
           </div>

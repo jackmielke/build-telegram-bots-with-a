@@ -386,15 +386,15 @@ serve(async (req) => {
             
             // Use configured intro message or default
             const introMessage = communityData?.agent_intro_message || 
-              `hey ${userName.toLowerCase()} — welcome! how's it going? what can i help you with today at ${communityName.toLowerCase()}?
+              `Hey ${userName}, welcome! How's it going? What can I help you with today at ${communityName.toLowerCase()}?
 
-some quick things i can do:
+Some quick things I can do:
 - answer questions about the community
 - help you connect with others
 - provide info and resources
 - assist with projects and ideas
 
-tell me what you need and i'll get on it.`;
+Tell me what you need and I'll get on it.`;
             
             const botToken = await getBotToken(supabase, communityId);
             if (!botToken) {

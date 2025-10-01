@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
   Zap, 
   Send, 
@@ -22,7 +23,8 @@ import {
   Loader,
   Save,
   Globe,
-  Play
+  Play,
+  AlertCircle
 } from 'lucide-react';
 
 interface Community {
@@ -574,6 +576,23 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                 Get a bot token from <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">@BotFather</a> on Telegram
               </p>
             </div>
+
+            <Alert className="border-primary/30 bg-primary/5">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Important: Bot Group Setup</AlertTitle>
+              <AlertDescription>
+                <p className="mb-2">For your bot to work in group chats, you need to:</p>
+                <ul className="list-disc ml-4 space-y-1 text-xs">
+                  <li>Go to <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">@BotFather</a></li>
+                  <li>Send <code className="bg-background/80 px-1 rounded">/mybots</code> and select your bot</li>
+                  <li>Click <strong>Bot Settings → Group Privacy → Turn Off</strong></li>
+                  <li>Enable <strong>Allow Groups</strong> if prompted</li>
+                </ul>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Without these settings, the bot can only see messages where it's mentioned with @botname.
+                </p>
+              </AlertDescription>
+            </Alert>
             
             {botInfo && (
               <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg mb-4">

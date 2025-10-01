@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, BarChart3, Bot, Brain, Users, Zap, Settings } from 'lucide-react';
+import { Loader2, ArrowLeft, BarChart3, Bot, Brain, Users, MessageSquare } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 // Import dashboard sections
@@ -13,7 +13,7 @@ import AnalyticsDashboard from '@/components/dashboard/AnalyticsDashboard';
 import AgentConfiguration from '@/components/dashboard/AgentConfiguration';
 import MemoryManagement from '@/components/dashboard/MemoryManagement';
 import CommunitySettings from '@/components/dashboard/CommunitySettings';
-import WorkflowBuilder from '@/components/dashboard/WorkflowBuilder';
+import ChatHistoryDashboard from '@/components/dashboard/ChatHistoryDashboard';
 
 interface Community {
   id: string;
@@ -202,14 +202,18 @@ const CommunityDashboard = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-2 bg-card/50 p-2 h-auto">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 gap-2 bg-card/50 p-2 h-auto">
             <TabsTrigger value="agent-workflows" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
               <Bot className="w-6 h-6 text-primary" />
-              <span className="text-xs">Agent & Workflows</span>
+              <span className="text-xs">Agent</span>
             </TabsTrigger>
             <TabsTrigger value="analytics" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
               <BarChart3 className="w-6 h-6 text-primary" />
               <span className="text-xs">Activity</span>
+            </TabsTrigger>
+            <TabsTrigger value="chat-history" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
+              <MessageSquare className="w-6 h-6 text-primary" />
+              <span className="text-xs">Chat History</span>
             </TabsTrigger>
             <TabsTrigger value="memory" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
               <Brain className="w-6 h-6 text-primary" />
@@ -231,6 +235,10 @@ const CommunityDashboard = () => {
 
           <TabsContent value="analytics" className="space-y-6">
             <AnalyticsDashboard community={community} />
+          </TabsContent>
+
+          <TabsContent value="chat-history" className="space-y-6">
+            <ChatHistoryDashboard communityId={community.id} isAdmin={isAdmin} />
           </TabsContent>
 
           <TabsContent value="memory" className="space-y-6">

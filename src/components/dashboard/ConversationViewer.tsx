@@ -416,7 +416,7 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
 
       {/* Prompt Viewer Dialog */}
       <Dialog open={promptDialogOpen} onOpenChange={setPromptDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle>AI Prompt Context</DialogTitle>
             <DialogDescription>
@@ -424,181 +424,178 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
             </DialogDescription>
           </DialogHeader>
           
-          {selectedPrompt && (
-            <div className="space-y-4">
-              {/* Conversation Context - THE 7 MESSAGES THE AI SAW */}
-              {selectedPrompt.contextMessages && selectedPrompt.contextMessages.length > 0 && (
+          <ScrollArea className="max-h-[60vh]">
+            {selectedPrompt && (
+              <div className="space-y-4 pr-4">
+                {/* System Prompt */}
                 <div className="space-y-2">
                   <h3 className="text-sm font-semibold flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4" />
-                    Conversation Context ({selectedPrompt.contextMessages.length} messages)
+                    <Bot className="w-4 h-4" />
+                    System Instructions
                   </h3>
-                  <p className="text-xs text-muted-foreground">
-                    These are the previous messages the AI had access to when generating this response (sliding window of 7 messages)
-                  </p>
-                  <ScrollArea className="h-64 border rounded-lg">
-                    <div className="p-3 space-y-3">
-                      {selectedPrompt.contextMessages.map((msg: any, idx: number) => {
-                        const isAI = msg.sent_by === 'ai';
-                        return (
-                          <div key={msg.id} className={`flex gap-2 ${isAI ? 'justify-start' : 'justify-end'}`}>
-                            {isAI && (
-                              <Avatar className="h-6 w-6">
-                                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                                  AI
-                                </AvatarFallback>
-                              </Avatar>
-                            )}
-                            <div className={`flex-1 max-w-[80%] ${isAI ? '' : 'text-right'}`}>
-                              <div className="flex items-center gap-2 mb-1 text-xs text-muted-foreground">
-                                <span>{isAI ? 'AI' : (msg.users?.name || msg.sent_by || 'User')}</span>
-                                <span>•</span>
-                                <span>{new Date(msg.created_at).toLocaleTimeString()}</span>
-                              </div>
-                              <div className={`rounded-lg p-2 text-sm ${
-                                isAI ? 'bg-primary/10' : 'bg-muted'
-                              }`}>
-                                {msg.content}
-                              </div>
-                            </div>
-                            {!isAI && (
-                              <Avatar className="h-6 w-6">
-                                <AvatarImage src={msg.users?.avatar_url} />
-                                <AvatarFallback className="text-xs">
-                                  {(msg.users?.name || msg.sent_by || 'U')[0]}
-                                </AvatarFallback>
-                              </Avatar>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </ScrollArea>
-                </div>
-              )}
-
-              {/* System Prompt */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold flex items-center gap-2">
-                  <Bot className="w-4 h-4" />
-                  System Instructions
-                </h3>
-                <div className="bg-muted p-3 rounded-lg font-mono text-xs whitespace-pre-wrap">
-                  {redactSecrets(selectedPrompt.community?.agent_instructions || 'No system instructions set')}
-                </div>
-              </div>
-
-              {/* Community Memories - ALL MEMORIES */}
-              {selectedPrompt.allMemories && selectedPrompt.allMemories.length > 0 && (
-                <Collapsible className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold flex items-center gap-2">
-                      <Database className="w-4 h-4" />
-                      Community Memories ({selectedPrompt.allMemories.length} total)
-                    </h3>
-                    <CollapsibleTrigger asChild>
-                      <Button variant="ghost" size="sm" className="w-9 p-0">
-                        <ChevronDown className="h-4 w-4" />
-                        <span className="sr-only">Toggle memories</span>
-                      </Button>
-                    </CollapsibleTrigger>
+                  <div className="bg-muted p-3 rounded-lg font-mono text-xs whitespace-pre-wrap">
+                    {redactSecrets(selectedPrompt.community?.agent_instructions || 'No system instructions set')}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Note: Only the last 10 memories are sent to the AI. This shows all {selectedPrompt.allMemories.length} memories in the community.
-                  </p>
-                  <CollapsibleContent className="space-y-2">
-                    <ScrollArea className="h-64 border rounded-lg bg-background">
-                      <div className="p-3 space-y-3">
-                        {selectedPrompt.allMemories.map((memory: any, idx: number) => (
-                          <div key={memory.id} className="border-b border-border/50 pb-2 last:border-0">
-                            <div className="flex items-start justify-between gap-2 mb-1">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  {idx < 10 && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      Sent to AI
-                                    </Badge>
-                                  )}
-                                  <span className="text-xs text-muted-foreground">
-                                    {new Date(memory.created_at).toLocaleDateString()}
-                                  </span>
-                                </div>
-                                {memory.tags && memory.tags.length > 0 && (
-                                  <div className="flex flex-wrap gap-1 mb-2">
-                                    {memory.tags.map((tag: string) => (
-                                      <Badge key={tag} variant="outline" className="text-xs">
-                                        {tag}
-                                      </Badge>
-                                    ))}
+                </div>
+
+                {/* Community Memories - ALL MEMORIES */}
+                {selectedPrompt.allMemories && selectedPrompt.allMemories.length > 0 && (
+                  <Collapsible className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold flex items-center gap-2">
+                        <Database className="w-4 h-4" />
+                        Community Memories ({selectedPrompt.allMemories.length} total)
+                      </h3>
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="sm" className="w-9 p-0">
+                          <ChevronDown className="h-4 w-4" />
+                          <span className="sr-only">Toggle memories</span>
+                        </Button>
+                      </CollapsibleTrigger>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      All community memories are sent to the AI. This shows all {selectedPrompt.allMemories.length} memories in the community.
+                    </p>
+                    <CollapsibleContent className="space-y-2">
+                      <ScrollArea className="h-64 border rounded-lg bg-background">
+                        <div className="p-3 space-y-3">
+                          {selectedPrompt.allMemories.map((memory: any) => (
+                            <div key={memory.id} className="border-b border-border/50 pb-2 last:border-0">
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-xs text-muted-foreground">
+                                      {new Date(memory.created_at).toLocaleDateString()}
+                                    </span>
                                   </div>
-                                )}
+                                  {memory.tags && memory.tags.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mb-2">
+                                      {memory.tags.map((tag: string) => (
+                                        <Badge key={tag} variant="outline" className="text-xs">
+                                          {tag}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
+                              <p className="text-sm whitespace-pre-wrap">{memory.content}</p>
                             </div>
-                            <p className="text-sm whitespace-pre-wrap">{memory.content}</p>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
+
+                {/* Model Info */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Model</p>
+                    <Badge>{selectedPrompt.session?.model_used || selectedPrompt.community?.agent_model || 'Unknown'}</Badge>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Agent Name</p>
+                    <Badge variant="outline">{selectedPrompt.community?.agent_name || 'AI Assistant'}</Badge>
+                  </div>
+                </div>
+
+                {/* Message Metadata */}
+                {selectedPrompt.message?.metadata && (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold">Message Metadata</h3>
+                    <div className="bg-muted p-3 rounded-lg font-mono text-xs overflow-x-auto">
+                      <pre>{JSON.stringify(selectedPrompt.message.metadata, null, 2)}</pre>
+                    </div>
+                  </div>
+                )}
+
+                {/* Session Analytics */}
+                {selectedPrompt.session && (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold">Session Analytics</h3>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-muted p-2 rounded">
+                        <p className="text-xs text-muted-foreground">Tokens Used</p>
+                        <p className="font-semibold">{selectedPrompt.session.tokens_used}</p>
+                      </div>
+                      <div className="bg-muted p-2 rounded">
+                        <p className="text-xs text-muted-foreground">Cost</p>
+                        <p className="font-semibold">${selectedPrompt.session.cost_usd.toFixed(4)}</p>
+                      </div>
+                      <div className="bg-muted p-2 rounded">
+                        <p className="text-xs text-muted-foreground">Response Time</p>
+                        <p className="font-semibold">
+                          {selectedPrompt.session.metadata?.response_time_ms 
+                            ? `${selectedPrompt.session.metadata.response_time_ms}ms`
+                            : 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Conversation Context - THE 7 MESSAGES THE AI SAW */}
+                {selectedPrompt.contextMessages && selectedPrompt.contextMessages.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
+                      <BarChart3 className="w-4 h-4" />
+                      Conversation Context ({selectedPrompt.contextMessages.length} messages)
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      These are the previous messages the AI had access to when generating this response (sliding window of 7 messages)
+                    </p>
+                    <ScrollArea className="h-64 border rounded-lg">
+                      <div className="p-3 space-y-3">
+                        {selectedPrompt.contextMessages.map((msg: any) => {
+                          const isAI = msg.sent_by === 'ai';
+                          return (
+                            <div key={msg.id} className={`flex gap-2 ${isAI ? 'justify-start' : 'justify-end'}`}>
+                              {isAI && (
+                                <Avatar className="h-6 w-6">
+                                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                                    AI
+                                  </AvatarFallback>
+                                </Avatar>
+                              )}
+                              <div className={`flex-1 max-w-[80%] ${isAI ? '' : 'text-right'}`}>
+                                <div className="flex items-center gap-2 mb-1 text-xs text-muted-foreground">
+                                  <span>{isAI ? 'AI' : (msg.users?.name || msg.sent_by || 'User')}</span>
+                                  <span>•</span>
+                                  <span>{new Date(msg.created_at).toLocaleTimeString()}</span>
+                                </div>
+                                <div className={`rounded-lg p-2 text-sm ${
+                                  isAI ? 'bg-primary/10' : 'bg-muted'
+                                }`}>
+                                  {msg.content}
+                                </div>
+                              </div>
+                              {!isAI && (
+                                <Avatar className="h-6 w-6">
+                                  <AvatarImage src={msg.users?.avatar_url} />
+                                  <AvatarFallback className="text-xs">
+                                    {(msg.users?.name || msg.sent_by || 'U')[0]}
+                                  </AvatarFallback>
+                                </Avatar>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </ScrollArea>
-                  </CollapsibleContent>
-                </Collapsible>
-              )}
+                  </div>
+                )}
 
-              {/* Model Info */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Model</p>
-                  <Badge>{selectedPrompt.session?.model_used || selectedPrompt.community?.agent_model || 'Unknown'}</Badge>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Agent Name</p>
-                  <Badge variant="outline">{selectedPrompt.community?.agent_name || 'AI Assistant'}</Badge>
-                </div>
-              </div>
-
-              {/* Message Metadata */}
-              {selectedPrompt.message?.metadata && (
+                {/* Original Message */}
                 <div className="space-y-2">
-                  <h3 className="text-sm font-semibold">Message Metadata</h3>
-                  <div className="bg-muted p-3 rounded-lg font-mono text-xs overflow-x-auto">
-                    <pre>{JSON.stringify(selectedPrompt.message.metadata, null, 2)}</pre>
+                  <h3 className="text-sm font-semibold">AI Response</h3>
+                  <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg">
+                    <p className="text-sm whitespace-pre-wrap">{selectedPrompt.message?.content}</p>
                   </div>
                 </div>
-              )}
-
-              {/* Session Analytics */}
-              {selectedPrompt.session && (
-                <div className="space-y-2">
-                  <h3 className="text-sm font-semibold">Session Analytics</h3>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="bg-muted p-2 rounded">
-                      <p className="text-xs text-muted-foreground">Tokens Used</p>
-                      <p className="font-semibold">{selectedPrompt.session.tokens_used}</p>
-                    </div>
-                    <div className="bg-muted p-2 rounded">
-                      <p className="text-xs text-muted-foreground">Cost</p>
-                      <p className="font-semibold">${selectedPrompt.session.cost_usd.toFixed(4)}</p>
-                    </div>
-                    <div className="bg-muted p-2 rounded">
-                      <p className="text-xs text-muted-foreground">Response Time</p>
-                      <p className="font-semibold">
-                        {selectedPrompt.session.metadata?.response_time_ms 
-                          ? `${selectedPrompt.session.metadata.response_time_ms}ms`
-                          : 'N/A'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Original Message */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold">AI Response</h3>
-                <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg">
-                  <p className="text-sm whitespace-pre-wrap">{selectedPrompt.message?.content}</p>
-                </div>
               </div>
-            </div>
-          )}
+            )}
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>

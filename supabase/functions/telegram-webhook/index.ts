@@ -422,6 +422,36 @@ Tell me what you need and I'll get on it.`).trim();
               });
             }
             
+            // Find or create user for /start command
+            const startUserId = await findOrCreateUser(
+              supabase,
+              telegramUserId,
+              telegramUsername,
+              firstName,
+              lastName
+            );
+            
+            // Log the /start user message
+            await supabase
+              .from('messages')
+              .insert({
+                content: '/start',
+                chat_type: 'telegram_bot',
+                conversation_id: conversationId,
+                community_id: communityId,
+                sender_id: startUserId,
+                sent_by: telegramUsername || firstName || 'telegram_user',
+                metadata: {
+                  telegram_chat_id: chatId,
+                  telegram_user_id: telegramUserId,
+                  telegram_message_id: body.message?.message_id,
+                  chat_type_detail: chatType,
+                  telegram_username: telegramUsername,
+                  telegram_first_name: firstName,
+                  telegram_last_name: lastName
+                }
+              });
+            
             // Send the intro message
             const sendMessageResp = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
               method: 'POST',
@@ -435,6 +465,25 @@ Tell me what you need and I'll get on it.`).trim();
             
             const sendMessageData = await sendMessageResp.json();
             console.log('✅ Intro message sent:', sendMessageData);
+            
+            // Log the intro AI response message
+            await supabase
+              .from('messages')
+              .insert({
+                content: introMessage,
+                chat_type: 'telegram_bot',
+                conversation_id: conversationId,
+                community_id: communityId,
+                sender_id: null,
+                sent_by: 'ai',
+                metadata: {
+                  telegram_chat_id: chatId,
+                  chat_type_detail: chatType,
+                  is_intro_message: true,
+                  telegram_chat_title: body.message?.chat?.title || null,
+                  telegram_chat_username: body.message?.chat?.username || null
+                }
+              });
             
             return new Response(JSON.stringify({ 
               ok: true, 
@@ -546,13 +595,12 @@ Tell me what you need and I'll get on it.`).trim();
               .eq('id', communityId)
               .single();
 
-            // Fetch community memories/knowledge with timestamps and IDs
+            // Fetch ALL community memories/knowledge with timestamps and IDs
             const { data: memories } = await supabase
               .from('memories')
               .select('id, content, created_at')
               .eq('community_id', communityId)
-              .order('created_at', { ascending: false })
-              .limit(10);
+              .order('created_at', { ascending: false });
 
             // Build enhanced system prompt with context
             const currentTime = new Date().toISOString();

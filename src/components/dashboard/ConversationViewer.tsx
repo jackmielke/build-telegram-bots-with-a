@@ -165,6 +165,21 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
 
       if (error) throw error;
 
+      // Fetch the 7 messages that came BEFORE this AI response (sliding window context)
+      const { data: contextMessages } = await supabase
+        .from('messages')
+        .select(`
+          *,
+          users:sender_id (
+            name,
+            avatar_url
+          )
+        `)
+        .eq('conversation_id', conversationId)
+        .lt('created_at', message.created_at)
+        .order('created_at', { ascending: false })
+        .limit(7);
+
       // Fetch related ai_chat_session if available
       const metadata = message.metadata as any;
       const { data: session } = await supabase
@@ -186,7 +201,8 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
       setSelectedPrompt({
         message,
         session,
-        community
+        community,
+        contextMessages: contextMessages?.reverse() || [] // Reverse to show chronological order
       });
       setPromptDialogOpen(true);
     } catch (error) {
@@ -401,6 +417,57 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
           
           {selectedPrompt && (
             <div className="space-y-4">
+              {/* Conversation Context - THE 7 MESSAGES THE AI SAW */}
+              {selectedPrompt.contextMessages && selectedPrompt.contextMessages.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4" />
+                    Conversation Context ({selectedPrompt.contextMessages.length} messages)
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    These are the previous messages the AI had access to when generating this response (sliding window of 7 messages)
+                  </p>
+                  <ScrollArea className="h-64 border rounded-lg">
+                    <div className="p-3 space-y-3">
+                      {selectedPrompt.contextMessages.map((msg: any, idx: number) => {
+                        const isAI = msg.sent_by === 'ai';
+                        return (
+                          <div key={msg.id} className={`flex gap-2 ${isAI ? 'justify-start' : 'justify-end'}`}>
+                            {isAI && (
+                              <Avatar className="h-6 w-6">
+                                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                                  AI
+                                </AvatarFallback>
+                              </Avatar>
+                            )}
+                            <div className={`flex-1 max-w-[80%] ${isAI ? '' : 'text-right'}`}>
+                              <div className="flex items-center gap-2 mb-1 text-xs text-muted-foreground">
+                                <span>{isAI ? 'AI' : (msg.users?.name || msg.sent_by || 'User')}</span>
+                                <span>•</span>
+                                <span>{new Date(msg.created_at).toLocaleTimeString()}</span>
+                              </div>
+                              <div className={`rounded-lg p-2 text-sm ${
+                                isAI ? 'bg-primary/10' : 'bg-muted'
+                              }`}>
+                                {msg.content}
+                              </div>
+                            </div>
+                            {!isAI && (
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={msg.users?.avatar_url} />
+                                <AvatarFallback className="text-xs">
+                                  {(msg.users?.name || msg.sent_by || 'U')[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
+
               {/* System Prompt */}
               <div className="space-y-2">
                 <h3 className="text-sm font-semibold flex items-center gap-2">

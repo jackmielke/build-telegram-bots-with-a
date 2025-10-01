@@ -576,11 +576,6 @@ ${communityData?.agent_instructions || 'You are a helpful community assistant.'}
                 .join('\n');
               systemPrompt += `\n\n=== Community Memory ===\n${memoriesContext}`;
             }
-            
-            // Add first-time user onboarding context
-            if (isNewUser && communityData?.agent_intro_message) {
-              systemPrompt += `\n\n=== Important ===\nThis is the user's first message. Start your response with: ${communityData.agent_intro_message}`;
-            }
 
             // Build conversation history for OpenAI (reverse to chronological order for sliding window)
             const conversationMessages = conversationHistory && conversationHistory.length > 0

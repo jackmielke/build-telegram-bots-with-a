@@ -631,12 +631,25 @@ ${communityData?.agent_instructions || 'You are a helpful community assistant.'}
             });
 
             if (!aiResponse.ok) {
-              console.error('OpenAI API error:', await aiResponse.text());
-              throw new Error('Failed to get AI response');
+              const errorText = await aiResponse.text();
+              console.error('❌ OpenAI API error:', aiResponse.status, errorText);
+              throw new Error(`OpenAI API failed: ${aiResponse.status} - ${errorText}`);
             }
 
             const aiData = await aiResponse.json();
+            console.log('✅ OpenAI response received:', {
+              hasChoices: !!aiData.choices,
+              choicesLength: aiData.choices?.length,
+              hasContent: !!aiData.choices?.[0]?.message?.content,
+              model: aiData.model,
+              usage: aiData.usage
+            });
+            
             const replyText = aiData.choices?.[0]?.message?.content || 'Sorry, I could not generate a response.';
+            
+            if (!aiData.choices?.[0]?.message?.content) {
+              console.error('⚠️ No content in AI response:', JSON.stringify(aiData));
+            }
             const responseTime = Date.now() - startTime;
 
             // Store AI response message (no sender_id for AI messages)

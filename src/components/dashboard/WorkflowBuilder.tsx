@@ -53,6 +53,8 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
   const [botInfo, setBotInfo] = useState<any>(null);
   const [testingConnection, setTestingConnection] = useState(false);
   const [savingBot, setSavingBot] = useState(false);
+  const [webhookInfo, setWebhookInfo] = useState<any>(null);
+  const [checkingWebhook, setCheckingWebhook] = useState(false);
   const EDGE_FUNCTION_URL = 'https://efdqqnubowgwsnwvlalp.supabase.co/functions/v1/telegram-webhook';
   const { toast } = useToast();
 
@@ -97,6 +99,7 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
       testBotConnection(community.telegram_bot_token).then(result => {
         if (result.success) {
           setBotInfo(result.botInfo);
+          checkWebhookStatus(community.telegram_bot_token);
         }
       });
     }
@@ -386,6 +389,29 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
     }
   };
 
+  const checkWebhookStatus = async (token: string) => {
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${token}/getWebhookInfo`);
+      const data = await response.json();
+      if (data.ok) {
+        setWebhookInfo(data.result);
+      }
+    } catch (error) {
+      console.error('Error checking webhook:', error);
+    }
+  };
+
+  const handleCheckWebhook = async () => {
+    if (!community.telegram_bot_token) return;
+    setCheckingWebhook(true);
+    await checkWebhookStatus(community.telegram_bot_token);
+    setCheckingWebhook(false);
+    toast({
+      title: "Webhook Status Checked",
+      description: webhookInfo?.url ? "Webhook is configured" : "Webhook not configured",
+    });
+  };
+
   const setupWebhook = async (token: string) => {
     try {
       const webhookUrl = `${EDGE_FUNCTION_URL}?community_id=${community.id}`;
@@ -402,9 +428,18 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
       if (!data.ok) {
         throw new Error(data.description || 'Failed to set webhook');
       }
+      await checkWebhookStatus(token);
+      toast({
+        title: "Webhook Configured",
+        description: "Your bot can now receive messages from Telegram",
+      });
     } catch (error) {
       console.error('Webhook setup error:', error);
-      // Don't fail the whole operation for webhook issues
+      toast({
+        title: "Webhook Error",
+        description: "Failed to configure webhook",
+        variant: "destructive"
+      });
     }
   };
 
@@ -645,6 +680,78 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                 Connect Bot
               </Button>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Webhook Status - Show when bot is connected */}
+      {botInfo && community.telegram_bot_token && (
+        <Card className="gradient-card border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Globe className="w-5 h-5 text-primary" />
+                <span>Webhook Status</span>
+              </div>
+              <Button
+                onClick={handleCheckWebhook}
+                variant="outline"
+                size="sm"
+                disabled={checkingWebhook}
+              >
+                {checkingWebhook ? (
+                  <Loader className="w-4 h-4 animate-spin" />
+                ) : (
+                  'Check Status'
+                )}
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {webhookInfo ? (
+              <div className="space-y-3">
+                {webhookInfo.url ? (
+                  <Alert className="border-green-500/30 bg-green-500/5">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <AlertTitle>Webhook Active</AlertTitle>
+                    <AlertDescription className="space-y-2">
+                      <p className="text-xs break-all">
+                        <strong>URL:</strong> {webhookInfo.url}
+                      </p>
+                      {webhookInfo.pending_update_count > 0 && (
+                        <p className="text-xs text-yellow-600">
+                          <strong>Pending updates:</strong> {webhookInfo.pending_update_count}
+                        </p>
+                      )}
+                      {webhookInfo.last_error_message && (
+                        <p className="text-xs text-destructive">
+                          <strong>Last error:</strong> {webhookInfo.last_error_message}
+                        </p>
+                      )}
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Webhook Not Configured</AlertTitle>
+                    <AlertDescription>
+                      <p className="text-xs mb-2">
+                        Your bot won't receive messages until the webhook is set up.
+                      </p>
+                      <Button
+                        onClick={() => setupWebhook(community.telegram_bot_token!)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        Configure Webhook Now
+                      </Button>
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Click "Check Status" to view webhook info</p>
+            )}
           </CardContent>
         </Card>
       )}

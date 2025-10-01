@@ -77,21 +77,55 @@ async function findOrCreateUser(
         .maybeSingle();
       
       if (existingUser) {
+        console.log(`Found existing user by telegram_username: ${telegramUsername}`);
         return existingUser.id;
+      }
+      
+      // Try to find by username field (in case they signed up via app first)
+      const { data: userByUsername } = await supabase
+        .from('users')
+        .select('id, telegram_username')
+        .eq('username', telegramUsername)
+        .maybeSingle();
+      
+      if (userByUsername) {
+        // Update their telegram_username if not set
+        if (!userByUsername.telegram_username) {
+          await supabase
+            .from('users')
+            .update({ telegram_username: telegramUsername })
+            .eq('id', userByUsername.id);
+          console.log(`Updated telegram_username for existing user: ${telegramUsername}`);
+        }
+        return userByUsername.id;
       }
     }
 
-    // If not found, create new user
+    // If not found, create new user with unique username
     const displayName = firstName 
       ? `${firstName}${lastName ? ' ' + lastName : ''}`
       : telegramUsername || `telegram_user_${telegramUserId}`;
+
+    // Generate unique username by adding telegram user ID if needed
+    let username = telegramUsername || `tg_${telegramUserId}`;
+    
+    // Check if username exists and make it unique if needed
+    const { data: usernameCheck } = await supabase
+      .from('users')
+      .select('id')
+      .eq('username', username)
+      .maybeSingle();
+    
+    if (usernameCheck) {
+      username = `${username}_tg${telegramUserId}`;
+    }
 
     const { data: newUser, error } = await supabase
       .from('users')
       .insert({
         name: displayName,
         telegram_username: telegramUsername,
-        username: telegramUsername || `tg_${telegramUserId}`,
+        username: username,
         bio: `Telegram user (ID: ${telegramUserId})`
       })
       .select('id')
@@ -102,6 +136,7 @@ async function findOrCreateUser(
       return null;
     }
 
+    console.log(`Created new user: ${username} (${displayName})`);
     return newUser.id;
   } catch (error) {
     console.error('Error in findOrCreateUser:', error);

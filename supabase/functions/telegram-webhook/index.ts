@@ -456,7 +456,7 @@ serve(async (req) => {
               throw new Error('AI service not configured');
             }
 
-            const model = communityData?.agent_model || 'gpt-4o-mini';
+            const model = communityData?.agent_model || 'gpt-5-mini-2025-08-07';
             const isLegacyModel = model.includes('gpt-4o') || model.includes('gpt-3.5');
             
             // Build request body based on model type

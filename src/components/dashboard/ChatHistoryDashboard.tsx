@@ -328,7 +328,12 @@ const ChatHistoryDashboard = ({ communityId, isAdmin }: ChatHistoryDashboardProp
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[600px]">
-            {filteredConversations.length === 0 ? (
+            {loading && conversations.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50 animate-pulse" />
+                <p>Loading conversations...</p>
+              </div>
+            ) : filteredConversations.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
                 <p>No conversations found</p>

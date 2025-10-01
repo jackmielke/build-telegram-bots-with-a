@@ -42,7 +42,7 @@ const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfiguration
     agent_instructions: community.agent_instructions || '',
     agent_intro_message: community.agent_intro_message || '',
     agent_avatar_url: community.agent_avatar_url || '',
-    agent_model: community.agent_model || 'gpt-4o-mini',
+    agent_model: community.agent_model || 'gpt-5-mini-2025-08-07',
     agent_max_tokens: community.agent_max_tokens || 2000,
     agent_temperature: community.agent_temperature || 0.7,
     agent_suggested_messages: community.agent_suggested_messages || []

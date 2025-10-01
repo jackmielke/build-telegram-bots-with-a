@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, Bot, User, Calendar, DollarSign, BarChart3, Download, Eye } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ArrowLeft, Bot, User, Calendar, DollarSign, BarChart3, Download, Eye, ChevronDown, Database } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Message {
@@ -180,6 +181,13 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
         .order('created_at', { ascending: false })
         .limit(7);
 
+      // Fetch ALL community memories (not just the 10 sent to AI)
+      const { data: allMemories } = await supabase
+        .from('memories')
+        .select('id, content, created_at, tags')
+        .eq('community_id', communityId)
+        .order('created_at', { ascending: false });
+
       // Fetch related ai_chat_session if available
       const metadata = message.metadata as any;
       const { data: session } = await supabase
@@ -202,7 +210,8 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
         message,
         session,
         community,
-        contextMessages: contextMessages?.reverse() || [] // Reverse to show chronological order
+        contextMessages: contextMessages?.reverse() || [], // Reverse to show chronological order
+        allMemories: allMemories || []
       });
       setPromptDialogOpen(true);
     } catch (error) {
@@ -478,6 +487,61 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
                   {redactSecrets(selectedPrompt.community?.agent_instructions || 'No system instructions set')}
                 </div>
               </div>
+
+              {/* Community Memories - ALL MEMORIES */}
+              {selectedPrompt.allMemories && selectedPrompt.allMemories.length > 0 && (
+                <Collapsible className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
+                      <Database className="w-4 h-4" />
+                      Community Memories ({selectedPrompt.allMemories.length} total)
+                    </h3>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" size="sm" className="w-9 p-0">
+                        <ChevronDown className="h-4 w-4" />
+                        <span className="sr-only">Toggle memories</span>
+                      </Button>
+                    </CollapsibleTrigger>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Note: Only the last 10 memories are sent to the AI. This shows all {selectedPrompt.allMemories.length} memories in the community.
+                  </p>
+                  <CollapsibleContent className="space-y-2">
+                    <ScrollArea className="h-64 border rounded-lg bg-background">
+                      <div className="p-3 space-y-3">
+                        {selectedPrompt.allMemories.map((memory: any, idx: number) => (
+                          <div key={memory.id} className="border-b border-border/50 pb-2 last:border-0">
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  {idx < 10 && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      Sent to AI
+                                    </Badge>
+                                  )}
+                                  <span className="text-xs text-muted-foreground">
+                                    {new Date(memory.created_at).toLocaleDateString()}
+                                  </span>
+                                </div>
+                                {memory.tags && memory.tags.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mb-2">
+                                    {memory.tags.map((tag: string) => (
+                                      <Badge key={tag} variant="outline" className="text-xs">
+                                        {tag}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <p className="text-sm whitespace-pre-wrap">{memory.content}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
 
               {/* Model Info */}
               <div className="grid grid-cols-2 gap-4">

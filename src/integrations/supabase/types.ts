@@ -1119,6 +1119,7 @@ export type Database = {
           universal_id: string
           updated_at: string
           username: string | null
+          vibecoin_balance: number
         }
         Insert: {
           auth_user_id?: string | null
@@ -1142,6 +1143,7 @@ export type Database = {
           universal_id: string
           updated_at?: string
           username?: string | null
+          vibecoin_balance?: number
         }
         Update: {
           auth_user_id?: string | null
@@ -1165,8 +1167,66 @@ export type Database = {
           universal_id?: string
           updated_at?: string
           username?: string | null
+          vibecoin_balance?: number
         }
         Relationships: []
+      }
+      vibecoin_pickups: {
+        Row: {
+          collected_at: string | null
+          collected_by: string | null
+          community_id: string
+          created_at: string
+          id: string
+          is_collected: boolean | null
+          position_x: number
+          position_y: number
+          position_z: number
+          respawn_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          collected_at?: string | null
+          collected_by?: string | null
+          community_id: string
+          created_at?: string
+          id?: string
+          is_collected?: boolean | null
+          position_x: number
+          position_y: number
+          position_z: number
+          respawn_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          collected_at?: string | null
+          collected_by?: string | null
+          community_id?: string
+          created_at?: string
+          id?: string
+          is_collected?: boolean | null
+          position_x?: number
+          position_y?: number
+          position_z?: number
+          respawn_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vibecoin_pickups_collected_by_fkey"
+            columns: ["collected_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vibecoin_pickups_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       world_objects: {
         Row: {

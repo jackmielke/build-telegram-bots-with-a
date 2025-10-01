@@ -283,7 +283,7 @@ const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfiguration
                 rows={3}
               />
               <p className="text-xs text-muted-foreground">
-                First message sent to new users when they start a conversation
+                Sent when users type /start — perfect for welcoming users and explaining what you can help with
               </p>
             </div>
           </CardContent>

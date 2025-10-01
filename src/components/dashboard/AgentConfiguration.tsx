@@ -170,24 +170,31 @@ const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfiguration
         </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="setup" className="space-y-6">
-        {/* Workflows Section */}
+      <TabsContent value="setup" className="space-y-4 md:space-y-6">
+        {/* System Instructions - TOP PRIORITY */}
         <Card className="gradient-card border-border/50">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Zap className="w-5 h-5 text-primary" />
-              <span>Workflows</span>
+              <Brain className="w-5 h-5 text-primary" />
+              <span>System Instructions</span>
             </CardTitle>
             <CardDescription>
-              Connect and configure automated workflows
+              Define how your AI agent thinks, behaves, and responds to users
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <WorkflowBuilder 
-              community={community} 
-              isAdmin={isAdmin}
-              onUpdate={(updated) => onUpdate({ ...community, ...updated })}
+          <CardContent className="space-y-3">
+            <Textarea
+              id="agent_instructions"
+              value={formData.agent_instructions}
+              onChange={(e) => setFormData({ ...formData, agent_instructions: e.target.value })}
+              placeholder="You are a helpful community assistant. Your role is to..."
+              disabled={!isAdmin}
+              rows={8}
+              className="font-mono text-sm"
             />
+            <p className="text-xs text-muted-foreground">
+              These core instructions guide your AI agent's personality, knowledge, and how it interacts with members
+            </p>
           </CardContent>
         </Card>
 
@@ -196,17 +203,17 @@ const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfiguration
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Bot className="w-5 h-5 text-primary" />
-              <span>Identity & Behavior</span>
+              <span>Identity & Appearance</span>
             </CardTitle>
             <CardDescription>
-              Configure your AI agent's personality and appearance
+              Configure your AI agent's name, avatar, and first impression
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4 md:space-y-6">
             {/* Avatar Upload */}
             <div className="space-y-2">
               <Label>Agent Avatar</Label>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 {formData.agent_avatar_url ? (
                   <img 
                     src={formData.agent_avatar_url} 
@@ -275,31 +282,10 @@ const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfiguration
                 disabled={!isAdmin}
                 rows={3}
               />
+              <p className="text-xs text-muted-foreground">
+                First message sent to new users when they start a conversation
+              </p>
             </div>
-
-            {/* System Instructions - Collapsible */}
-            <Collapsible open={instructionsOpen} onOpenChange={setInstructionsOpen}>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" className="w-full justify-between p-0 h-auto hover:bg-transparent">
-                  <Label className="cursor-pointer">System Instructions</Label>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${instructionsOpen ? 'rotate-180' : ''}`} />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-2 mt-2">
-                <Textarea
-                  id="agent_instructions"
-                  value={formData.agent_instructions}
-                  onChange={(e) => setFormData({ ...formData, agent_instructions: e.target.value })}
-                  placeholder="You are a helpful community assistant. Your role is to..."
-                  disabled={!isAdmin}
-                  rows={8}
-                  className="font-mono text-sm"
-                />
-                <p className="text-xs text-muted-foreground">
-                  These instructions guide how your AI agent behaves and responds to users
-                </p>
-              </CollapsibleContent>
-            </Collapsible>
           </CardContent>
         </Card>
 
@@ -314,20 +300,22 @@ const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfiguration
               Suggested messages that users can quickly send to the agent
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             {formData.agent_suggested_messages.map((message, index) => (
-              <div key={index} className="flex items-center space-x-2">
+              <div key={index} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <Input
                   value={message}
                   onChange={(e) => updateSuggestedMessage(index, e.target.value)}
                   placeholder="Enter suggested message"
                   disabled={!isAdmin}
+                  className="flex-1"
                 />
                 {isAdmin && (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => removeSuggestedMessage(index)}
+                    className="sm:w-auto"
                   >
                     Remove
                   </Button>
@@ -348,13 +336,33 @@ const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfiguration
           </CardContent>
         </Card>
 
+        {/* Workflows Section */}
+        <Card className="gradient-card border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Zap className="w-5 h-5 text-primary" />
+              <span>Workflows</span>
+            </CardTitle>
+            <CardDescription>
+              Connect and configure automated workflows
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <WorkflowBuilder 
+              community={community} 
+              isAdmin={isAdmin}
+              onUpdate={(updated) => onUpdate({ ...community, ...updated })}
+            />
+          </CardContent>
+        </Card>
+
         {/* Save Button */}
         {isAdmin && (
-          <div className="flex justify-end">
+          <div className="flex justify-end sticky bottom-4 z-10">
             <Button 
               onClick={handleSave} 
               disabled={saving}
-              className="gradient-primary hover:shadow-glow"
+              className="gradient-primary hover:shadow-glow w-full sm:w-auto"
             >
               {saving ? 'Saving...' : 'Save Configuration'}
             </Button>
@@ -362,7 +370,7 @@ const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfiguration
         )}
       </TabsContent>
 
-      <TabsContent value="advanced" className="space-y-6">
+      <TabsContent value="advanced" className="space-y-4 md:space-y-6">
         {/* AI Model Configuration */}
         <Card className="gradient-card border-border/50">
           <CardHeader>
@@ -444,11 +452,11 @@ const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfiguration
 
         {/* Save Button */}
         {isAdmin && (
-          <div className="flex justify-end">
+          <div className="flex justify-end sticky bottom-4 z-10">
             <Button 
               onClick={handleSave} 
               disabled={saving}
-              className="gradient-primary hover:shadow-glow"
+              className="gradient-primary hover:shadow-glow w-full sm:w-auto"
             >
               {saving ? 'Saving...' : 'Save Configuration'}
             </Button>

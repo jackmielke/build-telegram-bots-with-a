@@ -405,17 +405,13 @@ Tell me what you need and I'll get on it.`).trim();
               agent_name: agentName,
             } as const;
 
-            const replaced = templateRaw
+            const introMessage = templateRaw
               .replace(/\{first_name\}/gi, vars.first_name)
               .replace(/\{last_name\}/gi, vars.last_name)
               .replace(/\{full_name\}/gi, vars.full_name)
               .replace(/\{username\}/gi, vars.username ? `@${vars.username}` : vars.first_name)
               .replace(/\{community_name\}/gi, vars.community_name)
               .replace(/\{agent_name\}/gi, vars.agent_name);
-
-            // If no name placeholder was used, prefix a friendly greeting with the user's first name
-            const includesNameToken = /\{(first_name|full_name|username)\}/i.test(templateRaw);
-            const introMessage = includesNameToken ? replaced : `Hey ${vars.first_name}, ${templateRaw}`;
             
             const botToken = await getBotToken(supabase, communityId);
             if (!botToken) {

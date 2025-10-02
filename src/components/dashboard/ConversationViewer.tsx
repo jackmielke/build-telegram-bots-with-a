@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ArrowLeft, Bot, User, Calendar, DollarSign, BarChart3, Download, Eye, ChevronDown, Database } from 'lucide-react';
+import { ArrowLeft, Bot, User, Calendar, DollarSign, BarChart3, Download, Eye, ChevronDown, Database, Check, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Message {
@@ -166,7 +166,29 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
 
       if (error) throw error;
 
-      // Fetch the 7 messages that came BEFORE this AI response (sliding window context)
+      const metadata = message.metadata as any;
+      
+      // 🔍 Check if we have the ACTUAL AI context stored
+      if (metadata?.ai_context) {
+        // Use the actual context that was sent to the AI!
+        setSelectedPrompt({
+          message,
+          session: null,
+          community: {
+            agent_model: metadata.model_used || 'gpt-4o-mini'
+          },
+          contextMessages: metadata.ai_context.conversation_history || [],
+          allMemories: [], // We'll show the count from ai_context.memories_count
+          actualContext: true, // Flag to indicate this is real, not reconstructed
+          systemPrompt: metadata.ai_context.system_prompt,
+          memoriesCount: metadata.ai_context.memories_count,
+          modelConfig: metadata.ai_context.model_config
+        });
+        setPromptDialogOpen(true);
+        return;
+      }
+
+      // Fallback: Reconstruct context for older messages without ai_context
       const { data: contextMessages } = await supabase
         .from('messages')
         .select(`
@@ -181,15 +203,12 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
         .order('created_at', { ascending: false })
         .limit(7);
 
-      // Fetch ALL community memories (not just the 10 sent to AI)
       const { data: allMemories } = await supabase
         .from('memories')
         .select('id, content, created_at, tags')
         .eq('community_id', communityId)
         .order('created_at', { ascending: false });
 
-      // Fetch related ai_chat_session if available
-      const metadata = message.metadata as any;
       const { data: session } = await supabase
         .from('ai_chat_sessions')
         .select('*')
@@ -199,7 +218,6 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
         .limit(1)
         .maybeSingle();
 
-      // Fetch community settings for system prompt
       const { data: community } = await supabase
         .from('communities')
         .select('agent_instructions, agent_name, agent_model')
@@ -210,8 +228,9 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
         message,
         session,
         community,
-        contextMessages: contextMessages?.reverse() || [], // Reverse to show chronological order
-        allMemories: allMemories || []
+        contextMessages: contextMessages?.reverse() || [],
+        allMemories: allMemories || [],
+        actualContext: false // Reconstructed context
       });
       setPromptDialogOpen(true);
     } catch (error) {
@@ -427,6 +446,33 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
           <ScrollArea className="max-h-[60vh]">
             {selectedPrompt && (
               <div className="space-y-4 pr-4">
+                {/* Context Type Indicator */}
+                <div className="flex items-center justify-between pb-2 border-b">
+                  <div className="flex items-center gap-2">
+                    {selectedPrompt.actualContext ? (
+                      <>
+                        <Badge variant="default" className="bg-green-500">
+                          <Check className="w-3 h-3 mr-1" />
+                          Actual Context
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          This is the exact context sent to the AI at {new Date(selectedPrompt.message.created_at).toLocaleString()}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Badge variant="outline">
+                          <AlertCircle className="w-3 h-3 mr-1" />
+                          Reconstructed
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          This is an approximation - actual context not stored for this message
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
                 {/* System Prompt */}
                 <div className="space-y-2">
                   <h3 className="text-sm font-semibold flex items-center gap-2">
@@ -434,33 +480,44 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
                     System Instructions
                   </h3>
                   <div className="bg-muted p-3 rounded-lg font-mono text-xs whitespace-pre-wrap">
-                    {redactSecrets(selectedPrompt.community?.agent_instructions || 'No system instructions set')}
+                    {redactSecrets(
+                      selectedPrompt.actualContext 
+                        ? selectedPrompt.systemPrompt 
+                        : selectedPrompt.community?.agent_instructions || 'No system instructions set'
+                    )}
                   </div>
                 </div>
 
-                {/* Community Memories - ALL MEMORIES */}
-                {selectedPrompt.allMemories && selectedPrompt.allMemories.length > 0 && (
+                {/* Community Memories */}
+                {((selectedPrompt.actualContext && selectedPrompt.memoriesCount > 0) || 
+                  (!selectedPrompt.actualContext && selectedPrompt.allMemories && selectedPrompt.allMemories.length > 0)) && (
                   <Collapsible className="space-y-2">
                     <div className="flex items-center justify-between">
                       <h3 className="text-sm font-semibold flex items-center gap-2">
                         <Database className="w-4 h-4" />
-                        Community Memories ({selectedPrompt.allMemories.length} total)
+                        Community Memories ({selectedPrompt.actualContext ? selectedPrompt.memoriesCount : selectedPrompt.allMemories.length} {selectedPrompt.actualContext ? 'sent to AI' : 'total'})
                       </h3>
-                      <CollapsibleTrigger asChild>
-                        <Button variant="ghost" size="sm" className="w-9 p-0">
-                          <ChevronDown className="h-4 w-4" />
-                          <span className="sr-only">Toggle memories</span>
-                        </Button>
-                      </CollapsibleTrigger>
+                      {!selectedPrompt.actualContext && (
+                        <CollapsibleTrigger asChild>
+                          <Button variant="ghost" size="sm" className="w-9 p-0">
+                            <ChevronDown className="h-4 w-4" />
+                            <span className="sr-only">Toggle memories</span>
+                          </Button>
+                        </CollapsibleTrigger>
+                      )}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      All community memories are sent to the AI. This shows all {selectedPrompt.allMemories.length} memories in the community.
+                      {selectedPrompt.actualContext 
+                        ? `${selectedPrompt.memoriesCount} memories were included in the AI context`
+                        : `All ${selectedPrompt.allMemories.length} community memories are sent to the AI`
+                      }
                     </p>
-                    <CollapsibleContent className="space-y-2">
-                      <ScrollArea className="h-64 border rounded-lg bg-background">
-                        <div className="p-3 space-y-3">
-                          {selectedPrompt.allMemories.map((memory: any) => (
-                            <div key={memory.id} className="border-b border-border/50 pb-2 last:border-0">
+                    {!selectedPrompt.actualContext && (
+                      <CollapsibleContent className="space-y-2">
+                        <ScrollArea className="h-64 border rounded-lg bg-background">
+                          <div className="p-3 space-y-3">
+                            {selectedPrompt.allMemories.map((memory: any) => (
+                              <div key={memory.id} className="border-b border-border/50 pb-2 last:border-0">
                               <div className="flex items-start justify-between gap-2 mb-1">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-1">
@@ -480,11 +537,12 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
                                 </div>
                               </div>
                               <p className="text-sm whitespace-pre-wrap">{memory.content}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    </CollapsibleContent>
+                              </div>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      </CollapsibleContent>
+                    )}
                   </Collapsible>
                 )}
 

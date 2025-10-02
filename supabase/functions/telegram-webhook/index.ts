@@ -716,7 +716,19 @@ ${communityData?.agent_instructions || 'You are a helpful community assistant.'}
                   response_time_ms: responseTime,
                   chat_type_detail: chatType,
                   telegram_chat_title: body.message?.chat?.title || null,
-                  telegram_chat_username: body.message?.chat?.username || null
+                  telegram_chat_username: body.message?.chat?.username || null,
+                  // 🔍 Store the ACTUAL context sent to AI for debugging
+                  ai_context: {
+                    system_prompt: systemPrompt,
+                    conversation_history: conversationMessages,
+                    memories_count: memories?.length || 0,
+                    model_config: {
+                      model: model,
+                      max_tokens: isLegacyModel ? (communityData?.agent_max_tokens || 2000) : undefined,
+                      max_completion_tokens: !isLegacyModel ? (communityData?.agent_max_tokens || 2000) : undefined,
+                      temperature: isLegacyModel ? (communityData?.agent_temperature || 0.7) : undefined
+                    }
+                  }
                 }
               });
             

@@ -3,3 +3,6 @@ project_id = "efdqqnubowgwsnwvlalp"
 [functions]
   [functions.telegram-webhook]
   verify_jwt = false
+
+  [functions.telegram-manage]
+  verify_jwt = true

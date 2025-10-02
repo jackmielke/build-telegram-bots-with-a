@@ -247,39 +247,16 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
   const handleTestConnection = async () => {
     setTesting(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { data: userData } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', user.id)
-        .single();
-
-      if (!userData) throw new Error('User not found');
-
-      const { data: botData } = await supabase
-        .from('telegram_bots')
-        .select('bot_token')
-        .eq('community_id', communityId)
-        .eq('user_id', userData.id)
-        .maybeSingle();
-
-      if (!botData?.bot_token) {
-        throw new Error('Bot token not found');
-      }
-
-      const response = await fetch(`https://api.telegram.org/bot${botData.bot_token}/getMe`);
-      const data = await response.json();
-
-      if (!data.ok) {
-        throw new Error(data.description || 'Failed to connect to Telegram');
-      }
-
-      toast({
-        title: "Connection Successful",
-        description: `Bot @${data.result.username} is responding correctly.`
+      const { data, error } = await supabase.functions.invoke('telegram-manage', {
+        body: { action: 'test_connection', communityId }
       });
+      if (error) throw error;
+      if (data?.ok) {
+        const username = data?.me?.result?.username || data?.me?.result?.first_name || 'bot';
+        toast({ title: 'Connection Successful', description: `Bot @${username} is responding.` });
+      } else {
+        throw new Error(data?.error || 'Connection test failed');
+      }
     } catch (error) {
       console.error('Test connection error:', error);
       toast({
@@ -295,57 +272,12 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
   const handleReconnectWebhook = async () => {
     setReconnecting(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { data: userData } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', user.id)
-        .single();
-
-      if (!userData) throw new Error('User not found');
-
-      const { data: botData } = await supabase
-        .from('telegram_bots')
-        .select('bot_token, webhook_url')
-        .eq('community_id', communityId)
-        .eq('user_id', userData.id)
-        .maybeSingle();
-
-      if (!botData?.bot_token) {
-        throw new Error('Bot token not found');
-      }
-
-      // Delete old webhook first
-      await fetch(`https://api.telegram.org/bot${botData.bot_token}/deleteWebhook`, {
-        method: 'POST'
+      const { data, error } = await supabase.functions.invoke('telegram-manage', {
+        body: { action: 'reconnect_webhook', communityId }
       });
-
-      // Set webhook again
-      const webhookUrl = botData.webhook_url || 
-        `https://efdqqnubowgwsnwvlalp.supabase.co/functions/v1/telegram-webhook?community_id=${communityId}`;
-      
-      const response = await fetch(
-        `https://api.telegram.org/bot${botData.bot_token}/setWebhook`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: webhookUrl })
-        }
-      );
-
-      const data = await response.json();
-
-      if (!data.ok) {
-        throw new Error(data.description || 'Failed to set webhook');
-      }
-
-      toast({
-        title: "Webhook Reconnected",
-        description: "The Telegram webhook has been reset successfully."
-      });
-
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error || 'Failed to reconnect');
+      toast({ title: 'Webhook Reconnected', description: 'The Telegram webhook has been reset successfully.' });
       fetchBotHealth();
     } catch (error) {
       console.error('Reconnect webhook error:', error);
@@ -362,56 +294,16 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
   const handleDisconnectBot = async () => {
     setDisconnecting(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { data: userData } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', user.id)
-        .single();
-
-      if (!userData) throw new Error('User not found');
-
-      const { data: botData, error: fetchError } = await supabase
-        .from('telegram_bots')
-        .select('bot_token, id')
-        .eq('community_id', communityId)
-        .eq('user_id', userData.id)
-        .maybeSingle();
-
-      if (fetchError) {
-        console.error('Error fetching bot:', fetchError);
-        throw new Error(`Failed to fetch bot: ${fetchError.message}`);
-      }
-
-      if (!botData?.bot_token) {
-        throw new Error('Bot not found or no token available');
-      }
-
-      const response = await fetch(
-        `https://api.telegram.org/bot${botData.bot_token}/deleteWebhook`,
-        { method: 'POST' }
-      );
-      
-      const data = await response.json();
-      
-      if (!data.ok) {
-        throw new Error(data.description || 'Failed to disconnect webhook');
-      }
-
-      const { error: updateError } = await supabase
-        .from('telegram_bots')
-        .update({ is_active: false })
-        .eq('community_id', communityId);
-
-      if (updateError) throw updateError;
+      const { data, error } = await supabase.functions.invoke('telegram-manage', {
+        body: { action: 'delete_webhook', communityId }
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error || 'Failed to disconnect');
 
       toast({
         title: "Bot Disconnected",
         description: "The Telegram bot has been disconnected. You can reconnect it from the community settings."
       });
-      
       fetchBotHealth();
       setConfirmOpen(false);
     } catch (error) {

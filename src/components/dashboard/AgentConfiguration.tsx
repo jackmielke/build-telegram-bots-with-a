@@ -201,9 +201,7 @@ const AgentConfiguration = ({
             ...formData,
             agent_instructions: e.target.value
           })} placeholder="You are a helpful community assistant. Your role is to..." disabled={!isAdmin} rows={8} className="font-mono text-sm" />
-            <p className="text-xs text-muted-foreground">
-              These core instructions guide your AI agent's personality, knowledge, and how it interacts with members
-            </p>
+            <p className="text-xs text-muted-foreground">Define how your AI agent thinks, behaves, and responds to users via the system prompt</p>
           </CardContent>
         </Card>
 

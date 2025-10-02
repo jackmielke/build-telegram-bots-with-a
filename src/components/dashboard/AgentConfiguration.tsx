@@ -14,7 +14,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useToast } from '@/hooks/use-toast';
 import { Bot, Brain, MessageSquare, Settings, Sparkles, Upload, ChevronDown, Zap, Send, Loader2 } from 'lucide-react';
 import WorkflowBuilder from './WorkflowBuilder';
-
 interface Community {
   id: string;
   name: string;
@@ -29,14 +28,16 @@ interface Community {
   telegram_bot_token: string | null;
   telegram_bot_url: string | null;
 }
-
 interface AgentConfigurationProps {
   community: Community;
   isAdmin: boolean;
   onUpdate: (community: Community) => void;
 }
-
-const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfigurationProps) => {
+const AgentConfiguration = ({
+  community,
+  isAdmin,
+  onUpdate
+}: AgentConfigurationProps) => {
   const [formData, setFormData] = useState({
     agent_name: community.agent_name || '',
     agent_instructions: community.agent_instructions || '',
@@ -51,24 +52,24 @@ const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfiguration
   const [uploading, setUploading] = useState(false);
   const [instructionsOpen, setInstructionsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   const handleSave = async () => {
     if (!isAdmin) return;
-    
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('communities')
-        .update(formData)
-        .eq('id', community.id);
-
+      const {
+        error
+      } = await supabase.from('communities').update(formData).eq('id', community.id);
       if (error) throw error;
-
-      onUpdate({ ...community, ...formData });
+      onUpdate({
+        ...community,
+        ...formData
+      });
       toast({
         title: "Agent Updated",
-        description: "Agent configuration has been saved successfully.",
+        description: "Agent configuration has been saved successfully."
       });
     } catch (error: any) {
       toast({
@@ -80,16 +81,31 @@ const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfiguration
       setSaving(false);
     }
   };
-
-  const availableModels = [
-    { value: 'gpt-5-2025-08-07', label: 'GPT-5 (Latest)', description: 'Most capable flagship model' },
-    { value: 'gpt-5-mini-2025-08-07', label: 'GPT-5 Mini', description: 'Faster, cost-efficient' },
-    { value: 'gpt-5-nano-2025-08-07', label: 'GPT-5 Nano', description: 'Fastest, cheapest' },
-    { value: 'gpt-4.1-2025-04-14', label: 'GPT-4.1', description: 'Reliable flagship GPT-4' },
-    { value: 'gpt-4o-mini', label: 'GPT-4o Mini', description: 'Fast and affordable' },
-    { value: 'gpt-4o', label: 'GPT-4o', description: 'Powerful with vision' }
-  ];
-
+  const availableModels = [{
+    value: 'gpt-5-2025-08-07',
+    label: 'GPT-5 (Latest)',
+    description: 'Most capable flagship model'
+  }, {
+    value: 'gpt-5-mini-2025-08-07',
+    label: 'GPT-5 Mini',
+    description: 'Faster, cost-efficient'
+  }, {
+    value: 'gpt-5-nano-2025-08-07',
+    label: 'GPT-5 Nano',
+    description: 'Fastest, cheapest'
+  }, {
+    value: 'gpt-4.1-2025-04-14',
+    label: 'GPT-4.1',
+    description: 'Reliable flagship GPT-4'
+  }, {
+    value: 'gpt-4o-mini',
+    label: 'GPT-4o Mini',
+    description: 'Fast and affordable'
+  }, {
+    value: 'gpt-4o',
+    label: 'GPT-4o',
+    description: 'Powerful with vision'
+  }];
   const addSuggestedMessage = () => {
     if (formData.agent_suggested_messages.length < 6) {
       setFormData({
@@ -98,7 +114,6 @@ const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfiguration
       });
     }
   };
-
   const updateSuggestedMessage = (index: number, value: string) => {
     const newMessages = [...formData.agent_suggested_messages];
     newMessages[index] = value;
@@ -107,7 +122,6 @@ const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfiguration
       agent_suggested_messages: newMessages
     });
   };
-
   const removeSuggestedMessage = (index: number) => {
     const newMessages = formData.agent_suggested_messages.filter((_, i) => i !== index);
     setFormData({
@@ -115,35 +129,37 @@ const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfiguration
       agent_suggested_messages: newMessages
     });
   };
-
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !isAdmin) return;
-
     try {
       setUploading(true);
-      
+
       // Upload to Supabase Storage
       const fileExt = file.name.split('.').pop();
       const fileName = `${community.id}-${Date.now()}.${fileExt}`;
       const filePath = `${fileName}`;
-
-      const { error: uploadError, data } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true });
-
+      const {
+        error: uploadError,
+        data
+      } = await supabase.storage.from('avatars').upload(filePath, file, {
+        upsert: true
+      });
       if (uploadError) throw uploadError;
 
       // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      setFormData({ ...formData, agent_avatar_url: publicUrl });
-      
+      const {
+        data: {
+          publicUrl
+        }
+      } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      setFormData({
+        ...formData,
+        agent_avatar_url: publicUrl
+      });
       toast({
         title: "Avatar Uploaded",
-        description: "Agent avatar has been uploaded successfully.",
+        description: "Agent avatar has been uploaded successfully."
       });
     } catch (error: any) {
       console.error('Upload error:', error);
@@ -156,9 +172,7 @@ const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfiguration
       setUploading(false);
     }
   };
-
-  return (
-    <Tabs defaultValue="setup" className="space-y-6">
+  return <Tabs defaultValue="setup" className="space-y-6">
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="setup" className="flex items-center gap-2">
           <Zap className="w-4 h-4" />
@@ -176,22 +190,17 @@ const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfiguration
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Brain className="w-5 h-5 text-primary" />
-              <span>System Instructions</span>
+              <span>Instructions</span>
             </CardTitle>
             <CardDescription>
               Define how your AI agent thinks, behaves, and responds to users
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Textarea
-              id="agent_instructions"
-              value={formData.agent_instructions}
-              onChange={(e) => setFormData({ ...formData, agent_instructions: e.target.value })}
-              placeholder="You are a helpful community assistant. Your role is to..."
-              disabled={!isAdmin}
-              rows={8}
-              className="font-mono text-sm"
-            />
+            <Textarea id="agent_instructions" value={formData.agent_instructions} onChange={e => setFormData({
+            ...formData,
+            agent_instructions: e.target.value
+          })} placeholder="You are a helpful community assistant. Your role is to..." disabled={!isAdmin} rows={8} className="font-mono text-sm" />
             <p className="text-xs text-muted-foreground">
               These core instructions guide your AI agent's personality, knowledge, and how it interacts with members
             </p>
@@ -214,43 +223,19 @@ const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfiguration
             <div className="space-y-2">
               <Label>Agent Avatar</Label>
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                {formData.agent_avatar_url ? (
-                  <img 
-                    src={formData.agent_avatar_url} 
-                    alt="Agent avatar"
-                    className="w-20 h-20 rounded-lg object-cover border-2 border-border"
-                  />
-                ) : (
-                  <div className="w-20 h-20 rounded-lg bg-muted flex items-center justify-center border-2 border-dashed border-border">
+                {formData.agent_avatar_url ? <img src={formData.agent_avatar_url} alt="Agent avatar" className="w-20 h-20 rounded-lg object-cover border-2 border-border" /> : <div className="w-20 h-20 rounded-lg bg-muted flex items-center justify-center border-2 border-dashed border-border">
                     <Bot className="w-8 h-8 text-muted-foreground" />
-                  </div>
-                )}
+                  </div>}
                 <div className="flex flex-col gap-2">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarUpload}
-                    className="hidden"
-                    disabled={!isAdmin}
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={!isAdmin || uploading}
-                  >
-                    {uploading ? (
-                      <>
+                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" disabled={!isAdmin} />
+                  <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={!isAdmin || uploading}>
+                    {uploading ? <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         Uploading...
-                      </>
-                    ) : (
-                      <>
+                      </> : <>
                         <Upload className="w-4 h-4 mr-2" />
                         Upload Photo
-                      </>
-                    )}
+                      </>}
                   </Button>
                   <p className="text-xs text-muted-foreground">
                     JPG, PNG or GIF (max 2MB)
@@ -262,26 +247,19 @@ const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfiguration
             {/* Agent Name */}
             <div className="space-y-2">
               <Label htmlFor="agent_name">Agent Name</Label>
-              <Input
-                id="agent_name"
-                value={formData.agent_name}
-                onChange={(e) => setFormData({ ...formData, agent_name: e.target.value })}
-                placeholder="Enter agent name"
-                disabled={!isAdmin}
-              />
+              <Input id="agent_name" value={formData.agent_name} onChange={e => setFormData({
+              ...formData,
+              agent_name: e.target.value
+            })} placeholder="Enter agent name" disabled={!isAdmin} />
             </div>
 
             {/* Intro Message */}
             <div className="space-y-2">
               <Label htmlFor="agent_intro_message">Intro Message</Label>
-              <Textarea
-                id="agent_intro_message"
-                value={formData.agent_intro_message}
-                onChange={(e) => setFormData({ ...formData, agent_intro_message: e.target.value })}
-                placeholder="Hi! I'm your AI assistant. How can I help you today?"
-                disabled={!isAdmin}
-                rows={3}
-              />
+              <Textarea id="agent_intro_message" value={formData.agent_intro_message} onChange={e => setFormData({
+              ...formData,
+              agent_intro_message: e.target.value
+            })} placeholder="Hi! I'm your AI assistant. How can I help you today?" disabled={!isAdmin} rows={3} />
               <p className="text-xs text-muted-foreground">
                 Sent when users type /start — perfect for welcoming users and explaining what you can help with
               </p>
@@ -301,38 +279,17 @@ const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfiguration
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {formData.agent_suggested_messages.map((message, index) => (
-              <div key={index} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                <Input
-                  value={message}
-                  onChange={(e) => updateSuggestedMessage(index, e.target.value)}
-                  placeholder="Enter suggested message"
-                  disabled={!isAdmin}
-                  className="flex-1"
-                />
-                {isAdmin && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => removeSuggestedMessage(index)}
-                    className="sm:w-auto"
-                  >
+            {formData.agent_suggested_messages.map((message, index) => <div key={index} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <Input value={message} onChange={e => updateSuggestedMessage(index, e.target.value)} placeholder="Enter suggested message" disabled={!isAdmin} className="flex-1" />
+                {isAdmin && <Button variant="outline" size="sm" onClick={() => removeSuggestedMessage(index)} className="sm:w-auto">
                     Remove
-                  </Button>
-                )}
-              </div>
-            ))}
+                  </Button>}
+              </div>)}
             
-            {isAdmin && formData.agent_suggested_messages.length < 6 && (
-              <Button
-                variant="outline"
-                onClick={addSuggestedMessage}
-                className="w-full"
-              >
+            {isAdmin && formData.agent_suggested_messages.length < 6 && <Button variant="outline" onClick={addSuggestedMessage} className="w-full">
                 <Sparkles className="w-4 h-4 mr-2" />
                 Add Suggested Message
-              </Button>
-            )}
+              </Button>}
           </CardContent>
         </Card>
 
@@ -348,26 +305,19 @@ const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfiguration
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <WorkflowBuilder 
-              community={community} 
-              isAdmin={isAdmin}
-              onUpdate={(updated) => onUpdate({ ...community, ...updated })}
-            />
+            <WorkflowBuilder community={community} isAdmin={isAdmin} onUpdate={updated => onUpdate({
+            ...community,
+            ...updated
+          })} />
           </CardContent>
         </Card>
 
         {/* Save Button */}
-        {isAdmin && (
-          <div className="flex justify-end sticky bottom-4 z-10">
-            <Button 
-              onClick={handleSave} 
-              disabled={saving}
-              className="gradient-primary hover:shadow-glow w-full sm:w-auto"
-            >
+        {isAdmin && <div className="flex justify-end sticky bottom-4 z-10">
+            <Button onClick={handleSave} disabled={saving} className="gradient-primary hover:shadow-glow w-full sm:w-auto">
               {saving ? 'Saving...' : 'Save Configuration'}
             </Button>
-          </div>
-        )}
+          </div>}
       </TabsContent>
 
       <TabsContent value="advanced" className="space-y-4 md:space-y-6">
@@ -385,23 +335,20 @@ const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfiguration
           <CardContent className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="agent_model">AI Model</Label>
-              <Select 
-                value={formData.agent_model} 
-                onValueChange={(value) => setFormData({ ...formData, agent_model: value })}
-                disabled={!isAdmin}
-              >
+              <Select value={formData.agent_model} onValueChange={value => setFormData({
+              ...formData,
+              agent_model: value
+            })} disabled={!isAdmin}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select AI model" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableModels.map((model) => (
-                    <SelectItem key={model.value} value={model.value}>
+                  {availableModels.map(model => <SelectItem key={model.value} value={model.value}>
                       <div>
                         <div className="font-medium">{model.label}</div>
                         <div className="text-xs text-muted-foreground">{model.description}</div>
                       </div>
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -412,16 +359,10 @@ const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfiguration
                   <Label htmlFor="max_tokens">Max Tokens</Label>
                   <Badge variant="outline">{formData.agent_max_tokens}</Badge>
                 </div>
-                <Slider
-                  id="max_tokens"
-                  min={500}
-                  max={8000}
-                  step={100}
-                  value={[formData.agent_max_tokens]}
-                  onValueChange={(value) => setFormData({ ...formData, agent_max_tokens: value[0] })}
-                  disabled={!isAdmin}
-                  className="w-full"
-                />
+                <Slider id="max_tokens" min={500} max={8000} step={100} value={[formData.agent_max_tokens]} onValueChange={value => setFormData({
+                ...formData,
+                agent_max_tokens: value[0]
+              })} disabled={!isAdmin} className="w-full" />
                 <p className="text-xs text-muted-foreground">
                   Maximum tokens per AI response (higher = longer responses, higher cost)
                 </p>
@@ -432,16 +373,10 @@ const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfiguration
                   <Label htmlFor="temperature">Temperature</Label>
                   <Badge variant="outline">{formData.agent_temperature}</Badge>
                 </div>
-                <Slider
-                  id="temperature"
-                  min={0}
-                  max={1}
-                  step={0.1}
-                  value={[formData.agent_temperature]}
-                  onValueChange={(value) => setFormData({ ...formData, agent_temperature: value[0] })}
-                  disabled={!isAdmin}
-                  className="w-full"
-                />
+                <Slider id="temperature" min={0} max={1} step={0.1} value={[formData.agent_temperature]} onValueChange={value => setFormData({
+                ...formData,
+                agent_temperature: value[0]
+              })} disabled={!isAdmin} className="w-full" />
                 <p className="text-xs text-muted-foreground">
                   Controls randomness: 0 = focused, 1 = creative
                 </p>
@@ -451,20 +386,12 @@ const AgentConfiguration = ({ community, isAdmin, onUpdate }: AgentConfiguration
         </Card>
 
         {/* Save Button */}
-        {isAdmin && (
-          <div className="flex justify-end sticky bottom-4 z-10">
-            <Button 
-              onClick={handleSave} 
-              disabled={saving}
-              className="gradient-primary hover:shadow-glow w-full sm:w-auto"
-            >
+        {isAdmin && <div className="flex justify-end sticky bottom-4 z-10">
+            <Button onClick={handleSave} disabled={saving} className="gradient-primary hover:shadow-glow w-full sm:w-auto">
               {saving ? 'Saving...' : 'Save Configuration'}
             </Button>
-          </div>
-        )}
+          </div>}
       </TabsContent>
-    </Tabs>
-  );
+    </Tabs>;
 };
-
 export default AgentConfiguration;

@@ -18,6 +18,7 @@ interface Memory {
   updated_at: string;
   created_by: string | null;
   metadata: any;
+  creator_name?: string;
 }
 
 interface MemoryManagementProps {
@@ -46,12 +47,21 @@ const MemoryManagement = ({ communityId, isAdmin }: MemoryManagementProps) => {
     try {
       const { data, error } = await supabase
         .from('memories')
-        .select('*')
+        .select(`
+          *,
+          creator:users!created_by(name)
+        `)
         .eq('community_id', communityId)
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
-      setMemories(data || []);
+      
+      const memoriesWithCreator = data?.map(memory => ({
+        ...memory,
+        creator_name: memory.creator?.name || 'Unknown'
+      })) || [];
+      
+      setMemories(memoriesWithCreator);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -88,14 +98,26 @@ const MemoryManagement = ({ communityId, isAdmin }: MemoryManagementProps) => {
           description: "Memory has been updated successfully.",
         });
       } else {
-        // Create new memory
+        // Create new memory - get current user's internal ID
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+        
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('auth_user_id', user.id)
+          .single();
+          
+        if (userError) throw userError;
+        
         const { error } = await supabase
           .from('memories')
           .insert({
             community_id: communityId,
             content: formData.content,
             tags: tagsArray,
-            metadata: {}
+            metadata: {},
+            created_by: userData.id
           });
 
         if (error) throw error;
@@ -323,9 +345,12 @@ const MemoryManagement = ({ communityId, isAdmin }: MemoryManagementProps) => {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-2">
+                      <Badge variant="secondary" className="flex items-center space-x-1">
+                        <User className="w-3 h-3" />
+                        <span>{memory.creator_name}</span>
+                      </Badge>
                       {isAutoBio(memory) && (
-                        <Badge variant="secondary" className="flex items-center space-x-1">
-                          <User className="w-3 h-3" />
+                        <Badge variant="outline" className="flex items-center space-x-1">
                           <span>Auto Bio</span>
                         </Badge>
                       )}

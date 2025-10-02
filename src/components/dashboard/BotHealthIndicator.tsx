@@ -46,6 +46,8 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
   const [errorsOpen, setErrorsOpen] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -242,10 +244,9 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
     return `${Math.floor(diffMins / 1440)}d ago`;
   };
 
-  const handleDisconnectBot = async () => {
-    setDisconnecting(true);
+  const handleTestConnection = async () => {
+    setTesting(true);
     try {
-      // Get current user's ID
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
@@ -257,7 +258,121 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
 
       if (!userData) throw new Error('User not found');
 
-      // Get bot data with proper user context
+      const { data: botData } = await supabase
+        .from('telegram_bots')
+        .select('bot_token')
+        .eq('community_id', communityId)
+        .eq('user_id', userData.id)
+        .maybeSingle();
+
+      if (!botData?.bot_token) {
+        throw new Error('Bot token not found');
+      }
+
+      const response = await fetch(`https://api.telegram.org/bot${botData.bot_token}/getMe`);
+      const data = await response.json();
+
+      if (!data.ok) {
+        throw new Error(data.description || 'Failed to connect to Telegram');
+      }
+
+      toast({
+        title: "Connection Successful",
+        description: `Bot @${data.result.username} is responding correctly.`
+      });
+    } catch (error) {
+      console.error('Test connection error:', error);
+      toast({
+        title: "Connection Failed",
+        description: error instanceof Error ? error.message : "Could not reach Telegram API",
+        variant: "destructive"
+      });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const handleReconnectWebhook = async () => {
+    setReconnecting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .single();
+
+      if (!userData) throw new Error('User not found');
+
+      const { data: botData } = await supabase
+        .from('telegram_bots')
+        .select('bot_token, webhook_url')
+        .eq('community_id', communityId)
+        .eq('user_id', userData.id)
+        .maybeSingle();
+
+      if (!botData?.bot_token) {
+        throw new Error('Bot token not found');
+      }
+
+      // Delete old webhook first
+      await fetch(`https://api.telegram.org/bot${botData.bot_token}/deleteWebhook`, {
+        method: 'POST'
+      });
+
+      // Set webhook again
+      const webhookUrl = botData.webhook_url || 
+        `https://efdqqnubowgwsnwvlalp.supabase.co/functions/v1/telegram-webhook?community_id=${communityId}`;
+      
+      const response = await fetch(
+        `https://api.telegram.org/bot${botData.bot_token}/setWebhook`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: webhookUrl })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!data.ok) {
+        throw new Error(data.description || 'Failed to set webhook');
+      }
+
+      toast({
+        title: "Webhook Reconnected",
+        description: "The Telegram webhook has been reset successfully."
+      });
+
+      fetchBotHealth();
+    } catch (error) {
+      console.error('Reconnect webhook error:', error);
+      toast({
+        title: "Reconnection Failed",
+        description: error instanceof Error ? error.message : "Failed to reconnect webhook",
+        variant: "destructive"
+      });
+    } finally {
+      setReconnecting(false);
+    }
+  };
+
+  const handleDisconnectBot = async () => {
+    setDisconnecting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .single();
+
+      if (!userData) throw new Error('User not found');
+
       const { data: botData, error: fetchError } = await supabase
         .from('telegram_bots')
         .select('bot_token, id')
@@ -274,7 +389,6 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
         throw new Error('Bot not found or no token available');
       }
 
-      // Delete webhook
       const response = await fetch(
         `https://api.telegram.org/bot${botData.bot_token}/deleteWebhook`,
         { method: 'POST' }
@@ -286,7 +400,6 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
         throw new Error(data.description || 'Failed to disconnect webhook');
       }
 
-      // Mark bot as inactive in database
       const { error: updateError } = await supabase
         .from('telegram_bots')
         .update({ is_active: false })
@@ -300,6 +413,7 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
       });
       
       fetchBotHealth();
+      setConfirmOpen(false);
     } catch (error) {
       console.error('Error disconnecting bot:', error);
       toast({
@@ -411,20 +525,41 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
             </CollapsibleContent>
           </Collapsible>
         )}
-        {/* Always-available manage section */}
-        <div className="pt-2 border-t border-border/40">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs text-muted-foreground">Manage connection</p>
+        {/* Troubleshoot section */}
+        <div className="pt-2 border-t border-border/40 space-y-2">
+          <p className="text-xs text-muted-foreground font-medium">Troubleshoot</p>
+          <div className="flex gap-2">
             <Button
-              variant="destructive"
+              variant="outline"
               size="sm"
-              onClick={() => setConfirmOpen(true)}
-              disabled={disconnecting}
+              onClick={handleTestConnection}
+              disabled={testing}
+              className="flex-1"
             >
-              <Unplug className="w-3 h-3 mr-2" />
-              {disconnecting ? 'Disconnecting...' : 'Disconnect Bot'}
+              <RefreshCw className={`w-3 h-3 mr-2 ${testing ? 'animate-spin' : ''}`} />
+              {testing ? 'Testing...' : 'Test Connection'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReconnectWebhook}
+              disabled={reconnecting}
+              className="flex-1"
+            >
+              <RefreshCw className={`w-3 h-3 mr-2 ${reconnecting ? 'animate-spin' : ''}`} />
+              {reconnecting ? 'Reconnecting...' : 'Reconnect Webhook'}
             </Button>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setConfirmOpen(true)}
+            disabled={disconnecting}
+            className="w-full bg-transparent border-destructive/50 text-destructive hover:bg-destructive/10 hover:border-destructive hover:text-destructive"
+          >
+            <Unplug className="w-3 h-3 mr-2" />
+            {disconnecting ? 'Disconnecting...' : 'Disconnect Bot'}
+          </Button>
         </div>
 
         <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>

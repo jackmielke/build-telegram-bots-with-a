@@ -245,15 +245,33 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
   const handleDisconnectBot = async () => {
     setDisconnecting(true);
     try {
-      // Get bot data
+      // Get current user's ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .single();
+
+      if (!userData) throw new Error('User not found');
+
+      // Get bot data with proper user context
       const { data: botData, error: fetchError } = await supabase
         .from('telegram_bots')
-        .select('bot_token')
+        .select('bot_token, id')
         .eq('community_id', communityId)
+        .eq('user_id', userData.id)
         .maybeSingle();
 
-      if (fetchError || !botData?.bot_token) {
-        throw new Error('Bot not found');
+      if (fetchError) {
+        console.error('Error fetching bot:', fetchError);
+        throw new Error(`Failed to fetch bot: ${fetchError.message}`);
+      }
+
+      if (!botData?.bot_token) {
+        throw new Error('Bot not found or no token available');
       }
 
       // Delete webhook

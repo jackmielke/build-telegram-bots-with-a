@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Bot, Zap, MessageSquare, BarChart3, Brain } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import vibeHero from '@/assets/vibe-hero.png';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -69,31 +70,36 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
+    <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden">
+      {/* Starry background with gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(250,60%,15%)] via-[hsl(220,13%,9%)] to-[hsl(220,13%,9%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,hsl(8,85%,68%,0.08),transparent_50%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,hsl(195,100%,65%,0.08),transparent_40%)]" />
       
-      <div className="w-full max-w-5xl relative z-10 grid md:grid-cols-2 gap-8 items-center">
+      <div className="w-full max-w-6xl relative z-10 grid md:grid-cols-2 gap-12 items-center">
         {/* Left side - Branding & Value Prop */}
         <div className="space-y-6 text-center md:text-left">
-          <div className="inline-block">
-            <div className="w-20 h-20 rounded-2xl gradient-primary flex items-center justify-center shadow-glow mb-4">
-              <Bot className="w-10 h-10 text-primary-foreground" />
-            </div>
+          <div className="inline-block mb-6">
+            <img 
+              src={vibeHero} 
+              alt="Vibe AI" 
+              className="w-48 h-48 object-contain drop-shadow-[0_0_40px_rgba(255,120,130,0.3)]"
+            />
           </div>
           
-          <div className="space-y-3">
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
+          <div className="space-y-4">
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-[hsl(8,85%,68%)] via-[hsl(280,65%,68%)] to-[hsl(195,100%,65%)] bg-clip-text text-transparent leading-tight">
               Build Intelligent Telegram Communities
             </h1>
-            <p className="text-xl text-muted-foreground">
+            <p className="text-lg text-foreground/70">
               No code required. AI agents that learn, remember, and improve daily.
             </p>
           </div>
 
-          <div className="space-y-4 pt-4">
+          <div className="space-y-4 pt-6">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Zap className="w-5 h-5 text-primary" />
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[hsl(8,85%,68%)]/20 to-[hsl(195,100%,65%)]/20 flex items-center justify-center flex-shrink-0 border border-[hsl(8,85%,68%)]/30">
+                <Zap className="w-5 h-5 text-[hsl(8,85%,68%)]" />
               </div>
               <div className="text-left">
                 <h3 className="font-semibold text-foreground">Setup in Minutes</h3>
@@ -102,8 +108,8 @@ const Auth = () => {
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Brain className="w-5 h-5 text-primary" />
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[hsl(8,85%,68%)]/20 to-[hsl(195,100%,65%)]/20 flex items-center justify-center flex-shrink-0 border border-[hsl(195,100%,65%)]/30">
+                <Brain className="w-5 h-5 text-[hsl(195,100%,65%)]" />
               </div>
               <div className="text-left">
                 <h3 className="font-semibold text-foreground">Memory-Powered Intelligence</h3>
@@ -112,8 +118,8 @@ const Auth = () => {
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <BarChart3 className="w-5 h-5 text-primary" />
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[hsl(8,85%,68%)]/20 to-[hsl(195,100%,65%)]/20 flex items-center justify-center flex-shrink-0 border border-[hsl(280,65%,68%)]/30">
+                <BarChart3 className="w-5 h-5 text-[hsl(280,65%,68%)]" />
               </div>
               <div className="text-left">
                 <h3 className="font-semibold text-foreground">Full Transparency</h3>
@@ -124,7 +130,7 @@ const Auth = () => {
         </div>
 
         {/* Right side - Auth Form */}
-        <Card className="shadow-elevated border-border/50">
+        <Card className="shadow-elevated border-border/30 bg-card/80 backdrop-blur-xl">
           <CardHeader className="text-center space-y-2">
             <CardTitle className="text-2xl font-bold">
               {isLogin ? 'Welcome Back' : 'Get Started'}

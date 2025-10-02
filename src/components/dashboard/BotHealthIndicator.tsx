@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Activity, AlertCircle, CheckCircle, Clock, MessageSquare, ChevronDown, RefreshCw, Unplug } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -44,6 +45,7 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
   const [loading, setLoading] = useState(true);
   const [errorsOpen, setErrorsOpen] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -343,7 +345,7 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
             <Button
               variant="outline"
               size="sm"
-              onClick={handleDisconnectBot}
+              onClick={() => setConfirmOpen(true)}
               disabled={disconnecting}
               className="w-full"
             >
@@ -391,6 +393,38 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
             </CollapsibleContent>
           </Collapsible>
         )}
+        {/* Always-available manage section */}
+        <div className="pt-2 border-t border-border/40">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">Manage connection</p>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setConfirmOpen(true)}
+              disabled={disconnecting}
+            >
+              <Unplug className="w-3 h-3 mr-2" />
+              {disconnecting ? 'Disconnecting...' : 'Disconnect Bot'}
+            </Button>
+          </div>
+        </div>
+
+        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Disconnect bot?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will remove the Telegram webhook and mark the bot as inactive. You can reconnect it later from Community Settings.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={disconnecting}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDisconnectBot} disabled={disconnecting}>
+                {disconnecting ? 'Disconnecting...' : 'Yes, disconnect'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );

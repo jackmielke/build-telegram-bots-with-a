@@ -1,6 +1,6 @@
 {
-  "name": "Communities Dashboard",
-  "short_name": "Communities",
+  "name": "Vibe AI",
+  "short_name": "Vibe AI",
   "description": "AI Community Management Platform",
   "start_url": "/",
   "display": "standalone",

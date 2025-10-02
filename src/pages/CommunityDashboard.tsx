@@ -213,10 +213,6 @@ const CommunityDashboard = () => {
               <Bot className="w-6 h-6 text-primary" />
               <span className="text-xs">Agent</span>
             </TabsTrigger>
-            <TabsTrigger value="analytics" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
-              <BarChart3 className="w-6 h-6 text-primary" />
-              <span className="text-xs">Activity</span>
-            </TabsTrigger>
             <TabsTrigger value="chat-history" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
               <MessageSquare className="w-6 h-6 text-primary" />
               <span className="text-xs">Chat History</span>
@@ -224,6 +220,10 @@ const CommunityDashboard = () => {
             <TabsTrigger value="memory" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
               <Brain className="w-6 h-6 text-primary" />
               <span className="text-xs">Memory</span>
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
+              <BarChart3 className="w-6 h-6 text-primary" />
+              <span className="text-xs">Activity</span>
             </TabsTrigger>
             <TabsTrigger value="community" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
               <Users className="w-6 h-6 text-primary" />

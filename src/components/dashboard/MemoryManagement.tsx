@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Brain, Plus, Search, Trash2, Edit, User, Calendar } from 'lucide-react';
+import { Brain, Plus, Search, Trash2, Edit, User, Calendar, Sparkles, Loader2 } from 'lucide-react';
 
 interface Memory {
   id: string;
@@ -31,6 +31,7 @@ const MemoryManagement = ({ communityId, isAdmin }: MemoryManagementProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isImproving, setIsImproving] = useState(false);
   const [formData, setFormData] = useState({
     content: '',
     tags: ''
@@ -142,6 +143,40 @@ const MemoryManagement = ({ communityId, isAdmin }: MemoryManagementProps) => {
     }
   };
 
+  const handleImproveWriting = async () => {
+    if (!formData.content.trim()) {
+      toast({
+        title: "No Content",
+        description: "Please enter some content first.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsImproving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('improve-memory', {
+        body: { content: formData.content }
+      });
+
+      if (error) throw error;
+
+      setFormData({ ...formData, content: data.improvedContent });
+      toast({
+        title: "Writing Improved",
+        description: "Memory has been reformatted for better clarity.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to improve writing. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsImproving(false);
+    }
+  };
+
   const openEditDialog = (memory?: Memory) => {
     if (memory) {
       setSelectedMemory(memory);
@@ -207,7 +242,29 @@ const MemoryManagement = ({ communityId, isAdmin }: MemoryManagementProps) => {
                   </DialogHeader>
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="content">Content</Label>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="content">Content</Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleImproveWriting}
+                          disabled={isImproving || !formData.content.trim()}
+                          className="h-7 text-xs"
+                        >
+                          {isImproving ? (
+                            <>
+                              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                              Improving...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-3 h-3 mr-1" />
+                              Improve Writing
+                            </>
+                          )}
+                        </Button>
+                      </div>
                       <Textarea
                         id="content"
                         value={formData.content}

@@ -75,8 +75,8 @@ const Auth = () => {
       <div className="w-full max-w-5xl relative z-10 grid md:grid-cols-2 gap-8 items-center">
         {/* Left side - Branding & Value Prop */}
         <div className="space-y-6 text-center md:text-left">
-          <div className="flex justify-center md:justify-start mb-4">
-            <div className="w-20 h-20 rounded-full gradient-primary flex items-center justify-center shadow-glow">
+          <div className="inline-block">
+            <div className="w-20 h-20 rounded-2xl gradient-primary flex items-center justify-center shadow-glow mb-4">
               <Bot className="w-10 h-10 text-primary-foreground" />
             </div>
           </div>

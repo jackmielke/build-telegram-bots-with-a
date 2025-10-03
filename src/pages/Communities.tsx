@@ -4,8 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Users, Crown, Shield, Plus, LogOut, Settings, Heart } from 'lucide-react';
+import { Loader2, Users, Crown, Shield, Plus, LogOut, Settings, Heart, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import CreateCommunityDialog from '@/components/CreateCommunityDialog';
 
 interface Community {
   id: string;
@@ -213,13 +214,14 @@ const Communities = () => {
       {/* Header */}
       <div className="border-b border-border/50 bg-card/50 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center h-16">
+          <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
                 <Settings className="w-4 h-4 text-primary-foreground" />
               </div>
               <h1 className="text-xl font-semibold">Your Communities</h1>
             </div>
+            <CreateCommunityDialog onCommunityCreated={() => fetchCommunities(user?.id)} />
           </div>
         </div>
       </div>
@@ -237,17 +239,22 @@ const Communities = () => {
 
         {communities.length === 0 ? (
           <div className="text-center py-12">
-            <div className="w-16 h-16 mx-auto rounded-full bg-muted flex items-center justify-center mb-4">
-              <Users className="w-8 h-8 text-muted-foreground" />
+            <div className="w-20 h-20 mx-auto rounded-full gradient-primary flex items-center justify-center mb-6 shadow-glow">
+              <Sparkles className="w-10 h-10 text-primary-foreground" />
             </div>
-            <h3 className="text-lg font-medium mb-2">No communities yet</h3>
-            <p className="text-muted-foreground mb-6">
-              You're not a member of any communities. Contact an admin to get invited.
+            <h3 className="text-2xl font-semibold mb-2">Welcome to Vibe AI! 🎉</h3>
+            <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+              Create your first community and become the admin. You'll be able to customize everything and invite others to join!
             </p>
-            <Button onClick={() => window.location.reload()}>
-              <Plus className="w-4 h-4 mr-2" />
-              Refresh
-            </Button>
+            <CreateCommunityDialog 
+              onCommunityCreated={() => fetchCommunities(user?.id)}
+              trigger={
+                <Button size="lg" className="gradient-primary hover:shadow-glow transition-all duration-300">
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  Create Your First Community
+                </Button>
+              }
+            />
           </div>
         ) : (
           <>

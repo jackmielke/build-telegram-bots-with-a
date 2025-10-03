@@ -1,7 +1,8 @@
 import React from 'react';
-import { Activity, Brain, Users, Zap, BarChart3, Settings, Bot, MessageSquare } from 'lucide-react';
+import { Activity, Brain, Users, Zap, BarChart3, Settings, MessageSquare } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import vibeLogo from '@/assets/vibe-logo.png';
 
 const Dashboard = () => {
   const stats = [
@@ -9,8 +10,9 @@ const Dashboard = () => {
       title: 'Active Agents',
       value: '12',
       change: '+2 this week',
-      icon: Bot,
-      color: 'text-primary'
+      icon: null,
+      color: 'text-primary',
+      isLogo: true
     },
     {
       title: 'Communities',
@@ -60,7 +62,7 @@ const Dashboard = () => {
             Settings
           </Button>
           <Button variant="hero" size="lg">
-            <Brain className="w-4 h-4" />
+            <img src={vibeLogo} alt="Vibe AI" className="w-5 h-5 object-contain" />
             Create Agent
           </Button>
         </div>
@@ -74,7 +76,11 @@ const Dashboard = () => {
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {stat.title}
               </CardTitle>
-              <stat.icon className={`h-5 w-5 ${stat.color}`} />
+              {stat.isLogo ? (
+                <img src={vibeLogo} alt="Vibe AI" className="h-6 w-6 object-contain" />
+              ) : (
+                <stat.icon className={`h-5 w-5 ${stat.color}`} />
+              )}
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-foreground">{stat.value}</div>
@@ -102,7 +108,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent className="space-y-3">
             <Button variant="tech" className="w-full justify-start">
-              <Bot className="w-4 h-4" />
+              <img src={vibeLogo} alt="Vibe AI" className="w-5 h-5 object-contain" />
               Deploy New Agent
             </Button>
             <Button variant="tech" className="w-full justify-start">
@@ -173,7 +179,7 @@ const Dashboard = () => {
                       <span className="text-sm text-muted-foreground">{agent.status}</span>
                     </div>
                   </div>
-                  <Bot className="w-8 h-8 text-primary" />
+                  <img src={vibeLogo} alt="Vibe AI" className="w-10 h-10 object-contain" />
                 </div>
               </CardHeader>
               <CardContent>

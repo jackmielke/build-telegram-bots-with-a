@@ -4,9 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Users, Crown, Shield, Plus, LogOut, Settings, Heart, Sparkles } from 'lucide-react';
+import { Loader2, Users, Crown, Shield, Plus, LogOut, Heart, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import CreateCommunityDialog from '@/components/CreateCommunityDialog';
+import vibeLogo from '@/assets/vibe-logo.png';
 
 interface Community {
   id: string;
@@ -216,9 +217,7 @@ const Communities = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-                <Settings className="w-4 h-4 text-primary-foreground" />
-              </div>
+              <img src={vibeLogo} alt="Vibe AI" className="w-10 h-10 object-contain" />
               <h1 className="text-xl font-semibold">Your Communities</h1>
             </div>
             <CreateCommunityDialog onCommunityCreated={() => fetchCommunities(user?.id)} />
@@ -230,7 +229,7 @@ const Communities = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* User info section */}
         {user?.email && (
-          <div className="mb-6 text-center">
+          <div className="mb-6">
             <p className="text-sm text-muted-foreground">
               Signed in as <span className="font-medium">{user.email}</span>
             </p>

@@ -7,15 +7,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, Plus, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface CreateCommunityDialogProps {
   onCommunityCreated?: () => void;
   trigger?: React.ReactNode;
+  asCard?: boolean;
 }
 
-const CreateCommunityDialog = ({ onCommunityCreated, trigger }: CreateCommunityDialogProps) => {
+const CreateCommunityDialog = ({ onCommunityCreated, trigger, asCard = false }: CreateCommunityDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState('');
@@ -108,15 +110,29 @@ const CreateCommunityDialog = ({ onCommunityCreated, trigger }: CreateCommunityD
     }
   };
 
+  const defaultTrigger = asCard ? (
+    <Card className="cursor-pointer hover:border-primary transition-all duration-300 border-dashed border-2 group hover:shadow-glow">
+      <CardContent className="flex flex-col items-center justify-center h-full min-h-[280px] p-6">
+        <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+          <Plus className="w-8 h-8 text-primary" />
+        </div>
+        <h3 className="font-semibold text-lg mb-2 group-hover:text-primary transition-colors">Create Community</h3>
+        <p className="text-sm text-muted-foreground text-center">
+          Start your own community
+        </p>
+      </CardContent>
+    </Card>
+  ) : (
+    <Button className="gradient-primary hover:shadow-glow transition-all duration-300">
+      <Plus className="w-4 h-4 mr-2" />
+      Create Community
+    </Button>
+  );
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || (
-          <Button className="gradient-primary hover:shadow-glow transition-all duration-300">
-            <Plus className="w-4 h-4 mr-2" />
-            Create Community
-          </Button>
-        )}
+        {trigger || defaultTrigger}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>

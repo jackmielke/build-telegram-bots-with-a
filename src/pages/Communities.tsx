@@ -215,12 +215,9 @@ const Communities = () => {
       {/* Header */}
       <div className="border-b border-border/50 bg-card/50 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 py-3 sm:h-16 sm:py-0">
-            <div className="flex items-center space-x-3">
-              <img src={vibeLogo} alt="Vibe AI" className="w-10 h-10 object-contain" />
-              <h1 className="text-xl font-semibold">Your Communities</h1>
-            </div>
-            <CreateCommunityDialog onCommunityCreated={() => fetchCommunities(user?.id)} />
+          <div className="flex items-center space-x-3 h-16">
+            <img src={vibeLogo} alt="Vibe AI" className="w-10 h-10 object-contain" />
+            <h1 className="text-xl font-semibold">Your Communities</h1>
           </div>
         </div>
       </div>
@@ -274,7 +271,7 @@ const Communities = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {communities.filter(c => c.role === 'admin').map((community) => (
-                    <Card 
+                    <Card
                       key={community.id}
                       className="group cursor-pointer hover:shadow-glow transition-all duration-300 border-border/50 hover:border-primary/50"
                       onClick={() => navigate(`/community/${community.id}`)}
@@ -341,6 +338,7 @@ const Communities = () => {
                       </CardContent>
                     </Card>
                   ))}
+                  <CreateCommunityDialog asCard onCommunityCreated={() => fetchCommunities(user?.id)} />
                 </div>
               </div>
             )}
@@ -407,28 +405,29 @@ const Communities = () => {
                   </div>
                 </CardHeader>
 
-                  <CardContent>
-                    <CardDescription className="line-clamp-2">
-                      {community.description || "No description available"}
-                    </CardDescription>
-                    
-                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="outline" className="text-xs">
-                          {community.privacy_level}
-                        </Badge>
-                        <Badge variant={getRoleBadgeVariant(community.role)} className="flex items-center space-x-1 text-xs">
-                          {getRoleIcon(community.role)}
-                          <span className="capitalize">{community.role}</span>
-                        </Badge>
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Click to view →
-                      </div>
-                    </div>
-                  </CardContent>
-                    </Card>
-                  ))}
+                   <CardContent>
+                     <CardDescription className="line-clamp-2">
+                       {community.description || "No description available"}
+                     </CardDescription>
+                     
+                     <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
+                       <div className="flex items-center space-x-2">
+                         <Badge variant="outline" className="text-xs">
+                           {community.privacy_level}
+                         </Badge>
+                         <Badge variant={getRoleBadgeVariant(community.role)} className="flex items-center space-x-1 text-xs">
+                           {getRoleIcon(community.role)}
+                           <span className="capitalize">{community.role}</span>
+                         </Badge>
+                       </div>
+                       <div className="text-xs text-muted-foreground">
+                         Click to view →
+                       </div>
+                     </div>
+                   </CardContent>
+                     </Card>
+                   ))}
+                   <CreateCommunityDialog asCard onCommunityCreated={() => fetchCommunities(user?.id)} />
                 </div>
               </div>
             )}

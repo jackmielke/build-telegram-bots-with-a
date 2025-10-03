@@ -215,7 +215,7 @@ const Communities = () => {
       {/* Header */}
       <div className="border-b border-border/50 bg-card/50 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 py-3 sm:h-16 sm:py-0">
             <div className="flex items-center space-x-3">
               <img src={vibeLogo} alt="Vibe AI" className="w-10 h-10 object-contain" />
               <h1 className="text-xl font-semibold">Your Communities</h1>
@@ -226,10 +226,10 @@ const Communities = () => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* User info section */}
         {user?.email && (
-          <div className="mb-6">
+          <div className="mb-4 sm:mb-6">
             <p className="text-sm text-muted-foreground">
               Signed in as <span className="font-medium">{user.email}</span>
             </p>

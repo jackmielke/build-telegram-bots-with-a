@@ -1,6 +1,7 @@
 import React from 'react';
 import { Brain, Home, Settings, Users, BarChart3, Workflow, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import vibeLogo from '@/assets/vibe-logo.png';
 
 const Navbar = () => {
   const navItems = [
@@ -19,10 +20,8 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shadow-glow">
-              <Brain className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-foreground">AgentHub</span>
+            <img src={vibeLogo} alt="Vibe AI" className="w-10 h-10 object-contain" />
+            <span className="text-xl font-bold text-foreground">Vibe AI</span>
           </div>
 
           {/* Navigation Items */}

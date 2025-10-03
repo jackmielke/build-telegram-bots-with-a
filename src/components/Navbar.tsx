@@ -20,7 +20,7 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <img src={vibeLogo} alt="Vibe AI" className="w-10 h-10 object-contain" />
+            <img src={vibeLogo} alt="Vibe AI" className="w-10 h-10 object-contain rounded-lg" />
             <span className="text-xl font-bold text-foreground">Vibe AI</span>
           </div>
 

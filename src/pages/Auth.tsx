@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Bot, Zap, MessageSquare, BarChart3, Brain } from 'lucide-react';
+import { Loader2, Zap, MessageSquare, BarChart3, Brain } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import vibeLogo from '@/assets/vibe-logo.png';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -76,8 +77,8 @@ const Auth = () => {
         {/* Left side - Branding & Value Prop */}
         <div className="space-y-6 text-center md:text-left">
           <div className="inline-block">
-            <div className="w-20 h-20 rounded-2xl gradient-primary flex items-center justify-center shadow-glow mb-4">
-              <Bot className="w-10 h-10 text-primary-foreground" />
+            <div className="w-20 h-20 rounded-2xl gradient-primary flex items-center justify-center shadow-glow mb-4 p-3">
+              <img src={vibeLogo} alt="Vibe AI" className="w-full h-full object-contain" />
             </div>
           </div>
           

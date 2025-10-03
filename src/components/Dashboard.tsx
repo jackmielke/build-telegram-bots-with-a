@@ -62,7 +62,7 @@ const Dashboard = () => {
             Settings
           </Button>
           <Button variant="hero" size="lg">
-            <img src={vibeLogo} alt="Vibe AI" className="w-5 h-5 object-contain" />
+            <img src={vibeLogo} alt="Vibe AI" className="w-5 h-5 object-contain rounded" />
             Create Agent
           </Button>
         </div>
@@ -77,7 +77,7 @@ const Dashboard = () => {
                 {stat.title}
               </CardTitle>
               {stat.isLogo ? (
-                <img src={vibeLogo} alt="Vibe AI" className="h-6 w-6 object-contain" />
+                <img src={vibeLogo} alt="Vibe AI" className="h-6 w-6 object-contain rounded" />
               ) : (
                 <stat.icon className={`h-5 w-5 ${stat.color}`} />
               )}
@@ -108,7 +108,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent className="space-y-3">
             <Button variant="tech" className="w-full justify-start">
-              <img src={vibeLogo} alt="Vibe AI" className="w-5 h-5 object-contain" />
+              <img src={vibeLogo} alt="Vibe AI" className="w-5 h-5 object-contain rounded" />
               Deploy New Agent
             </Button>
             <Button variant="tech" className="w-full justify-start">
@@ -179,7 +179,7 @@ const Dashboard = () => {
                       <span className="text-sm text-muted-foreground">{agent.status}</span>
                     </div>
                   </div>
-                  <img src={vibeLogo} alt="Vibe AI" className="w-10 h-10 object-contain" />
+                  <img src={vibeLogo} alt="Vibe AI" className="w-10 h-10 object-contain rounded-lg" />
                 </div>
               </CardHeader>
               <CardContent>

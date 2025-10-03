@@ -45,15 +45,35 @@ const CreateCommunityDialog = ({ onCommunityCreated, trigger, asCard = false }: 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Get user's internal ID
-      const { data: userData, error: userError } = await supabase
+      // Get user's internal ID, or create user record if it doesn't exist
+      let { data: userData, error: userError } = await supabase
         .from('users')
         .select('id')
         .eq('auth_user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (userError || !userData) {
-        throw new Error('User not found');
+      // If user doesn't exist in users table, create them
+      if (!userData) {
+        const { data: newUser, error: createError } = await supabase
+          .from('users')
+          .insert({
+            auth_user_id: user.id,
+            email: user.email,
+            name: user.user_metadata?.name || user.email?.split('@')[0] || 'User'
+          } as any)
+          .select('id')
+          .single();
+
+        if (createError) {
+          console.error('Error creating user record:', createError);
+          throw new Error('Failed to create user profile. Please try logging out and back in.');
+        }
+
+        userData = newUser;
+      }
+
+      if (!userData) {
+        throw new Error('Unable to access user profile');
       }
 
       // Create the community

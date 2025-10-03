@@ -58,7 +58,7 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
           filter: `conversation_id=eq.${conversationId}`
         },
         (payload) => {
-          setMessages(prev => [...prev, payload.new as Message]);
+          setMessages(prev => [payload.new as Message, ...prev]);
         }
       )
       .subscribe();
@@ -84,7 +84,7 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
         `)
         .eq('conversation_id', conversationId)
         .eq('community_id', communityId)
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
         .range(from, to);
 
       if (error) throw error;
@@ -349,18 +349,6 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
             <div className="text-center py-12 text-muted-foreground">Loading messages...</div>
           ) : (
             <ScrollArea className="h-[600px] pr-4">
-              {hasMore && messages.length >= MESSAGES_PER_PAGE && (
-                <div className="pb-4 text-center">
-                  <Button 
-                    onClick={loadMore} 
-                    variant="outline" 
-                    size="sm"
-                    disabled={loading}
-                  >
-                    {loading ? 'Loading...' : 'Load Earlier Messages'}
-                  </Button>
-                </div>
-              )}
               <div className="space-y-4">
                 {messages.map((message) => {
                 const isAI = message.sent_by === 'ai' || message.chat_type === 'ai';
@@ -428,6 +416,18 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
                 );
                 })}
               </div>
+              {hasMore && messages.length >= MESSAGES_PER_PAGE && (
+                <div className="pt-4 text-center">
+                  <Button 
+                    onClick={loadMore} 
+                    variant="outline" 
+                    size="sm"
+                    disabled={loading}
+                  >
+                    {loading ? 'Loading...' : 'Load Earlier Messages'}
+                  </Button>
+                </div>
+              )}
             </ScrollArea>
           )}
         </CardContent>

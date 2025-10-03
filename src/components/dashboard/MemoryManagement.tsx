@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Brain, Plus, Search, Trash2, Edit, User, Calendar, Sparkles, Loader2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
 interface Memory {
   id: string;
@@ -389,9 +390,9 @@ const MemoryManagement = ({ communityId, isAdmin }: MemoryManagementProps) => {
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-foreground/90 whitespace-pre-wrap">
-                  {memory.content}
-                </p>
+                <div className="text-sm text-foreground/90 prose prose-sm dark:prose-invert max-w-none">
+                  <ReactMarkdown>{memory.content}</ReactMarkdown>
+                </div>
               </CardContent>
             </Card>
           ))

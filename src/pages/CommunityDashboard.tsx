@@ -2,18 +2,19 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, BarChart3, Bot, Brain, Users, MessageSquare, Check } from 'lucide-react';
+import { Loader2, ArrowLeft, Home, MessageSquare, Bot, Brain, Settings, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 // Import dashboard sections
-import AnalyticsDashboard from '@/components/dashboard/AnalyticsDashboard';
-import AgentConfiguration from '@/components/dashboard/AgentConfiguration';
+import HomePage from '@/components/dashboard/HomePage';
+import ChatHistoryDashboard from '@/components/dashboard/ChatHistoryDashboard';
+import AgentSetup from '@/components/dashboard/AgentSetup';
+import WorkflowBuilder from '@/components/dashboard/WorkflowBuilder';
+import LLMSettings from '@/components/dashboard/LLMSettings';
 import MemoryManagement from '@/components/dashboard/MemoryManagement';
 import CommunitySettings from '@/components/dashboard/CommunitySettings';
-import ChatHistoryDashboard from '@/components/dashboard/ChatHistoryDashboard';
 
 interface Community {
   id: string;
@@ -44,7 +45,8 @@ const CommunityDashboard = () => {
   const { toast } = useToast();
   const [community, setCommunity] = useState<Community | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('agent-workflows');
+  const [activeTab, setActiveTab] = useState('home');
+  const [agentSubTab, setAgentSubTab] = useState('setup');
 
   useEffect(() => {
     const checkAuthAndFetchCommunity = async () => {
@@ -209,49 +211,75 @@ const CommunityDashboard = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 gap-2 bg-card/50 p-2 h-auto">
-            <TabsTrigger value="agent-workflows" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
+            <TabsTrigger value="home" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
+              <Home className="w-6 h-6 text-primary" />
+              <span className="text-xs">Home</span>
+            </TabsTrigger>
+            <TabsTrigger value="conversations" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
+              <MessageSquare className="w-6 h-6 text-primary" />
+              <span className="text-xs">Conversations</span>
+            </TabsTrigger>
+            <TabsTrigger value="agent" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
               <Bot className="w-6 h-6 text-primary" />
               <span className="text-xs">Agent</span>
-            </TabsTrigger>
-            <TabsTrigger value="chat-history" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
-              <MessageSquare className="w-6 h-6 text-primary" />
-              <span className="text-xs">Chat History</span>
             </TabsTrigger>
             <TabsTrigger value="memory" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
               <Brain className="w-6 h-6 text-primary" />
               <span className="text-xs">Memory</span>
             </TabsTrigger>
-            <TabsTrigger value="analytics" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
-              <BarChart3 className="w-6 h-6 text-primary" />
-              <span className="text-xs">Activity</span>
-            </TabsTrigger>
-            <TabsTrigger value="community" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
-              <Users className="w-6 h-6 text-primary" />
+            <TabsTrigger value="settings" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
+              <Settings className="w-6 h-6 text-primary" />
               <span className="text-xs">Settings</span>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="agent-workflows" className="space-y-6">
-            <AgentConfiguration 
-              community={community} 
-              isAdmin={isAdmin} 
-              onUpdate={(updatedCommunity) => setCommunity(prev => ({ ...prev, ...updatedCommunity }))} 
-            />
+          <TabsContent value="home" className="space-y-6">
+            <HomePage community={community} onNavigate={setActiveTab} />
           </TabsContent>
 
-          <TabsContent value="analytics" className="space-y-6">
-            <AnalyticsDashboard community={community} />
-          </TabsContent>
-
-          <TabsContent value="chat-history" className="space-y-6">
+          <TabsContent value="conversations" className="space-y-6">
             <ChatHistoryDashboard communityId={community.id} isAdmin={isAdmin} />
+          </TabsContent>
+
+          <TabsContent value="agent" className="space-y-6">
+            <Tabs value={agentSubTab} onValueChange={setAgentSubTab} className="space-y-6">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="setup">Setup</TabsTrigger>
+                <TabsTrigger value="workflows">Workflows</TabsTrigger>
+                <TabsTrigger value="llm">LLM</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="setup">
+                <AgentSetup 
+                  community={community} 
+                  isAdmin={isAdmin} 
+                  onUpdate={(updatedCommunity) => setCommunity(prev => ({ ...prev, ...updatedCommunity }))} 
+                />
+              </TabsContent>
+
+              <TabsContent value="workflows">
+                <WorkflowBuilder 
+                  community={community} 
+                  isAdmin={isAdmin} 
+                  onUpdate={(updatedCommunity) => setCommunity(prev => ({ ...prev, ...updatedCommunity }))} 
+                />
+              </TabsContent>
+
+              <TabsContent value="llm">
+                <LLMSettings 
+                  community={community} 
+                  isAdmin={isAdmin} 
+                  onUpdate={(updatedCommunity) => setCommunity(prev => ({ ...prev, ...updatedCommunity }))} 
+                />
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
           <TabsContent value="memory" className="space-y-6">
             <MemoryManagement communityId={community.id} isAdmin={isAdmin} />
           </TabsContent>
 
-          <TabsContent value="community" className="space-y-6">
+          <TabsContent value="settings" className="space-y-6">
             <CommunitySettings 
               community={community} 
               isAdmin={isAdmin} 

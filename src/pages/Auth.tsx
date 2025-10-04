@@ -78,7 +78,7 @@ const Auth = () => {
         <div className="space-y-6 text-center md:text-left">
           <div className="inline-block">
             <div className="w-20 h-20 rounded-2xl gradient-primary flex items-center justify-center shadow-glow mb-4 p-3">
-              <img src={vibeLogo} alt="Vibe AI" className="w-full h-full object-contain" />
+              <img src={vibeLogo} alt="Vibe AI" className="w-full h-full object-contain rounded-lg" />
             </div>
           </div>
           

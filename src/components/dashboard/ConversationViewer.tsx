@@ -6,9 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ArrowLeft, Bot, User, Calendar, DollarSign, BarChart3, Download, Eye, ChevronDown, Database, Check, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Bot, User, Calendar, DollarSign, BarChart3, Download, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { AIContextViewer } from './AIContextViewer';
 
 interface Message {
   id: string;
@@ -37,7 +37,7 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
   const [conversationStats, setConversationStats] = useState<any>(null);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
-  const [selectedPrompt, setSelectedPrompt] = useState<any>(null);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [promptDialogOpen, setPromptDialogOpen] = useState(false);
   const MESSAGES_PER_PAGE = 50;
   const { toast } = useToast();
@@ -155,101 +155,9 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
     setPage(prev => prev + 1);
   };
 
-  const viewPrompt = async (messageId: string) => {
-    try {
-      // Fetch the specific message with all metadata
-      const { data: message, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('id', messageId)
-        .single();
-
-      if (error) throw error;
-
-      const metadata = message.metadata as any;
-      
-      // 🔍 Check if we have the ACTUAL AI context stored
-      if (metadata?.ai_context) {
-        // Use the actual context that was sent to the AI!
-        setSelectedPrompt({
-          message,
-          session: null,
-          community: {
-            agent_model: metadata.model_used || 'gpt-4o-mini'
-          },
-          contextMessages: metadata.ai_context.conversation_history || [],
-          allMemories: [], // We'll show the count from ai_context.memories_count
-          actualContext: true, // Flag to indicate this is real, not reconstructed
-          systemPrompt: metadata.ai_context.system_prompt,
-          memoriesCount: metadata.ai_context.memories_count,
-          modelConfig: metadata.ai_context.model_config
-        });
-        setPromptDialogOpen(true);
-        return;
-      }
-
-      // Fallback: Reconstruct context for older messages without ai_context
-      const { data: contextMessages } = await supabase
-        .from('messages')
-        .select(`
-          *,
-          users:sender_id (
-            name,
-            avatar_url
-          )
-        `)
-        .eq('conversation_id', conversationId)
-        .lt('created_at', message.created_at)
-        .order('created_at', { ascending: false })
-        .limit(7);
-
-      const { data: allMemories } = await supabase
-        .from('memories')
-        .select('id, content, created_at, tags')
-        .eq('community_id', communityId)
-        .order('created_at', { ascending: false });
-
-      const { data: session } = await supabase
-        .from('ai_chat_sessions')
-        .select('*')
-        .eq('community_id', communityId)
-        .eq('metadata->>telegram_chat_id', metadata?.telegram_chat_id || '')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      const { data: community } = await supabase
-        .from('communities')
-        .select('agent_instructions, agent_name, agent_model')
-        .eq('id', communityId)
-        .single();
-
-      setSelectedPrompt({
-        message,
-        session,
-        community,
-        contextMessages: contextMessages?.reverse() || [],
-        allMemories: allMemories || [],
-        actualContext: false // Reconstructed context
-      });
-      setPromptDialogOpen(true);
-    } catch (error) {
-      console.error('Error fetching prompt details:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load prompt details",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const redactSecrets = (text: string) => {
-    if (!text) return text;
-    // Redact API keys, tokens, and other secrets
-    return text
-      .replace(/sk-[a-zA-Z0-9]{32,}/g, 'sk-***REDACTED***')
-      .replace(/Bearer [a-zA-Z0-9_-]+/g, 'Bearer ***REDACTED***')
-      .replace(/[0-9]{10,}:[A-Za-z0-9_-]{35}/g, '***REDACTED***'); // Telegram bot tokens
+  const viewPrompt = (messageId: string) => {
+    setSelectedMessageId(messageId);
+    setPromptDialogOpen(true);
   };
 
   return (
@@ -433,225 +341,23 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
         </CardContent>
       </Card>
 
-      {/* Prompt Viewer Dialog */}
+      {/* AI Context Viewer Dialog */}
       <Dialog open={promptDialogOpen} onOpenChange={setPromptDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh]">
           <DialogHeader>
-            <DialogTitle>AI Prompt Context</DialogTitle>
+            <DialogTitle>AI Context Mirror</DialogTitle>
             <DialogDescription>
-              Full context sent to the AI model for this message
+              Exact reconstruction of what the AI saw when generating this response
             </DialogDescription>
           </DialogHeader>
           
           <ScrollArea className="max-h-[60vh]">
-            {selectedPrompt && (
-              <div className="space-y-4 pr-4">
-                {/* Context Type Indicator */}
-                <div className="flex items-center justify-between pb-2 border-b">
-                  <div className="flex items-center gap-2">
-                    {selectedPrompt.actualContext ? (
-                      <>
-                        <Badge variant="default" className="bg-green-500">
-                          <Check className="w-3 h-3 mr-1" />
-                          Actual Context
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          This is the exact context sent to the AI at {new Date(selectedPrompt.message.created_at).toLocaleString()}
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <Badge variant="outline">
-                          <AlertCircle className="w-3 h-3 mr-1" />
-                          Reconstructed
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          This is an approximation - actual context not stored for this message
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* System Prompt */}
-                <div className="space-y-2">
-                  <h3 className="text-sm font-semibold flex items-center gap-2">
-                    <Bot className="w-4 h-4" />
-                    System Instructions
-                  </h3>
-                  <div className="bg-muted p-3 rounded-lg font-mono text-xs whitespace-pre-wrap">
-                    {redactSecrets(
-                      selectedPrompt.actualContext 
-                        ? selectedPrompt.systemPrompt 
-                        : selectedPrompt.community?.agent_instructions || 'No system instructions set'
-                    )}
-                  </div>
-                </div>
-
-                {/* Community Memories */}
-                {((selectedPrompt.actualContext && selectedPrompt.memoriesCount > 0) || 
-                  (!selectedPrompt.actualContext && selectedPrompt.allMemories && selectedPrompt.allMemories.length > 0)) && (
-                  <Collapsible className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-semibold flex items-center gap-2">
-                        <Database className="w-4 h-4" />
-                        Community Memories ({selectedPrompt.actualContext ? selectedPrompt.memoriesCount : selectedPrompt.allMemories.length} {selectedPrompt.actualContext ? 'sent to AI' : 'total'})
-                      </h3>
-                      {!selectedPrompt.actualContext && (
-                        <CollapsibleTrigger asChild>
-                          <Button variant="ghost" size="sm" className="w-9 p-0">
-                            <ChevronDown className="h-4 w-4" />
-                            <span className="sr-only">Toggle memories</span>
-                          </Button>
-                        </CollapsibleTrigger>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {selectedPrompt.actualContext 
-                        ? `${selectedPrompt.memoriesCount} memories were included in the AI context`
-                        : `All ${selectedPrompt.allMemories.length} community memories are sent to the AI`
-                      }
-                    </p>
-                    {!selectedPrompt.actualContext && (
-                      <CollapsibleContent className="space-y-2">
-                        <ScrollArea className="h-64 border rounded-lg bg-background">
-                          <div className="p-3 space-y-3">
-                            {selectedPrompt.allMemories.map((memory: any) => (
-                              <div key={memory.id} className="border-b border-border/50 pb-2 last:border-0">
-                              <div className="flex items-start justify-between gap-2 mb-1">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className="text-xs text-muted-foreground">
-                                      {new Date(memory.created_at).toLocaleDateString()}
-                                    </span>
-                                  </div>
-                                  {memory.tags && memory.tags.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mb-2">
-                                      {memory.tags.map((tag: string) => (
-                                        <Badge key={tag} variant="outline" className="text-xs">
-                                          {tag}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                              <p className="text-sm whitespace-pre-wrap">{memory.content}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </ScrollArea>
-                      </CollapsibleContent>
-                    )}
-                  </Collapsible>
-                )}
-
-                {/* Model Info */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Model</p>
-                    <Badge>{selectedPrompt.session?.model_used || selectedPrompt.community?.agent_model || 'Unknown'}</Badge>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Agent Name</p>
-                    <Badge variant="outline">{selectedPrompt.community?.agent_name || 'AI Assistant'}</Badge>
-                  </div>
-                </div>
-
-                {/* Message Metadata */}
-                {selectedPrompt.message?.metadata && (
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-semibold">Message Metadata</h3>
-                    <div className="bg-muted p-3 rounded-lg font-mono text-xs overflow-x-auto">
-                      <pre>{JSON.stringify(selectedPrompt.message.metadata, null, 2)}</pre>
-                    </div>
-                  </div>
-                )}
-
-                {/* Session Analytics */}
-                {selectedPrompt.session && (
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-semibold">Session Analytics</h3>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="bg-muted p-2 rounded">
-                        <p className="text-xs text-muted-foreground">Tokens Used</p>
-                        <p className="font-semibold">{selectedPrompt.session.tokens_used}</p>
-                      </div>
-                      <div className="bg-muted p-2 rounded">
-                        <p className="text-xs text-muted-foreground">Cost</p>
-                        <p className="font-semibold">${selectedPrompt.session.cost_usd.toFixed(4)}</p>
-                      </div>
-                      <div className="bg-muted p-2 rounded">
-                        <p className="text-xs text-muted-foreground">Response Time</p>
-                        <p className="font-semibold">
-                          {selectedPrompt.session.metadata?.response_time_ms 
-                            ? `${selectedPrompt.session.metadata.response_time_ms}ms`
-                            : 'N/A'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Conversation Context - THE 7 MESSAGES THE AI SAW */}
-                {selectedPrompt.contextMessages && selectedPrompt.contextMessages.length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-semibold flex items-center gap-2">
-                      <BarChart3 className="w-4 h-4" />
-                      Conversation Context ({selectedPrompt.contextMessages.length} messages)
-                    </h3>
-                    <p className="text-xs text-muted-foreground">
-                      These are the previous messages the AI had access to when generating this response (sliding window of 7 messages)
-                    </p>
-                    <ScrollArea className="h-64 border rounded-lg">
-                      <div className="p-3 space-y-3">
-                        {selectedPrompt.contextMessages.map((msg: any) => {
-                          const isAI = msg.sent_by === 'ai';
-                          return (
-                            <div key={msg.id} className={`flex gap-2 ${isAI ? 'justify-start' : 'justify-end'}`}>
-                              {isAI && (
-                                <Avatar className="h-6 w-6">
-                                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                                    AI
-                                  </AvatarFallback>
-                                </Avatar>
-                              )}
-                              <div className={`flex-1 max-w-[80%] ${isAI ? '' : 'text-right'}`}>
-                                <div className="flex items-center gap-2 mb-1 text-xs text-muted-foreground">
-                                  <span>{isAI ? 'AI' : (msg.users?.name || msg.sent_by || 'User')}</span>
-                                  <span>•</span>
-                                  <span>{new Date(msg.created_at).toLocaleTimeString()}</span>
-                                </div>
-                                <div className={`rounded-lg p-2 text-sm ${
-                                  isAI ? 'bg-primary/10' : 'bg-muted'
-                                }`}>
-                                  {msg.content}
-                                </div>
-                              </div>
-                              {!isAI && (
-                                <Avatar className="h-6 w-6">
-                                  <AvatarImage src={msg.users?.avatar_url} />
-                                  <AvatarFallback className="text-xs">
-                                    {(msg.users?.name || msg.sent_by || 'U')[0]}
-                                  </AvatarFallback>
-                                </Avatar>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </ScrollArea>
-                  </div>
-                )}
-
-                {/* Original Message */}
-                <div className="space-y-2">
-                  <h3 className="text-sm font-semibold">AI Response</h3>
-                  <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg">
-                    <p className="text-sm whitespace-pre-wrap">{selectedPrompt.message?.content}</p>
-                  </div>
-                </div>
-              </div>
+            {selectedMessageId && (
+              <AIContextViewer 
+                messageId={selectedMessageId}
+                conversationId={conversationId}
+                communityId={communityId}
+              />
             )}
           </ScrollArea>
         </DialogContent>

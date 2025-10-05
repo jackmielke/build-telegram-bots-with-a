@@ -234,7 +234,15 @@ const CommunityDashboard = () => {
           </TabsList>
 
           <TabsContent value="home" className="space-y-6">
-            <HomePage community={community} onNavigate={setActiveTab} />
+            <HomePage 
+              community={community} 
+              onNavigate={(tab, conversationId) => {
+                setActiveTab(tab);
+                if (conversationId && tab === 'conversations') {
+                  sessionStorage.setItem('selectedConversation', conversationId);
+                }
+              }} 
+            />
           </TabsContent>
 
           <TabsContent value="conversations" className="space-y-6">

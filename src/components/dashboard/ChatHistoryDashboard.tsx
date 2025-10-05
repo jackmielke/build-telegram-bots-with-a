@@ -37,6 +37,15 @@ const ChatHistoryDashboard = ({ communityId, isAdmin }: ChatHistoryDashboardProp
   const [hasMore, setHasMore] = useState(true);
   const CONVERSATIONS_PER_PAGE = 20;
 
+  // Check for pre-selected conversation from sessionStorage
+  useEffect(() => {
+    const preSelected = sessionStorage.getItem('selectedConversation');
+    if (preSelected) {
+      setSelectedConversation(preSelected);
+      sessionStorage.removeItem('selectedConversation');
+    }
+  }, []);
+
   useEffect(() => {
     fetchConversations();
     

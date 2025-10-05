@@ -161,28 +161,28 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header */}
       <Card className="gradient-card border-border/50">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="sm" onClick={onBack}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
+        <CardHeader className="p-4 md:p-6">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Button variant="ghost" size="sm" onClick={onBack} className="flex-shrink-0">
+                <ArrowLeft className="w-4 h-4 md:mr-2" />
+                <span className="hidden md:inline">Back</span>
               </Button>
-              <div>
-                <CardTitle className="flex items-center gap-2">
+              <div className="min-w-0">
+                <CardTitle className="text-base md:text-lg truncate">
                   Conversation Details
                 </CardTitle>
-                <CardDescription className="mt-1">
+                <CardDescription className="mt-1 text-xs md:text-sm">
                   {messages.length} messages
                 </CardDescription>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={exportConversation}>
-              <Download className="w-4 h-4 mr-2" />
-              Export
+            <Button variant="outline" size="sm" onClick={exportConversation} className="flex-shrink-0">
+              <Download className="w-4 h-4 md:mr-2" />
+              <span className="hidden md:inline">Export</span>
             </Button>
           </div>
         </CardHeader>
@@ -246,18 +246,18 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
 
       {/* Messages */}
       <Card className="gradient-card border-border/50">
-        <CardHeader>
-          <CardTitle>Conversation Thread</CardTitle>
-          <CardDescription>
+        <CardHeader className="p-4 md:p-6">
+          <CardTitle className="text-base md:text-lg">Conversation Thread</CardTitle>
+          <CardDescription className="text-xs md:text-sm">
             Full message history from this conversation
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-2 md:p-6">
           {loading && page === 0 ? (
             <div className="text-center py-12 text-muted-foreground">Loading messages...</div>
           ) : (
-            <ScrollArea className="h-[600px] pr-4">
-              <div className="space-y-4">
+            <ScrollArea className="h-[600px] md:h-[700px] px-2 md:px-4">
+              <div className="space-y-3 md:space-y-4">
                 {messages.map((message) => {
                 const isAI = message.sent_by === 'ai' || message.chat_type === 'ai';
                 const userName = message.users?.name || 'User';
@@ -266,34 +266,34 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
                 return (
                   <div
                     key={message.id}
-                    className={`flex gap-3 ${isAI ? 'flex-row' : 'flex-row-reverse'}`}
+                    className={`flex gap-2 md:gap-3 ${isAI ? 'flex-row' : 'flex-row-reverse'}`}
                   >
-                    <Avatar className="w-8 h-8 flex-shrink-0">
+                    <Avatar className="w-7 h-7 md:w-8 md:h-8 flex-shrink-0">
                       {isAI ? (
                         <>
                           <AvatarFallback className="bg-primary/10">
-                            <Bot className="w-4 h-4 text-primary" />
+                            <Bot className="w-3 h-3 md:w-4 md:h-4 text-primary" />
                           </AvatarFallback>
                         </>
                       ) : (
                         <>
                           <AvatarImage src={avatarUrl} alt={userName} />
                           <AvatarFallback className="bg-muted">
-                            <User className="w-4 h-4" />
+                            <User className="w-3 h-3 md:w-4 md:h-4" />
                           </AvatarFallback>
                         </>
                       )}
                     </Avatar>
 
-                      <div className={`flex-1 ${isAI ? 'mr-12' : 'ml-12'}`}>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-medium">
+                    <div className="flex-1 min-w-0 max-w-full">
+                      <div className="flex flex-wrap items-center gap-1 md:gap-2 mb-1">
+                        <span className="text-xs md:text-sm font-medium">
                           {isAI ? 'AI Assistant' : userName}
                         </span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-[10px] md:text-xs text-muted-foreground">
                           {new Date(message.created_at).toLocaleString()}
                         </span>
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-[10px] md:text-xs h-4 md:h-5">
                           {message.message_type}
                         </Badge>
                         {isAI && (
@@ -301,21 +301,21 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
                             variant="ghost"
                             size="sm"
                             onClick={() => viewPrompt(message.id)}
-                            className="h-6 px-2"
+                            className="h-5 md:h-6 px-1 md:px-2"
                           >
-                            <Eye className="w-3 h-3 mr-1" />
-                            <span className="text-xs">View Prompt</span>
+                            <Eye className="w-3 h-3" />
+                            <span className="text-[10px] md:text-xs ml-1">Prompt</span>
                           </Button>
                         )}
                       </div>
                       <div
-                        className={`rounded-lg p-3 ${
+                        className={`rounded-lg p-2.5 md:p-3 ${
                           isAI
                             ? 'bg-primary/10 border border-primary/20'
                             : 'bg-muted border border-border'
                         }`}
                       >
-                        <p className="text-sm whitespace-pre-wrap break-words">
+                        <p className="text-xs md:text-sm whitespace-pre-wrap break-words leading-relaxed">
                           {message.content}
                         </p>
                       </div>
@@ -331,6 +331,7 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
                     variant="outline" 
                     size="sm"
                     disabled={loading}
+                    className="w-full md:w-auto"
                   >
                     {loading ? 'Loading...' : 'Load Earlier Messages'}
                   </Button>

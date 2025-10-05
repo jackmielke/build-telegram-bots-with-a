@@ -220,6 +220,53 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
     }
   };
 
+  const toggleAgentTool = async (workflowType: string, toolName: string, currentEnabled: boolean) => {
+    if (!isAdmin) return;
+    
+    try {
+      // Get current workflow configuration
+      const workflow = workflows.find(w => w.type === workflowType);
+      const currentConfig = workflow?.configuration || {};
+      const agentTools = currentConfig.agent_tools || {};
+      
+      // Update the specific tool
+      const newAgentTools = {
+        ...agentTools,
+        [toolName]: !currentEnabled
+      };
+
+      const { error } = await supabase
+        .from('community_workflows')
+        .upsert({
+          community_id: community.id,
+          workflow_type: workflowType,
+          is_enabled: workflow?.enabled || false,
+          configuration: {
+            ...currentConfig,
+            agent_tools: newAgentTools
+          }
+        }, {
+          onConflict: 'community_id,workflow_type'
+        });
+
+      if (error) throw error;
+      
+      toast({
+        title: currentEnabled ? "Tool Disabled" : "Tool Enabled",
+        description: `${toolName.replace('_', ' ')} has been ${currentEnabled ? 'disabled' : 'enabled'}.`,
+      });
+      
+      fetchWorkflows();
+    } catch (error: any) {
+      console.error('Error toggling agent tool:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update agent tool setting",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Test workflow functions
   const testTelegramWorkflow = async (input: string) => {
     const mockTelegramMessage = {
@@ -817,29 +864,46 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
 
                   {/* Telegram Chat Type Sub-toggles */}
                   {workflow.type === 'telegram_integration' && workflow.enabled && (
-                    <div className="mt-4 pt-3 border-t border-border/30">
-                      <p className="text-xs font-medium text-muted-foreground mb-3">Chat Types</p>
-                      <div className="space-y-2">
-                        {[
-                          { type: 'private', label: 'Private Chats', desc: '1-on-1 conversations' },
-                          { type: 'group', label: 'Groups', desc: 'Regular group chats' },
-                          { type: 'supergroup', label: 'Supergroups', desc: 'Large groups with admin features' }
-                        ].map((chatType) => {
-                          const isEnabled = workflow.configuration?.chat_types?.[chatType.type] || false;
-                          return (
-                            <div key={chatType.type} className="flex items-center justify-between p-2 rounded bg-background/50">
-                              <div>
-                                <p className="text-sm font-medium">{chatType.label}</p>
-                                <p className="text-xs text-muted-foreground">{chatType.desc}</p>
+                    <div className="mt-4 pt-3 border-t border-border/30 space-y-4">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-3">Chat Types</p>
+                        <div className="space-y-2">
+                          {[
+                            { type: 'private', label: 'Private Chats', desc: '1-on-1 conversations' },
+                            { type: 'group', label: 'Groups', desc: 'Regular group chats' },
+                            { type: 'supergroup', label: 'Supergroups', desc: 'Large groups with admin features' }
+                          ].map((chatType) => {
+                            const isEnabled = workflow.configuration?.chat_types?.[chatType.type] || false;
+                            return (
+                              <div key={chatType.type} className="flex items-center justify-between p-2 rounded bg-background/50">
+                                <div>
+                                  <p className="text-sm font-medium">{chatType.label}</p>
+                                  <p className="text-xs text-muted-foreground">{chatType.desc}</p>
+                                </div>
+                                <Switch 
+                                  checked={isEnabled}
+                                  onCheckedChange={() => toggleChatType(workflow.type, chatType.type, isEnabled)}
+                                  disabled={!isAdmin}
+                                />
                               </div>
-                              <Switch 
-                                checked={isEnabled}
-                                onCheckedChange={() => toggleChatType(workflow.type, chatType.type, isEnabled)}
-                                disabled={!isAdmin}
-                              />
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-3">Agent Tools</p>
+                        <div className="flex items-center justify-between p-2 rounded bg-background/50">
+                          <div>
+                            <p className="text-sm font-medium">🔍 Search Chat History</p>
+                            <p className="text-xs text-muted-foreground">Let AI search recent messages (last 7-30 days)</p>
+                          </div>
+                          <Switch 
+                            checked={workflow.configuration?.agent_tools?.search_chat_history || false}
+                            onCheckedChange={() => toggleAgentTool(workflow.type, 'search_chat_history', workflow.configuration?.agent_tools?.search_chat_history || false)}
+                            disabled={!isAdmin}
+                          />
+                        </div>
                       </div>
                     </div>
                   )}

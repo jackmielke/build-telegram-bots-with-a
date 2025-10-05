@@ -14,6 +14,9 @@ interface WorkflowCheck {
       group?: boolean;
       supergroup?: boolean;
     };
+    agent_tools?: {
+      search_chat_history?: boolean;
+    };
   };
 }
 
@@ -659,6 +662,33 @@ ${communityData?.agent_instructions || 'You are a helpful community assistant.'}
               ]
             };
 
+            // Add search_chat_history tool if enabled
+            const searchHistoryEnabled = workflowStatus.configuration?.agent_tools?.search_chat_history;
+            if (searchHistoryEnabled) {
+              requestBody.tools = [
+                {
+                  type: "function",
+                  function: {
+                    name: "search_chat_history",
+                    description: "Search recent community messages from the last N days to find relevant context or information.",
+                    parameters: {
+                      type: "object",
+                      properties: {
+                        days_back: {
+                          type: "integer",
+                          description: "Number of days to search back (default 7, max 30)",
+                          minimum: 1,
+                          maximum: 30
+                        }
+                      },
+                      required: []
+                    }
+                  }
+                }
+              ];
+              requestBody.tool_choice = "auto";
+            }
+
             // Use correct token parameter based on model
             if (isLegacyModel) {
               requestBody.max_tokens = communityData?.agent_max_tokens || 2000;
@@ -689,16 +719,135 @@ ${communityData?.agent_instructions || 'You are a helpful community assistant.'}
               hasChoices: !!aiData.choices,
               choicesLength: aiData.choices?.length,
               hasContent: !!aiData.choices?.[0]?.message?.content,
+              hasToolCalls: !!aiData.choices?.[0]?.message?.tool_calls,
               model: aiData.model,
               usage: aiData.usage
             });
             
-            const replyText = aiData.choices?.[0]?.message?.content || 'Sorry, I could not generate a response.';
+            // Check if AI wants to use the search_chat_history tool
+            const toolCalls = aiData.choices?.[0]?.message?.tool_calls;
+            let finalReplyText = aiData.choices?.[0]?.message?.content || 'Sorry, I could not generate a response.';
             
-            if (!aiData.choices?.[0]?.message?.content) {
+            if (toolCalls && toolCalls.length > 0) {
+              const toolCall = toolCalls[0];
+              if (toolCall.function.name === 'search_chat_history') {
+                console.log('🔍 AI requested chat history search');
+                
+                // Send "searching..." indicator to Telegram
+                await fetch(`https://api.telegram.org/bot${botToken}/sendChatAction`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    chat_id: chatId,
+                    action: 'find_location'
+                  })
+                });
+                
+                // Parse tool arguments
+                const args = JSON.parse(toolCall.function.arguments || '{}');
+                const daysBack = Math.min(Math.max(args.days_back || 7, 1), 30);
+                const cutoffDate = new Date();
+                cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+                
+                // Query messages table for recent community messages
+                const { data: recentMessages, error: searchError } = await supabase
+                  .from('messages')
+                  .select(`
+                    content,
+                    sent_by,
+                    created_at,
+                    sender:sender_id (
+                      name
+                    )
+                  `)
+                  .eq('community_id', communityId)
+                  .gte('created_at', cutoffDate.toISOString())
+                  .order('created_at', { ascending: false })
+                  .limit(30);
+                
+                if (searchError) {
+                  console.error('❌ Error searching messages:', searchError);
+                } else {
+                  console.log(`✅ Found ${recentMessages?.length || 0} messages from last ${daysBack} days`);
+                }
+                
+                // Format search results for AI
+                const formatTimeAgo = (timestamp: string) => {
+                  const now = Date.now();
+                  const then = new Date(timestamp).getTime();
+                  const diffMs = now - then;
+                  const diffMins = Math.floor(diffMs / 60000);
+                  const diffHours = Math.floor(diffMs / 3600000);
+                  const diffDays = Math.floor(diffMs / 86400000);
+                  
+                  if (diffMins < 60) return `${diffMins}m ago`;
+                  if (diffHours < 24) return `${diffHours}h ago`;
+                  return `${diffDays}d ago`;
+                };
+                
+                const searchResults = recentMessages && recentMessages.length > 0
+                  ? recentMessages.map((msg: any) => {
+                      const senderName = msg.sender?.name || msg.sent_by || 'Unknown';
+                      const timeAgo = formatTimeAgo(msg.created_at);
+                      return `[${timeAgo}] ${senderName}: ${msg.content}`;
+                    }).join('\n')
+                  : 'No messages found in the specified time range.';
+                
+                // Send tool results back to OpenAI for final response
+                const toolResponseBody: any = {
+                  model,
+                  messages: [
+                    {
+                      role: 'system',
+                      content: systemPrompt
+                    },
+                    ...conversationMessages,
+                    {
+                      role: 'user',
+                      content: userMessage
+                    },
+                    aiData.choices[0].message, // Include original AI response with tool call
+                    {
+                      role: 'tool',
+                      tool_call_id: toolCall.id,
+                      content: searchResults
+                    }
+                  ]
+                };
+                
+                // Use correct token parameter based on model
+                if (isLegacyModel) {
+                  toolResponseBody.max_tokens = communityData?.agent_max_tokens || 2000;
+                  toolResponseBody.temperature = communityData?.agent_temperature || 0.7;
+                } else {
+                  toolResponseBody.max_completion_tokens = communityData?.agent_max_tokens || 2000;
+                }
+                
+                // Call OpenAI again with tool results
+                const toolAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${openaiApiKey}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(toolResponseBody),
+                });
+                
+                if (!toolAiResponse.ok) {
+                  console.error('❌ OpenAI tool response error:', await toolAiResponse.text());
+                } else {
+                  const toolAiData = await toolAiResponse.json();
+                  finalReplyText = toolAiData.choices?.[0]?.message?.content || finalReplyText;
+                  console.log('✅ AI synthesized response with search results');
+                }
+              }
+            }
+            
+            if (!aiData.choices?.[0]?.message?.content && !toolCalls) {
               console.error('⚠️ No content in AI response:', JSON.stringify(aiData));
             }
             const responseTime = Date.now() - startTime;
+            const replyText = finalReplyText;
 
             // Store AI response message (no sender_id for AI messages)
             const { error: insertAiMsgError } = await supabase

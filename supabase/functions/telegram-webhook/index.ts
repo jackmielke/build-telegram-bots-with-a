@@ -618,6 +618,8 @@ Chat type: ${chatTypeLabel}
 User: ${userName}${telegramUsername ? ` (@${telegramUsername})` : ''}
 Community: ${agentName}
 
+IMPORTANT: Keep responses under 4000 characters due to Telegram's message limit. Be concise and direct.
+
 ${communityData?.agent_instructions || 'You are a helpful community assistant.'}`;
             
             // Add memories in n8n format (timestamp | content | id)
@@ -694,7 +696,7 @@ ${communityData?.agent_instructions || 'You are a helpful community assistant.'}
               requestBody.max_tokens = communityData?.agent_max_tokens || 2000;
               requestBody.temperature = communityData?.agent_temperature || 0.7;
             } else {
-              requestBody.max_completion_tokens = communityData?.agent_max_tokens || 2000;
+              requestBody.max_completion_tokens = communityData?.agent_max_tokens || 4000;
               // Newer models don't support temperature parameter
             }
 
@@ -820,7 +822,7 @@ ${communityData?.agent_instructions || 'You are a helpful community assistant.'}
                   toolResponseBody.max_tokens = communityData?.agent_max_tokens || 2000;
                   toolResponseBody.temperature = communityData?.agent_temperature || 0.7;
                 } else {
-                  toolResponseBody.max_completion_tokens = communityData?.agent_max_tokens || 2000;
+                  toolResponseBody.max_completion_tokens = communityData?.agent_max_tokens || 4000;
                 }
                 
                 // Call OpenAI again with tool results
@@ -880,13 +882,20 @@ ${communityData?.agent_instructions || 'You are a helpful community assistant.'}
               console.error('Error storing AI response:', insertAiMsgError);
             }
 
+            // Truncate message if it exceeds Telegram's 4096 character limit
+            let truncatedReply = replyText;
+            if (replyText.length > 4096) {
+              console.log(`⚠️ Message too long (${replyText.length} chars), truncating to 4096`);
+              truncatedReply = replyText.substring(0, 4090) + '...';
+            }
+
             // 🚀 SEND TO TELEGRAM IMMEDIATELY (don't wait for analytics)
             const telegramPromise = fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 chat_id: chatId,
-                text: replyText,
+                text: truncatedReply,
                 parse_mode: 'HTML',
                 disable_web_page_preview: true,
               }),

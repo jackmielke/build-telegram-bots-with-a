@@ -390,7 +390,7 @@ const MemoryManagement = ({ communityId, isAdmin }: MemoryManagementProps) => {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-sm text-foreground/90 prose prose-sm dark:prose-invert max-w-none">
+                <div className="text-sm text-foreground/90 prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
                   <ReactMarkdown>{memory.content}</ReactMarkdown>
                 </div>
               </CardContent>

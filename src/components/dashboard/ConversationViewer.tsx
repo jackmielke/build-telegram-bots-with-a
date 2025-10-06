@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, Bot, User, Calendar, DollarSign, BarChart3, Download, Eye } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { ArrowLeft, Bot, User, Calendar, DollarSign, BarChart3, Download, Eye, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AIContextViewer } from './AIContextViewer';
 
@@ -39,6 +40,10 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
   const [hasMore, setHasMore] = useState(true);
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [promptDialogOpen, setPromptDialogOpen] = useState(false);
+  const [introDialogOpen, setIntroDialogOpen] = useState(false);
+  const [generatedIntro, setGeneratedIntro] = useState('');
+  const [isGeneratingIntro, setIsGeneratingIntro] = useState(false);
+  const [isSavingIntro, setIsSavingIntro] = useState(false);
   const MESSAGES_PER_PAGE = 50;
   const { toast } = useToast();
 
@@ -160,6 +165,77 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
     setPromptDialogOpen(true);
   };
 
+  const generateIntro = async () => {
+    setIsGeneratingIntro(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-intro', {
+        body: {
+          conversationId,
+          communityId
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.intro) {
+        setGeneratedIntro(data.intro);
+        setIntroDialogOpen(true);
+      } else {
+        throw new Error('No intro generated');
+      }
+    } catch (error) {
+      console.error('Error generating intro:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate intro. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingIntro(false);
+    }
+  };
+
+  const saveIntro = async () => {
+    if (!generatedIntro.trim()) {
+      toast({
+        title: "Error",
+        description: "Intro cannot be empty",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSavingIntro(true);
+    try {
+      const { error } = await supabase
+        .from('memories')
+        .insert({
+          community_id: communityId,
+          content: generatedIntro,
+          tags: ['intro', 'auto-generated']
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Intro saved as a memory"
+      });
+
+      setIntroDialogOpen(false);
+      setGeneratedIntro('');
+    } catch (error) {
+      console.error('Error saving intro:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save intro. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingIntro(false);
+    }
+  };
+
   return (
     <div className="space-y-4 w-full max-w-full">
       {/* Header */}
@@ -178,10 +254,24 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
             </p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={exportConversation} className="flex-shrink-0">
-          <Download className="w-4 h-4 md:mr-2" />
-          <span className="hidden md:inline">Export</span>
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={generateIntro} 
+            disabled={isGeneratingIntro}
+            className="flex-shrink-0"
+          >
+            <Sparkles className="w-4 h-4 md:mr-2" />
+            <span className="hidden md:inline">
+              {isGeneratingIntro ? 'Generating...' : 'Generate Intro'}
+            </span>
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportConversation} className="flex-shrink-0">
+            <Download className="w-4 h-4 md:mr-2" />
+            <span className="hidden md:inline">Export</span>
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -355,6 +445,44 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
               />
             )}
           </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Generate Intro Dialog */}
+      <Dialog open={introDialogOpen} onOpenChange={setIntroDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Generated Intro</DialogTitle>
+            <DialogDescription>
+              Review and edit the AI-generated intro before saving it as a memory
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Textarea
+            value={generatedIntro}
+            onChange={(e) => setGeneratedIntro(e.target.value)}
+            className="min-h-[300px]"
+            placeholder="Generated intro will appear here..."
+          />
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIntroDialogOpen(false);
+                setGeneratedIntro('');
+              }}
+              disabled={isSavingIntro}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={saveIntro}
+              disabled={isSavingIntro || !generatedIntro.trim()}
+            >
+              {isSavingIntro ? 'Saving...' : 'Save as Memory'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -353,32 +353,32 @@ const ChatHistoryDashboard = ({ communityId, isAdmin }: ChatHistoryDashboardProp
                   <Button
                     key={conversation.conversation_id}
                     variant="ghost"
-                    className="w-full h-auto p-4 justify-start hover:bg-primary/10 border border-border/30"
+                    className="w-full h-auto p-3 md:p-4 justify-start hover:bg-primary/10 border border-border/30"
                     onClick={() => setSelectedConversation(conversation.conversation_id)}
                   >
-                    <div className="flex items-start gap-4 w-full text-left">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                    <div className="flex items-start gap-3 md:gap-4 w-full text-left min-w-0">
+                      <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
                         {getChatTypeIcon(conversation.chat_type)}
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 overflow-hidden">
                         <div className="flex items-center justify-between gap-2 mb-1">
-                          <h3 className="font-semibold truncate">
+                          <h3 className="font-semibold text-sm md:text-base truncate">
                             {conversation.display_name || conversation.topic_name || 'Untitled Conversation'}
                           </h3>
-                          <Badge variant="secondary" className="text-xs flex-shrink-0">
+                          <Badge variant="secondary" className="text-[10px] md:text-xs flex-shrink-0">
                             {getChatTypeLabel(conversation.chat_type)}
                           </Badge>
                         </div>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
+                        <div className="flex flex-wrap items-center gap-2 md:gap-4 text-[10px] md:text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1 whitespace-nowrap">
                             <MessageSquare className="w-3 h-3" />
-                            {conversation.message_count} messages
+                            {conversation.message_count}
                           </span>
-                          <span className="flex items-center gap-1">
+                          <span className="flex items-center gap-1 whitespace-nowrap">
                             <Users className="w-3 h-3" />
-                            {conversation.participant_count} participants
+                            {conversation.participant_count}
                           </span>
-                          <span className="flex items-center gap-1">
+                          <span className="flex items-center gap-1 whitespace-nowrap">
                             <Calendar className="w-3 h-3" />
                             {formatDate(conversation.last_message_at)}
                           </span>

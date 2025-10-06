@@ -161,32 +161,28 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
   };
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-4 w-full max-w-full">
       {/* Header */}
-      <Card className="gradient-card border-border/50">
-        <CardHeader className="p-4 md:p-6">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <Button variant="ghost" size="sm" onClick={onBack} className="flex-shrink-0">
-                <ArrowLeft className="w-4 h-4 md:mr-2" />
-                <span className="hidden md:inline">Back</span>
-              </Button>
-              <div className="min-w-0">
-                <CardTitle className="text-base md:text-lg truncate">
-                  Conversation Details
-                </CardTitle>
-                <CardDescription className="mt-1 text-xs md:text-sm">
-                  {messages.length} messages
-                </CardDescription>
-              </div>
-            </div>
-            <Button variant="outline" size="sm" onClick={exportConversation} className="flex-shrink-0">
-              <Download className="w-4 h-4 md:mr-2" />
-              <span className="hidden md:inline">Export</span>
-            </Button>
+      <div className="flex items-center justify-between gap-2 p-4 bg-card rounded-lg border border-border/50">
+        <div className="flex items-center gap-2 min-w-0">
+          <Button variant="ghost" size="sm" onClick={onBack} className="flex-shrink-0">
+            <ArrowLeft className="w-4 h-4 md:mr-2" />
+            <span className="hidden md:inline">Back</span>
+          </Button>
+          <div className="min-w-0">
+            <h2 className="text-base md:text-lg font-semibold truncate">
+              Conversation Details
+            </h2>
+            <p className="text-xs md:text-sm text-muted-foreground">
+              {messages.length} messages
+            </p>
           </div>
-        </CardHeader>
-      </Card>
+        </div>
+        <Button variant="outline" size="sm" onClick={exportConversation} className="flex-shrink-0">
+          <Download className="w-4 h-4 md:mr-2" />
+          <span className="hidden md:inline">Export</span>
+        </Button>
+      </div>
 
       {/* Stats */}
       {conversationStats && (
@@ -244,103 +240,101 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
         </div>
       )}
 
-      {/* Messages */}
-      <Card className="gradient-card border-border/50">
-        <CardHeader className="p-4 md:p-6">
-          <CardTitle className="text-base md:text-lg">Conversation Thread</CardTitle>
-          <CardDescription className="text-xs md:text-sm">
+      {/* Messages - Full width, no card wrapper */}
+      <div className="w-full">
+        <div className="mb-4">
+          <h3 className="text-base md:text-lg font-semibold">Conversation Thread</h3>
+          <p className="text-xs md:text-sm text-muted-foreground">
             Full message history from this conversation
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-2 md:p-6">
-          {loading && page === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">Loading messages...</div>
-          ) : (
-            <ScrollArea className="h-[600px] md:h-[700px] px-2 md:px-4">
-              <div className="space-y-3 md:space-y-4">
-                {messages.map((message) => {
-                const isAI = message.sent_by === 'ai' || message.chat_type === 'ai';
-                const userName = message.users?.name || 'User';
-                const avatarUrl = message.users?.avatar_url;
+          </p>
+        </div>
+        {loading && page === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">Loading messages...</div>
+        ) : (
+          <ScrollArea className="h-[600px] md:h-[700px]">
+            <div className="space-y-3 md:space-y-4 pr-4">
+              {messages.map((message) => {
+              const isAI = message.sent_by === 'ai' || message.chat_type === 'ai';
+              const userName = message.users?.name || 'User';
+              const avatarUrl = message.users?.avatar_url;
 
-                return (
-                  <div
-                    key={message.id}
-                    className={`flex gap-2 md:gap-3 ${isAI ? 'flex-row' : 'flex-row-reverse'}`}
-                  >
-                    <Avatar className="w-7 h-7 md:w-8 md:h-8 flex-shrink-0">
-                      {isAI ? (
-                        <>
-                          <AvatarFallback className="bg-primary/10">
-                            <Bot className="w-3 h-3 md:w-4 md:h-4 text-primary" />
-                          </AvatarFallback>
-                        </>
-                      ) : (
-                        <>
-                          <AvatarImage src={avatarUrl} alt={userName} />
-                          <AvatarFallback className="bg-muted">
-                            <User className="w-3 h-3 md:w-4 md:h-4" />
-                          </AvatarFallback>
-                        </>
+              return (
+                <div
+                  key={message.id}
+                  className={`flex gap-2 md:gap-3 ${isAI ? 'flex-row' : 'flex-row-reverse'}`}
+                >
+                  <Avatar className="w-7 h-7 md:w-8 md:h-8 flex-shrink-0">
+                    {isAI ? (
+                      <>
+                        <AvatarFallback className="bg-primary/10">
+                          <Bot className="w-3 h-3 md:w-4 md:h-4 text-primary" />
+                        </AvatarFallback>
+                      </>
+                    ) : (
+                      <>
+                        <AvatarImage src={avatarUrl} alt={userName} />
+                        <AvatarFallback className="bg-muted">
+                          <User className="w-3 h-3 md:w-4 md:h-4" />
+                        </AvatarFallback>
+                      </>
+                    )}
+                  </Avatar>
+
+                  <div className="flex-1 min-w-0 max-w-[calc(100%-3rem)]">
+                    <div className="flex flex-wrap items-center gap-1 md:gap-2 mb-1">
+                      <span className="text-xs md:text-sm font-medium">
+                        {isAI ? 'AI Assistant' : userName}
+                      </span>
+                      <span className="text-[10px] md:text-xs text-muted-foreground">
+                        {new Date(message.created_at).toLocaleString()}
+                      </span>
+                      <Badge variant="outline" className="text-[10px] md:text-xs h-4 md:h-5">
+                        {message.message_type}
+                      </Badge>
+                      {isAI && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => viewPrompt(message.id)}
+                          className="h-5 md:h-6 px-1 md:px-2"
+                        >
+                          <Eye className="w-3 h-3" />
+                          <span className="text-[10px] md:text-xs ml-1">Prompt</span>
+                        </Button>
                       )}
-                    </Avatar>
-
-                    <div className="flex-1 min-w-0 max-w-full">
-                      <div className="flex flex-wrap items-center gap-1 md:gap-2 mb-1">
-                        <span className="text-xs md:text-sm font-medium">
-                          {isAI ? 'AI Assistant' : userName}
-                        </span>
-                        <span className="text-[10px] md:text-xs text-muted-foreground">
-                          {new Date(message.created_at).toLocaleString()}
-                        </span>
-                        <Badge variant="outline" className="text-[10px] md:text-xs h-4 md:h-5">
-                          {message.message_type}
-                        </Badge>
-                        {isAI && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => viewPrompt(message.id)}
-                            className="h-5 md:h-6 px-1 md:px-2"
-                          >
-                            <Eye className="w-3 h-3" />
-                            <span className="text-[10px] md:text-xs ml-1">Prompt</span>
-                          </Button>
-                        )}
-                      </div>
-                      <div
-                        className={`rounded-lg p-2.5 md:p-3 ${
-                          isAI
-                            ? 'bg-primary/10 border border-primary/20'
-                            : 'bg-muted border border-border'
-                        }`}
-                      >
-                        <p className="text-xs md:text-sm whitespace-pre-wrap break-words leading-relaxed">
-                          {message.content}
-                        </p>
-                      </div>
+                    </div>
+                    <div
+                      className={`rounded-lg p-2.5 md:p-3 ${
+                        isAI
+                          ? 'bg-primary/10 border border-primary/20'
+                          : 'bg-muted border border-border'
+                      }`}
+                    >
+                      <p className="text-xs md:text-sm whitespace-pre-wrap break-all leading-relaxed">
+                        {message.content}
+                      </p>
                     </div>
                   </div>
-                );
-                })}
-              </div>
-              {hasMore && messages.length >= MESSAGES_PER_PAGE && (
-                <div className="pt-4 text-center">
-                  <Button 
-                    onClick={loadMore} 
-                    variant="outline" 
-                    size="sm"
-                    disabled={loading}
-                    className="w-full md:w-auto"
-                  >
-                    {loading ? 'Loading...' : 'Load Earlier Messages'}
-                  </Button>
                 </div>
-              )}
-            </ScrollArea>
-          )}
-        </CardContent>
-      </Card>
+              );
+              })}
+            </div>
+            {hasMore && messages.length >= MESSAGES_PER_PAGE && (
+              <div className="pt-4 text-center pr-4">
+                <Button 
+                  onClick={loadMore} 
+                  variant="outline" 
+                  size="sm"
+                  disabled={loading}
+                  className="w-full md:w-auto"
+                >
+                  {loading ? 'Loading...' : 'Load Earlier Messages'}
+                </Button>
+              </div>
+            )}
+          </ScrollArea>
+        )}
+      </div>
 
       {/* AI Context Viewer Dialog */}
       <Dialog open={promptDialogOpen} onOpenChange={setPromptDialogOpen}>

@@ -254,22 +254,27 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-shrink-0">
           <Button 
             variant="outline" 
             size="sm" 
             onClick={generateIntro} 
             disabled={isGeneratingIntro}
-            className="flex-shrink-0"
+            className="flex items-center gap-1"
           >
-            <Sparkles className="w-4 h-4 md:mr-2" />
-            <span className="hidden md:inline">
-              {isGeneratingIntro ? 'Generating...' : 'Generate Intro'}
+            <Sparkles className="w-4 h-4" />
+            <span className="text-xs">
+              {isGeneratingIntro ? 'Generating...' : 'Intro'}
             </span>
           </Button>
-          <Button variant="outline" size="sm" onClick={exportConversation} className="flex-shrink-0">
-            <Download className="w-4 h-4 md:mr-2" />
-            <span className="hidden md:inline">Export</span>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={exportConversation}
+            className="flex items-center gap-1"
+          >
+            <Download className="w-4 h-4" />
+            <span className="text-xs">Export</span>
           </Button>
         </div>
       </div>

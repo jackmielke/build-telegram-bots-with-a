@@ -98,7 +98,6 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
         .insert([{
           name: botName,
           description: `Telegram bot community for @${botUsername}`,
-          created_by: internalUser.id,
           telegram_bot_token: botToken,
           telegram_bot_url: botUrl,
           agent_name: botName,

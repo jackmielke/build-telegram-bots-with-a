@@ -4,9 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Users, Crown, Shield, Plus, LogOut, Heart, Sparkles, Compass } from 'lucide-react';
+import { Loader2, Users, Crown, Shield, Plus, LogOut, Heart, Sparkles, Compass, Bot } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import CreateCommunityDialog from '@/components/CreateCommunityDialog';
+import { CreateBotWorkflow } from '@/components/dashboard/CreateBotWorkflow';
 import vibeLogo from '@/assets/vibe-logo.png';
 
 interface Community {
@@ -26,6 +27,7 @@ const Communities = () => {
   const [communities, setCommunities] = useState<Community[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [showCreateBotWorkflow, setShowCreateBotWorkflow] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -212,6 +214,12 @@ const Communities = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Create Bot Workflow Dialog */}
+      <CreateBotWorkflow 
+        open={showCreateBotWorkflow}
+        onOpenChange={setShowCreateBotWorkflow}
+      />
+
       {/* Header */}
       <div className="border-b border-border/50 bg-card/50 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -220,14 +228,23 @@ const Communities = () => {
               <img src={vibeLogo} alt="Vibe AI" className="w-10 h-10 object-contain rounded-lg" />
               <h1 className="text-xl font-semibold">Vibe AI</h1>
             </div>
-            <Button
-              onClick={() => navigate('/explore')}
-              variant="outline"
-              className="hover:bg-primary/10"
-            >
-              <Compass className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Explore</span>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => setShowCreateBotWorkflow(true)}
+                className="gradient-primary"
+              >
+                <Plus className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">New Bot</span>
+              </Button>
+              <Button
+                onClick={() => navigate('/explore')}
+                variant="outline"
+                className="hover:bg-primary/10"
+              >
+                <Compass className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Explore</span>
+              </Button>
+            </div>
           </div>
         </div>
       </div>

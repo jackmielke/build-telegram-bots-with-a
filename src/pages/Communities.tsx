@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Users, Crown, Shield, Plus, LogOut, Heart, Sparkles } from 'lucide-react';
+import { Loader2, Users, Crown, Shield, Plus, LogOut, Heart, Sparkles, Compass } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import CreateCommunityDialog from '@/components/CreateCommunityDialog';
 import vibeLogo from '@/assets/vibe-logo.png';
@@ -215,9 +215,19 @@ const Communities = () => {
       {/* Header */}
       <div className="border-b border-border/50 bg-card/50 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center space-x-3 h-16">
-            <img src={vibeLogo} alt="Vibe AI" className="w-10 h-10 object-contain rounded-lg" />
-            <h1 className="text-xl font-semibold">Your Communities</h1>
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-3">
+              <img src={vibeLogo} alt="Vibe AI" className="w-10 h-10 object-contain rounded-lg" />
+              <h1 className="text-xl font-semibold">Your Communities</h1>
+            </div>
+            <Button
+              onClick={() => navigate('/explore')}
+              variant="outline"
+              className="hover:bg-primary/10"
+            >
+              <Compass className="w-4 h-4 mr-2" />
+              Explore Communities
+            </Button>
           </div>
         </div>
       </div>

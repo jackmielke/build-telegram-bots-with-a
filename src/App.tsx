@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Communities from "./pages/Communities";
+import ExploreCommunities from "./pages/ExploreCommunities";
 import CommunityDashboard from "./pages/CommunityDashboard";
 import NotFound from "./pages/NotFound";
 
@@ -21,6 +22,7 @@ const App = () => (
           <Route path="/" element={<Navigate to="/communities" replace />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/communities" element={<Communities />} />
+          <Route path="/explore" element={<ExploreCommunities />} />
           <Route path="/community/:communityId" element={<CommunityDashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

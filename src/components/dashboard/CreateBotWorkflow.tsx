@@ -3,9 +3,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Bot, ExternalLink, Loader2, Check } from 'lucide-react';
+import { Bot, ExternalLink, Loader2, Check, MessageSquare, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface CreateBotWorkflowProps {
@@ -14,9 +15,10 @@ interface CreateBotWorkflowProps {
 }
 
 export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps) => {
-  const [step, setStep] = useState<'guide' | 'token' | 'creating' | 'success'>('guide');
+  const [step, setStep] = useState<'guide' | 'token' | 'creating' | 'success' | 'configure'>('guide');
   const [botToken, setBotToken] = useState('');
   const [creating, setCreating] = useState(false);
+  const [systemPrompt, setSystemPrompt] = useState('You are a helpful community assistant.');
   const [botDetails, setBotDetails] = useState<{
     name: string;
     username: string;
@@ -235,6 +237,7 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
       setStep('guide');
       setBotToken('');
       setBotDetails(null);
+      setSystemPrompt('You are a helpful community assistant.');
       onOpenChange(false);
     }
   };
@@ -435,15 +438,141 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
 
               <div className="flex justify-center pt-2">
                 <Button 
-                  onClick={() => {
-                    navigate(`/community/${botDetails.communityId}`);
-                    onOpenChange(false);
-                  }} 
+                  onClick={() => setStep('configure')} 
                   size="lg" 
                   className="gradient-primary hover:shadow-glow"
                 >
-                  Go to Dashboard
+                  Configure Bot
                   <ExternalLink className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+        {step === 'configure' && botDetails && (
+          <>
+            <DialogHeader className="text-center space-y-3 pb-2">
+              <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                <Settings className="w-7 h-7 text-primary" />
+              </div>
+              <DialogTitle className="text-2xl">
+                Configure Your Bot
+              </DialogTitle>
+              <DialogDescription className="text-base">
+                Set up how your bot responds and behaves
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-6 py-4">
+              {/* DM Settings */}
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">Message Settings</Label>
+                <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
+                  <div className="flex items-center gap-3">
+                    <MessageSquare className="w-5 h-5 text-primary" />
+                    <div className="flex-1">
+                      <p className="font-medium">Direct Messages (DMs)</p>
+                      <p className="text-sm text-muted-foreground">Bot responds to private messages</p>
+                    </div>
+                    <div className="px-3 py-1 bg-primary/20 text-primary text-sm font-medium rounded-full">
+                      Enabled
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Group chat responses are disabled by default. You can enable them later in settings.
+                </p>
+              </div>
+
+              {/* System Prompt */}
+              <div className="space-y-2">
+                <Label htmlFor="system_prompt" className="text-base font-semibold">
+                  System Prompt
+                </Label>
+                <Textarea
+                  id="system_prompt"
+                  value={systemPrompt}
+                  onChange={(e) => setSystemPrompt(e.target.value)}
+                  placeholder="Define how your bot should behave..."
+                  className="min-h-[120px]"
+                />
+                <p className="text-xs text-muted-foreground">
+                  This prompt defines your bot's personality and how it responds to messages.
+                </p>
+              </div>
+
+              {/* Memories Section */}
+              <div className="space-y-2">
+                <Label className="text-base font-semibold">Memory & Context</Label>
+                <div className="p-4 bg-muted/50 rounded-lg border">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Your bot will automatically save important information from conversations to provide better, more contextual responses over time.
+                  </p>
+                  <p className="text-sm text-primary font-medium">
+                    Memory saving is enabled by default
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setStep('success')}
+                  className="flex-1"
+                  size="lg"
+                >
+                  Back
+                </Button>
+                <Button
+                  onClick={async () => {
+                    try {
+                      setCreating(true);
+                      
+                      // Update the community with the system prompt
+                      const { error } = await supabase
+                        .from('communities')
+                        .update({
+                          agent_instructions: systemPrompt
+                        })
+                        .eq('id', botDetails.communityId);
+
+                      if (error) throw error;
+
+                      toast({
+                        title: "Bot Configured!",
+                        description: "Your bot is ready to use."
+                      });
+
+                      setTimeout(() => {
+                        navigate(`/community/${botDetails.communityId}`);
+                        onOpenChange(false);
+                      }, 1000);
+                    } catch (error: any) {
+                      toast({
+                        title: "Configuration Error",
+                        description: error.message || "Failed to save configuration.",
+                        variant: "destructive"
+                      });
+                    } finally {
+                      setCreating(false);
+                    }
+                  }}
+                  disabled={creating}
+                  className="flex-1 gradient-primary"
+                  size="lg"
+                >
+                  {creating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      Save & Continue
+                      <Check className="w-4 h-4 ml-2" />
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Users, MessageSquare, DollarSign, Bot, Zap, TrendingUp, Activity, Calendar, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { TelegramBotDialog } from '@/components/TelegramBotDialog';
 
 interface Community {
   id: string;
@@ -32,10 +33,15 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
   const hasTelegram = !!community.telegram_bot_token;
   const [recentConversations, setRecentConversations] = useState<RecentConversation[]>([]);
   const [loadingConversations, setLoadingConversations] = useState(true);
+  const [showBotDialog, setShowBotDialog] = useState(false);
 
   useEffect(() => {
     fetchRecentConversations();
-  }, [community.id]);
+    // Auto-open bot dialog if no telegram bot is connected
+    if (!hasTelegram) {
+      setShowBotDialog(true);
+    }
+  }, [community.id, hasTelegram]);
 
   const fetchRecentConversations = async () => {
     try {
@@ -104,6 +110,17 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
 
   return (
     <div className="space-y-6">
+      {/* Telegram Bot Dialog - Auto-opens if no bot connected */}
+      <TelegramBotDialog 
+        communityId={community.id}
+        open={showBotDialog}
+        onOpenChange={setShowBotDialog}
+        onSuccess={() => {
+          setShowBotDialog(false);
+          window.location.reload(); // Refresh to show connected state
+        }}
+      />
+
       {/* Recent Conversations */}
       <Card className="gradient-card border-border/50">
         <CardHeader>

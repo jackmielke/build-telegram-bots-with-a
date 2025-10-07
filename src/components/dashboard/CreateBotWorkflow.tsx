@@ -318,7 +318,7 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
                   className="flex-1 gradient-primary"
                   size="lg"
                 >
-                  Create Bot Community
+                  Create Bot
                 </Button>
               </div>
             </div>

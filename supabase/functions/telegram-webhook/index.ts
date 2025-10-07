@@ -773,20 +773,62 @@ ${communityData?.agent_instructions || 'Be helpful, friendly, and concise.'}`;
             const tokensUsed = agentData.tokensUsed || 0;
             const modelUsed = agentData.model || 'google/gemini-2.5-flash';
 
-            // Send final AI response to Telegram
-            const sendMessageResp = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                chat_id: chatId,
-                text: aiReplyText.length > 4096 ? aiReplyText.substring(0, 4093) + '...' : aiReplyText,
-                parse_mode: 'Markdown',
-                ...(messageThreadId && { message_thread_id: messageThreadId })
-              })
-            });
+            // Send final AI response to Telegram with error handling
+            let sendMessageData: any;
+            let truncatedReply = aiReplyText.length > 4096 ? aiReplyText.substring(0, 4093) + '...' : aiReplyText;
+            
+            try {
+              const sendMessageResp = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: chatId,
+                  text: truncatedReply,
+                  parse_mode: 'Markdown',
+                  ...(messageThreadId && { message_thread_id: messageThreadId })
+                })
+              });
 
-            const sendMessageData = await sendMessageResp.json();
-            console.log('✅ Agent response sent to Telegram:', sendMessageData);
+              sendMessageData = await sendMessageResp.json();
+              
+              // If Telegram rejected due to parse error, retry without markdown
+              if (!sendMessageData.ok && sendMessageData.description?.includes('parse')) {
+                console.log('⚠️ Markdown parse error, retrying with plain text');
+                
+                const plainTextResp = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    chat_id: chatId,
+                    text: truncatedReply,
+                    ...(messageThreadId && { message_thread_id: messageThreadId })
+                  })
+                });
+                
+                sendMessageData = await plainTextResp.json();
+              }
+              
+              console.log('✅ Agent response sent to Telegram:', sendMessageData);
+            } catch (sendError) {
+              console.error('❌ Error sending message to Telegram:', sendError);
+              
+              // Try to notify user about the error
+              try {
+                await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    chat_id: chatId,
+                    text: '⚠️ Sorry, I encountered an error sending my response. Please try again.',
+                    ...(messageThreadId && { message_thread_id: messageThreadId })
+                  })
+                });
+              } catch (notifyError) {
+                console.error('❌ Could not notify user about error:', notifyError);
+              }
+              
+              throw sendError;
+            }
 
             // Store AI response in messages
             await supabase

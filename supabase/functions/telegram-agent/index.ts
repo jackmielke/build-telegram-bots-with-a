@@ -334,8 +334,8 @@ serve(async (req) => {
           const toolName = toolCall.function.name;
           const args = JSON.parse(toolCall.function.arguments || '{}');
           
-          // Send tool usage notification to Telegram
-          const toolMessage = `🔧 Using tool: **${toolName}**${args.query ? `\n🔍 Query: "${args.query}"` : ''}`;
+          // Send tool usage notification to Telegram (without markdown to avoid parse errors)
+          const toolMessage = `🔧 Using tool: ${toolName}${args.query ? `\n🔍 Query: "${args.query}"` : ''}`;
           toolUsageMessages.push(toolMessage);
           
           if (botToken && telegramChatId) {
@@ -344,20 +344,38 @@ serve(async (req) => {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 chat_id: telegramChatId,
-                text: toolMessage,
-                parse_mode: 'Markdown'
+                text: toolMessage
               })
             }).catch(err => console.log('Error sending tool notification:', err));
           }
 
-          // Execute the tool
-          const toolResult = await executeTool(
-            toolName,
-            args,
-            supabase,
-            communityId,
-            userId
-          );
+          // Execute the tool with error handling
+          let toolResult: string;
+          try {
+            toolResult = await executeTool(
+              toolName,
+              args,
+              supabase,
+              communityId,
+              userId
+            );
+            console.log(`✅ Tool ${toolName} executed successfully`);
+          } catch (toolError) {
+            console.error(`❌ Error executing tool ${toolName}:`, toolError);
+            toolResult = `Error executing ${toolName}: ${toolError instanceof Error ? toolError.message : 'Unknown error'}`;
+            
+            // Notify user about tool error
+            if (botToken && telegramChatId) {
+              await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: telegramChatId,
+                  text: `⚠️ Error using ${toolName}: ${toolError instanceof Error ? toolError.message : 'Unknown error'}`
+                })
+              }).catch(err => console.log('Error sending error notification:', err));
+            }
+          }
 
           // Add tool result to conversation
           currentMessages.push({

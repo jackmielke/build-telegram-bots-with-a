@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Users, MessageSquare, DollarSign, Bot, Zap, TrendingUp, Activity, Calendar, ArrowRight } from 'lucide-react';
+import { Users, MessageSquare, DollarSign, Bot, Zap, TrendingUp, Activity, Calendar, ArrowRight, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { TelegramBotDialog } from '@/components/TelegramBotDialog';
+import BotOnboarding from '@/components/dashboard/BotOnboarding';
 
 interface Community {
   id: string;
@@ -34,9 +35,16 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
   const [recentConversations, setRecentConversations] = useState<RecentConversation[]>([]);
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [showBotDialog, setShowBotDialog] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
   useEffect(() => {
     fetchRecentConversations();
+    
+    // Check if onboarding was completed
+    const completed = localStorage.getItem(`onboarding_completed_${community.id}`);
+    setOnboardingCompleted(!!completed);
+    
     // Auto-open bot dialog if no telegram bot is connected
     if (!hasTelegram) {
       setShowBotDialog(true);
@@ -117,7 +125,21 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
         onOpenChange={setShowBotDialog}
         onSuccess={() => {
           setShowBotDialog(false);
-          window.location.reload(); // Refresh to show connected state
+          setShowOnboarding(true); // Show onboarding after bot connection
+        }}
+      />
+
+      {/* Bot Onboarding - Shows after bot is connected */}
+      <BotOnboarding
+        open={showOnboarding}
+        onOpenChange={setShowOnboarding}
+        communityId={community.id}
+        communityName={community.name}
+        onComplete={() => {
+          localStorage.setItem(`onboarding_completed_${community.id}`, 'true');
+          setOnboardingCompleted(true);
+          setShowOnboarding(false);
+          window.location.reload(); // Refresh to show updated state
         }}
       />
 
@@ -208,12 +230,41 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
           </CardHeader>
           <CardContent>
             <Button 
-              onClick={() => onNavigate('workflows')} 
+              onClick={() => setShowBotDialog(true)} 
               className="gradient-primary hover:shadow-glow"
               size="lg"
             >
               <Zap className="w-4 h-4 mr-2" />
               Connect Telegram Bot
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Onboarding CTA - Show if bot connected but onboarding not completed */}
+      {hasTelegram && !onboardingCompleted && (
+        <Card className="gradient-card border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
+                <Sparkles className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-xl">Complete Your Bot Setup</CardTitle>
+                <CardDescription className="text-base mt-1">
+                  Configure your AI agent's behavior, knowledge, and permissions
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={() => setShowOnboarding(true)} 
+              className="gradient-primary hover:shadow-glow"
+              size="lg"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              Start Setup
             </Button>
           </CardContent>
         </Card>

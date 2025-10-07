@@ -14,9 +14,16 @@ interface CreateBotWorkflowProps {
 }
 
 export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps) => {
-  const [step, setStep] = useState<'guide' | 'token' | 'creating'>('guide');
+  const [step, setStep] = useState<'guide' | 'token' | 'creating' | 'success'>('guide');
   const [botToken, setBotToken] = useState('');
   const [creating, setCreating] = useState(false);
+  const [botDetails, setBotDetails] = useState<{
+    name: string;
+    username: string;
+    description: string;
+    photoUrl: string | null;
+    communityId: string;
+  } | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -42,6 +49,29 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
 
       if (!testData.ok) {
         throw new Error('Invalid bot token');
+      }
+
+      // Fetch bot profile photo
+      let photoUrl: string | null = null;
+      try {
+        const photosResponse = await fetch(
+          `https://api.telegram.org/bot${botToken}/getUserProfilePhotos?user_id=${testData.result.id}&limit=1`
+        );
+        const photosData = await photosResponse.json();
+        
+        if (photosData.ok && photosData.result.photos.length > 0) {
+          const fileId = photosData.result.photos[0][0].file_id;
+          const fileResponse = await fetch(
+            `https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`
+          );
+          const fileData = await fileResponse.json();
+          
+          if (fileData.ok) {
+            photoUrl = `https://api.telegram.org/file/bot${botToken}/${fileData.result.file_path}`;
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching bot photo:', error);
       }
 
       const botUsername = testData.result.username;
@@ -172,16 +202,21 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
           is_enabled: true
         });
 
+      // Set bot details and show success screen
+      setBotDetails({
+        name: botName,
+        username: botUsername,
+        description: `Telegram bot community for @${botUsername}`,
+        photoUrl,
+        communityId: newCommunity.id
+      });
+
+      setStep('success');
+
       toast({
         title: "Bot Created!",
         description: `@${botUsername} is now connected and ready.`
       });
-
-      // Redirect to the new community dashboard
-      setTimeout(() => {
-        navigate(`/community/${newCommunity.id}`);
-        onOpenChange(false);
-      }, 1500);
 
     } catch (error: any) {
       setStep('token');
@@ -199,6 +234,7 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
     if (!creating) {
       setStep('guide');
       setBotToken('');
+      setBotDetails(null);
       onOpenChange(false);
     }
   };
@@ -359,6 +395,57 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
               <p className="text-base text-muted-foreground">
                 Setting up your bot and creating your community...
               </p>
+            </div>
+          </>
+        )}
+
+        {step === 'success' && botDetails && (
+          <>
+            <DialogHeader className="text-center space-y-3 pb-2">
+              <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                <Check className="w-7 h-7 text-primary" />
+              </div>
+              <DialogTitle className="text-2xl">
+                Bot Created Successfully!
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-6 py-4">
+              <div className="flex flex-col items-center space-y-4">
+                {botDetails.photoUrl ? (
+                  <img 
+                    src={botDetails.photoUrl} 
+                    alt={botDetails.name}
+                    className="w-24 h-24 rounded-full object-cover border-2 border-primary/20"
+                  />
+                ) : (
+                  <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Bot className="w-12 h-12 text-primary" />
+                  </div>
+                )}
+                
+                <div className="text-center space-y-2">
+                  <h3 className="text-xl font-semibold">{botDetails.name}</h3>
+                  <p className="text-sm text-muted-foreground">@{botDetails.username}</p>
+                  <p className="text-sm text-muted-foreground max-w-md">
+                    {botDetails.description}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-center pt-2">
+                <Button 
+                  onClick={() => {
+                    navigate(`/community/${botDetails.communityId}`);
+                    onOpenChange(false);
+                  }} 
+                  size="lg" 
+                  className="gradient-primary hover:shadow-glow"
+                >
+                  Go to Dashboard
+                  <ExternalLink className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
             </div>
           </>
         )}

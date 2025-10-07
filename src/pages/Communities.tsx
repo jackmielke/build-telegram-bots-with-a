@@ -218,15 +218,15 @@ const Communities = () => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-3">
               <img src={vibeLogo} alt="Vibe AI" className="w-10 h-10 object-contain rounded-lg" />
-              <h1 className="text-xl font-semibold">Your Communities</h1>
+              <h1 className="text-xl font-semibold">Vibe AI</h1>
             </div>
             <Button
               onClick={() => navigate('/explore')}
               variant="outline"
               className="hover:bg-primary/10"
             >
-              <Compass className="w-4 h-4 mr-2" />
-              Explore Communities
+              <Compass className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Explore</span>
             </Button>
           </div>
         </div>

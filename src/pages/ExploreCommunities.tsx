@@ -198,18 +198,17 @@ const ExploreCommunities = () => {
       <div className="border-b border-border/50 bg-card/50 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate('/communities')}
-                className="mr-2"
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
+                <ArrowLeft className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Back</span>
               </Button>
-              <img src={vibeLogo} alt="Vibe AI" className="w-10 h-10 object-contain rounded-lg" />
-              <h1 className="text-xl font-semibold">Explore Communities</h1>
+              <img src={vibeLogo} alt="Vibe AI" className="w-8 h-8 sm:w-10 sm:h-10 object-contain rounded-lg" />
+              <h1 className="text-lg sm:text-xl font-semibold">Vibe AI</h1>
             </div>
           </div>
         </div>

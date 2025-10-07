@@ -917,16 +917,54 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                       
                       <div>
                         <p className="text-xs font-medium text-muted-foreground mb-3">Agent Tools</p>
-                        <div className="flex items-center justify-between p-2 rounded bg-background/50">
-                          <div>
-                            <p className="text-sm font-medium">🔍 Search Chat History</p>
-                            <p className="text-xs text-muted-foreground">Let AI search recent messages (last 7-30 days)</p>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between p-2 rounded bg-background/50">
+                            <div>
+                              <p className="text-sm font-medium">🌐 Web Search</p>
+                              <p className="text-xs text-muted-foreground">Enable DuckDuckGo search for real-time information</p>
+                            </div>
+                            <Switch 
+                              checked={workflow.configuration?.agent_tools?.web_search || false}
+                              onCheckedChange={() => toggleAgentTool(workflow.type, 'web_search', workflow.configuration?.agent_tools?.web_search || false)}
+                              disabled={!isAdmin}
+                            />
                           </div>
-                          <Switch 
-                            checked={workflow.configuration?.agent_tools?.search_chat_history || false}
-                            onCheckedChange={() => toggleAgentTool(workflow.type, 'search_chat_history', workflow.configuration?.agent_tools?.search_chat_history || false)}
-                            disabled={!isAdmin}
-                          />
+                          
+                          <div className="flex items-center justify-between p-2 rounded bg-background/50">
+                            <div>
+                              <p className="text-sm font-medium">💾 Search Memory</p>
+                              <p className="text-xs text-muted-foreground">Search community knowledge base and saved memories</p>
+                            </div>
+                            <Switch 
+                              checked={workflow.configuration?.agent_tools?.search_memory || false}
+                              onCheckedChange={() => toggleAgentTool(workflow.type, 'search_memory', workflow.configuration?.agent_tools?.search_memory || false)}
+                              disabled={!isAdmin}
+                            />
+                          </div>
+                          
+                          <div className="flex items-center justify-between p-2 rounded bg-background/50">
+                            <div>
+                              <p className="text-sm font-medium">🔍 Search Chat History</p>
+                              <p className="text-xs text-muted-foreground">Search recent messages (last 7-30 days)</p>
+                            </div>
+                            <Switch 
+                              checked={workflow.configuration?.agent_tools?.search_chat_history || false}
+                              onCheckedChange={() => toggleAgentTool(workflow.type, 'search_chat_history', workflow.configuration?.agent_tools?.search_chat_history || false)}
+                              disabled={!isAdmin}
+                            />
+                          </div>
+                          
+                          <div className="flex items-center justify-between p-2 rounded bg-background/50">
+                            <div>
+                              <p className="text-sm font-medium">💿 Save Memory</p>
+                              <p className="text-xs text-muted-foreground">Allow AI to save important information to memory</p>
+                            </div>
+                            <Switch 
+                              checked={workflow.configuration?.agent_tools?.save_memory || false}
+                              onCheckedChange={() => toggleAgentTool(workflow.type, 'save_memory', workflow.configuration?.agent_tools?.save_memory || false)}
+                              disabled={!isAdmin}
+                            />
+                          </div>
                         </div>
                       </div>
 

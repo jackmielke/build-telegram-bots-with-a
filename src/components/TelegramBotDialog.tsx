@@ -67,8 +67,8 @@ export const TelegramBotDialog = ({
 
       if (updateError) throw updateError;
 
-      // Set up webhook
-      const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/telegram-webhook`;
+      // Set up webhook with community_id in URL
+      const webhookUrl = `https://efdqqnubowgwsnwvlalp.supabase.co/functions/v1/telegram-webhook?community_id=${communityId}`;
       const webhookResponse = await fetch(
         `https://api.telegram.org/bot${botToken}/setWebhook`,
         {
@@ -83,21 +83,31 @@ export const TelegramBotDialog = ({
         throw new Error('Failed to set webhook');
       }
 
-      // Insert telegram_bots record
+      // Insert telegram_bots record - get internal user_id from users table
       const { data: userData } = await supabase.auth.getUser();
       if (userData.user) {
-        const { error: insertError } = await supabase
-          .from('telegram_bots')
-          .insert({
-            user_id: userData.user.id,
-            community_id: communityId,
-            bot_token: botToken,
-            bot_username: botUsername,
-            is_active: true
-          });
+        // Get the internal user_id from users table
+        const { data: internalUser } = await supabase
+          .from('users')
+          .select('id')
+          .eq('auth_user_id', userData.user.id)
+          .single();
 
-        if (insertError && insertError.code !== '23505') { // Ignore duplicate key error
-          console.error('Error inserting telegram_bots record:', insertError);
+        if (internalUser) {
+          const { error: insertError } = await supabase
+            .from('telegram_bots')
+            .insert({
+              user_id: internalUser.id,
+              community_id: communityId,
+              bot_token: botToken,
+              bot_username: botUsername,
+              is_active: true,
+              webhook_url: webhookUrl
+            });
+
+          if (insertError && insertError.code !== '23505') { // Ignore duplicate key error
+            console.error('Error inserting telegram_bots record:', insertError);
+          }
         }
       }
 

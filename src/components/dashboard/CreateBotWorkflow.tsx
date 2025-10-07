@@ -54,17 +54,6 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
         throw new Error('Not authenticated');
       }
 
-      // Get internal user ID
-      const { data: internalUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('auth_user_id', userData.user.id)
-        .single();
-
-      if (!internalUser) {
-        throw new Error('User not found');
-      }
-
       // Generate a simple universal_id (8 random alphanumeric chars)
       const generateUniversalId = () => {
         const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -74,6 +63,34 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
         }
         return result;
       };
+
+      // Get or create internal user ID
+      let { data: internalUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_user_id', userData.user.id)
+        .maybeSingle();
+
+      // If user doesn't exist in users table, create them
+      if (!internalUser) {
+        const { data: newUser, error: userError } = await supabase
+          .from('users')
+          .insert([{
+            auth_user_id: userData.user.id,
+            email: userData.user.email,
+            name: userData.user.user_metadata?.name || userData.user.email?.split('@')[0] || 'User',
+            universal_id: generateUniversalId()
+          }])
+          .select('id')
+          .single();
+
+        if (userError) {
+          console.error('Error creating user:', userError);
+          throw new Error('Failed to create user profile');
+        }
+
+        internalUser = newUser;
+      }
 
       // Create new community with bot name
       const { data: newCommunity, error: communityError } = await supabase

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Bot, ExternalLink, Loader2, Check, MessageSquare, Settings } from 'lucide-react';
@@ -19,6 +20,9 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
   const [botToken, setBotToken] = useState('');
   const [creating, setCreating] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState('You are a helpful community assistant.');
+  const [respondInPrivate, setRespondInPrivate] = useState(true);
+  const [respondInGroups, setRespondInGroups] = useState(false);
+  const [respondInSupergroups, setRespondInSupergroups] = useState(false);
   const [botDetails, setBotDetails] = useState<{
     name: string;
     username: string;
@@ -238,6 +242,9 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
       setBotToken('');
       setBotDetails(null);
       setSystemPrompt('You are a helpful community assistant.');
+      setRespondInPrivate(true);
+      setRespondInGroups(false);
+      setRespondInSupergroups(false);
       onOpenChange(false);
     }
   };
@@ -467,20 +474,48 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
               {/* DM Settings */}
               <div className="space-y-3">
                 <Label className="text-base font-semibold">Message Settings</Label>
-                <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
-                  <div className="flex items-center gap-3">
-                    <MessageSquare className="w-5 h-5 text-primary" />
-                    <div className="flex-1">
-                      <p className="font-medium">Direct Messages (DMs)</p>
-                      <p className="text-sm text-muted-foreground">Bot responds to private messages</p>
+                <div className="p-4 bg-primary/5 rounded-lg border border-primary/20 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4 text-primary" />
+                      <div>
+                        <p className="text-sm font-medium">Direct Messages</p>
+                      </div>
                     </div>
-                    <div className="px-3 py-1 bg-primary/20 text-primary text-sm font-medium rounded-full">
-                      Enabled
+                    <Switch
+                      checked={respondInPrivate}
+                      onCheckedChange={setRespondInPrivate}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium">Groups</p>
+                      </div>
                     </div>
+                    <Switch
+                      checked={respondInGroups}
+                      onCheckedChange={setRespondInGroups}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium">Supergroups</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={respondInSupergroups}
+                      onCheckedChange={setRespondInSupergroups}
+                    />
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Group chat responses are disabled by default. You can enable them later in settings.
+                  Choose where your bot should respond to messages
                 </p>
               </div>
 
@@ -530,14 +565,33 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
                       setCreating(true);
                       
                       // Update the community with the system prompt
-                      const { error } = await supabase
+                      const { error: communityError } = await supabase
                         .from('communities')
                         .update({
                           agent_instructions: systemPrompt
                         })
                         .eq('id', botDetails.communityId);
 
-                      if (error) throw error;
+                      if (communityError) throw communityError;
+
+                      // Update workflow configuration with message settings
+                      const { error: workflowError } = await supabase
+                        .from('community_workflows')
+                        .update({
+                          configuration: {
+                            search_chat_history: true,
+                            search_memory: true,
+                            save_memory: true,
+                            web_search: false,
+                            respond_in_groups: respondInGroups,
+                            respond_in_supergroups: respondInSupergroups,
+                            respond_in_private: respondInPrivate
+                          }
+                        })
+                        .eq('community_id', botDetails.communityId)
+                        .eq('workflow_type', 'telegram_agent_tools');
+
+                      if (workflowError) throw workflowError;
 
                       toast({
                         title: "Bot Configured!",

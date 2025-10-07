@@ -37,7 +37,7 @@ const BotOnboarding = ({ open, onOpenChange, communityId, communityName, onCompl
 
   // Step 3: Permissions
   const [permissions, setPermissions] = useState({
-    respondInGroups: true,
+    respondInGroups: false,
     searchMemory: true,
     saveMemory: true,
     webSearch: false

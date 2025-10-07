@@ -111,6 +111,42 @@ export const TelegramBotDialog = ({
         }
       }
 
+      // Auto-enable private chats workflow
+      const { data: existingWorkflow } = await supabase
+        .from('community_workflows')
+        .select('*')
+        .eq('community_id', communityId)
+        .eq('workflow_type', 'telegram_agent_tools')
+        .single();
+
+      const workflowConfig = {
+        search_chat_history: true,
+        search_memory: true,
+        save_memory: true,
+        web_search: false,
+        respond_in_groups: false, // Groups disabled by default
+        respond_in_private: true  // Private chats enabled by default
+      };
+
+      if (existingWorkflow) {
+        await supabase
+          .from('community_workflows')
+          .update({
+            configuration: workflowConfig,
+            is_enabled: true
+          })
+          .eq('id', existingWorkflow.id);
+      } else {
+        await supabase
+          .from('community_workflows')
+          .insert({
+            community_id: communityId,
+            workflow_type: 'telegram_agent_tools',
+            configuration: workflowConfig,
+            is_enabled: true
+          });
+      }
+
       toast({
         title: "Bot Connected!",
         description: `@${botUsername} is now connected and active.`

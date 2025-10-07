@@ -191,7 +191,7 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
           </CardHeader>
           <CardContent>
             <Button 
-              onClick={() => onNavigate('agent')} 
+              onClick={() => onNavigate('workflows')} 
               className="gradient-primary hover:shadow-glow"
               size="lg"
             >

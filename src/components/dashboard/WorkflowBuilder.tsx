@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import BotHealthIndicator from './BotHealthIndicator';
+import { TelegramBotDialog } from '../TelegramBotDialog';
 import {
   Zap, 
   Send, 
@@ -731,94 +732,34 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
 
       {/* Telegram Bot Configuration - Show if not configured */}
       {!botInfo && (
-        <Card className="gradient-card border-border/50 border-primary/30">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Send className="w-5 h-5 text-primary" />
-              <span>Connect Telegram Bot</span>
-            </CardTitle>
-            <CardDescription>
-              Set up your Telegram bot to enable AI interactions
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="bot_token">Bot Token</Label>
-              <Input
-                id="bot_token"
-                type="password"
-                value={botToken}
-                onChange={(e) => setBotToken(e.target.value)}
-                placeholder="Enter bot token from @BotFather"
-              />
-              <p className="text-xs text-muted-foreground">
-                Get a bot token from <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">@BotFather</a> on Telegram
-              </p>
-            </div>
-
-            <Alert className="border-primary/30 bg-primary/5">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Important: Bot Group Setup</AlertTitle>
-              <AlertDescription>
-                <p className="mb-2">For your bot to work in group chats, you need to:</p>
-                <ul className="list-disc ml-4 space-y-1 text-xs">
-                  <li>Go to <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">@BotFather</a></li>
-                  <li>Send <code className="bg-background/80 px-1 rounded">/mybots</code> and select your bot</li>
-                  <li>Click <strong>Bot Settings → Group Privacy → Turn Off</strong></li>
-                  <li>Enable <strong>Allow Groups</strong> if prompted</li>
-                </ul>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Without these settings, the bot can only see messages where it's mentioned with @botname.
-                </p>
-              </AlertDescription>
-            </Alert>
-            
-            {botInfo && (
-              <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg mb-4">
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <div>
-                    <p className="text-sm font-medium text-green-900 dark:text-green-100">
-                      Connected to @{botInfo.username}
-                    </p>
-                    <p className="text-xs text-green-700 dark:text-green-300">
-                      Ready to save and activate
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            <div className="flex items-center space-x-2">
-              <Button
-                onClick={handleTestConnection}
-                variant="outline"
-                size="sm"
-                disabled={!botToken.trim() || testingConnection}
-              >
-                {testingConnection ? (
-                  <Loader className="w-4 h-4 animate-spin mr-2" />
-                ) : (
-                  <TestTube className="w-4 h-4 mr-2" />
-                )}
-                Test Connection
-              </Button>
-              
-              <Button
-                onClick={saveBotToken}
-                size="sm"
-                disabled={!botToken.trim() || savingBot}
-              >
-                {savingBot ? (
-                  <Loader className="w-4 h-4 animate-spin mr-2" />
-                ) : (
-                  <Save className="w-4 h-4 mr-2" />
-                )}
-                Connect Bot
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <TelegramBotDialog 
+          communityId={community.id}
+          onSuccess={() => {
+            // Refresh bot info after successful connection
+            if (community.telegram_bot_token) {
+              testBotConnection(community.telegram_bot_token).then(result => {
+                if (result.success) {
+                  setBotInfo(result.botInfo);
+                  checkWebhookStatus(community.telegram_bot_token);
+                }
+              });
+            }
+            fetchWorkflows();
+          }}
+          trigger={
+            <Card className="gradient-card border-border/50 border-primary/30 cursor-pointer hover:border-primary/50 transition-colors">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Send className="w-5 h-5 text-primary" />
+                  <span>Connect Telegram Bot</span>
+                </CardTitle>
+                <CardDescription>
+                  Click to set up your Telegram bot and enable AI interactions
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          }
+        />
       )}
 
       {/* Webhook Status - Show when bot is connected */}

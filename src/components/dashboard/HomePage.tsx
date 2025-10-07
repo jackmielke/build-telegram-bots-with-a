@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Users, MessageSquare, DollarSign, Bot, Zap, TrendingUp, Activity, Calendar, ArrowRight, Sparkles } from 'lucide-react';
+import { Users, MessageSquare, DollarSign, Bot, Zap, TrendingUp, Activity, Calendar, ArrowRight, Sparkles, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { TelegramBotDialog } from '@/components/TelegramBotDialog';
 import BotOnboarding from '@/components/dashboard/BotOnboarding';
+import { CreateBotWorkflow } from '@/components/dashboard/CreateBotWorkflow';
 
 interface Community {
   id: string;
@@ -37,6 +38,7 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
   const [showBotDialog, setShowBotDialog] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [showCreateBotWorkflow, setShowCreateBotWorkflow] = useState(false);
 
   useEffect(() => {
     fetchRecentConversations();
@@ -118,8 +120,14 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
 
   return (
     <div className="space-y-6">
+      {/* New Bot Workflow */}
+      <CreateBotWorkflow 
+        open={showCreateBotWorkflow}
+        onOpenChange={setShowCreateBotWorkflow}
+      />
+
       {/* Telegram Bot Dialog - Auto-opens if no bot connected */}
-      <TelegramBotDialog 
+      <TelegramBotDialog
         communityId={community.id}
         open={showBotDialog}
         onOpenChange={setShowBotDialog}
@@ -142,6 +150,33 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
           window.location.reload(); // Refresh to show updated state
         }}
       />
+
+      {/* Hero CTA - New Bot */}
+      <Card className="gradient-card border-primary/20 bg-gradient-to-br from-primary/10 to-accent/10">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center">
+                <Bot className="w-7 h-7 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold">Create a New Bot</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Set up a Telegram bot in minutes with AI-powered responses
+                </p>
+              </div>
+            </div>
+            <Button 
+              onClick={() => setShowCreateBotWorkflow(true)}
+              size="lg"
+              className="gradient-primary hover:shadow-glow"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              New Bot
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Recent Conversations */}
       <Card className="gradient-card border-border/50">

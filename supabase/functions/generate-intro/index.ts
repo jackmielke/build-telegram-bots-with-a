@@ -12,10 +12,20 @@ serve(async (req) => {
   }
 
   try {
-    const { conversationId, communityId } = await req.json();
-
-    if (!conversationId || !communityId) {
-      throw new Error('Missing required parameters');
+    const { conversationId, communityId, singleMessage } = await req.json();
+    
+    if (!conversationId && !singleMessage) {
+      return new Response(
+        JSON.stringify({ error: 'conversationId or singleMessage is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    if (!communityId) {
+      return new Response(
+        JSON.stringify({ error: 'communityId is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -28,31 +38,52 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch messages from the conversation
-    const { data: messages, error: messagesError } = await supabase
-      .from('messages')
-      .select(`
-        *,
-        users:sender_id (
-          name,
-          telegram_username
-        )
-      `)
-      .eq('conversation_id', conversationId)
-      .eq('community_id', communityId)
-      .order('created_at', { ascending: true });
+    // Fetch messages from the conversation or use single message
+    let conversationText = '';
+    
+    if (singleMessage) {
+      // Use the single message provided
+      conversationText = singleMessage;
+    } else if (conversationId) {
+      // Fetch messages from database
+      const { data: messages, error: messagesError } = await supabase
+        .from('messages')
+        .select(`
+          *,
+          users:sender_id (
+            name,
+            telegram_username
+          )
+        `)
+        .eq('conversation_id', conversationId)
+        .eq('community_id', communityId)
+        .order('created_at', { ascending: true });
 
-    if (messagesError) throw messagesError;
+      if (messagesError) {
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch messages' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
-    if (!messages || messages.length === 0) {
-      throw new Error('No messages found in conversation');
+      if (!messages || messages.length === 0) {
+        return new Response(
+          JSON.stringify({ error: 'No messages found in conversation' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Format the conversation for the AI
+      conversationText = messages.map(msg => {
+        const sender = msg.sent_by === 'ai' ? 'AI Assistant' : (msg.users?.name || msg.users?.telegram_username || 'User');
+        return `${sender}: ${msg.content}`;
+      }).join('\n\n');
+    } else {
+      return new Response(
+        JSON.stringify({ error: 'Either conversationId or singleMessage must be provided' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
-
-    // Format the conversation for the AI
-    const conversationText = messages.map(msg => {
-      const sender = msg.sent_by === 'ai' ? 'AI Assistant' : (msg.users?.name || msg.users?.telegram_username || 'User');
-      return `${sender}: ${msg.content}`;
-    }).join('\n\n');
 
     const systemPrompt = `You are an expert at creating professional, well-formatted intro summaries from conversations.
 

@@ -267,6 +267,96 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
     }
   };
 
+  const toggleAutoIntroGeneration = async (workflowType: string, currentEnabled: boolean) => {
+    if (!isAdmin) return;
+    
+    try {
+      const workflow = workflows.find(w => w.type === workflowType);
+      const currentConfig = workflow?.configuration || {};
+      const autoIntroConfig = currentConfig.auto_intro_generation || {};
+      
+      const newAutoIntroConfig = {
+        ...autoIntroConfig,
+        enabled: !currentEnabled
+      };
+
+      const { error } = await supabase
+        .from('community_workflows')
+        .upsert({
+          community_id: community.id,
+          workflow_type: workflowType,
+          is_enabled: workflow?.enabled || false,
+          configuration: {
+            ...currentConfig,
+            auto_intro_generation: newAutoIntroConfig
+          }
+        }, {
+          onConflict: 'community_id,workflow_type'
+        });
+
+      if (error) throw error;
+      
+      toast({
+        title: currentEnabled ? "Auto-Intro Disabled" : "Auto-Intro Enabled",
+        description: `Auto-intro generation has been ${currentEnabled ? 'disabled' : 'enabled'}.`,
+      });
+      
+      fetchWorkflows();
+    } catch (error: any) {
+      console.error('Error toggling auto-intro:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update auto-intro setting",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const updateIntroThreadNames = async (workflowType: string, threadNames: string[]) => {
+    if (!isAdmin) return;
+    
+    try {
+      const workflow = workflows.find(w => w.type === workflowType);
+      const currentConfig = workflow?.configuration || {};
+      const autoIntroConfig = currentConfig.auto_intro_generation || {};
+      
+      const newAutoIntroConfig = {
+        ...autoIntroConfig,
+        thread_names: threadNames
+      };
+
+      const { error } = await supabase
+        .from('community_workflows')
+        .upsert({
+          community_id: community.id,
+          workflow_type: workflowType,
+          is_enabled: workflow?.enabled || false,
+          configuration: {
+            ...currentConfig,
+            auto_intro_generation: newAutoIntroConfig
+          }
+        }, {
+          onConflict: 'community_id,workflow_type'
+        });
+
+      if (error) throw error;
+      
+      toast({
+        title: "Thread Names Updated",
+        description: "Auto-intro thread configuration saved.",
+      });
+      
+      fetchWorkflows();
+    } catch (error: any) {
+      console.error('Error updating thread names:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update thread names",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Test workflow functions
   const testTelegramWorkflow = async (input: string) => {
     const mockTelegramMessage = {
@@ -903,6 +993,46 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                             onCheckedChange={() => toggleAgentTool(workflow.type, 'search_chat_history', workflow.configuration?.agent_tools?.search_chat_history || false)}
                             disabled={!isAdmin}
                           />
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-3">Auto-Intro Generation</p>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between p-2 rounded bg-background/50">
+                            <div>
+                              <p className="text-sm font-medium">✨ Auto-Generate Intros</p>
+                              <p className="text-xs text-muted-foreground">Automatically create and save intros from messages in intros channels</p>
+                            </div>
+                            <Switch 
+                              checked={workflow.configuration?.auto_intro_generation?.enabled || false}
+                              onCheckedChange={() => toggleAutoIntroGeneration(workflow.type, workflow.configuration?.auto_intro_generation?.enabled || false)}
+                              disabled={!isAdmin}
+                            />
+                          </div>
+                          
+                          {workflow.configuration?.auto_intro_generation?.enabled && (
+                            <div className="p-2 rounded bg-background/50">
+                              <Label htmlFor={`thread-names-${workflow.type}`} className="text-xs">
+                                Intro Channel Names (comma-separated)
+                              </Label>
+                              <Input
+                                id={`thread-names-${workflow.type}`}
+                                defaultValue={(workflow.configuration?.auto_intro_generation?.thread_names || ['intros', 'introductions']).join(', ')}
+                                placeholder="intros, introductions, introduce yourself"
+                                onBlur={(e) => {
+                                  const names = e.target.value.split(',').map(s => s.trim()).filter(s => s);
+                                  if (names.length > 0) {
+                                    updateIntroThreadNames(workflow.type, names);
+                                  }
+                                }}
+                                className="mt-1 text-xs"
+                              />
+                              <p className="text-[10px] text-muted-foreground mt-1">
+                                Messages in supergroup channels with these names will auto-generate intros
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

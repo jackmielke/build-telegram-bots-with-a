@@ -9,3 +9,6 @@ project_id = "efdqqnubowgwsnwvlalp"
 
   [functions.generate-intro]
   verify_jwt = true
+
+  [functions.telegram-agent]
+  verify_jwt = false

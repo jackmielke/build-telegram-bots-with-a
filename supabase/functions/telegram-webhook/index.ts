@@ -15,7 +15,10 @@ interface WorkflowCheck {
       supergroup?: boolean;
     };
     agent_tools?: {
+      web_search?: boolean;
+      search_memory?: boolean;
       search_chat_history?: boolean;
+      save_memory?: boolean;
     };
     auto_intro_generation?: {
       enabled?: boolean;
@@ -696,7 +699,151 @@ Tell me what you need and I'll get on it.`).trim();
             })
           }).catch(err => console.log('Error sending typing indicator:', err));
 
+          // CHECK IF AGENT MODE IS ENABLED (any agent tool enabled)
+          const hasAgentTools = workflowStatus.configuration?.agent_tools;
+          const agentToolsEnabled = hasAgentTools && (
+            hasAgentTools.web_search ||
+            hasAgentTools.search_memory ||
+            hasAgentTools.search_chat_history ||
+            hasAgentTools.save_memory
+          );
+
+          if (agentToolsEnabled) {
+            console.log('🤖 Agent mode enabled - calling telegram-agent function');
+            
+            // Get community agent configuration for system prompt
+            const { data: communityData } = await supabase
+              .from('communities')
+              .select('agent_instructions, agent_name')
+              .eq('id', communityId)
+              .single();
+
+            const userName = firstName 
+              ? `${firstName}${lastName ? ' ' + lastName : ''}`
+              : telegramUsername || 'User';
+            const agentName = communityData?.agent_name || 'Assistant';
+            
+            const systemPrompt = `You are ${agentName}, a helpful AI assistant for this community.
+Current time: ${new Date().toISOString()}
+User: ${userName}${telegramUsername ? ` (@${telegramUsername})` : ''}
+Chat type: ${chatType === 'private' ? 'private DM' : `${chatType} chat`}
+
+IMPORTANT: Keep responses under 4000 characters due to Telegram's message limit.
+
+${communityData?.agent_instructions || 'Be helpful, friendly, and concise.'}`;
+
+            // Build conversation history
+            const conversationMessages = conversationHistory && conversationHistory.length > 0
+              ? conversationHistory.reverse().map(msg => ({
+                  role: msg.sent_by === 'ai' ? 'assistant' : 'user',
+                  content: msg.content
+                }))
+              : [];
+
+            // Call telegram-agent function
+            const agentResponse = await fetch(
+              `${supabaseUrl}/functions/v1/telegram-agent`,
+              {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${supabaseKey}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  userMessage,
+                  conversationHistory: conversationMessages,
+                  communityId,
+                  userId,
+                  systemPrompt,
+                  telegramChatId: chatId,
+                  botToken,
+                  enabledTools: hasAgentTools
+                })
+              }
+            );
+
+            if (!agentResponse.ok) {
+              const errorText = await agentResponse.text();
+              console.error('❌ Agent function error:', agentResponse.status, errorText);
+              throw new Error(`Agent function failed: ${agentResponse.status}`);
+            }
+
+            const agentData = await agentResponse.json();
+            const aiReplyText = agentData.response;
+            const tokensUsed = agentData.tokensUsed || 0;
+            const modelUsed = agentData.model || 'google/gemini-2.5-flash';
+
+            // Send final AI response to Telegram
+            const sendMessageResp = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: chatId,
+                text: aiReplyText.length > 4096 ? aiReplyText.substring(0, 4093) + '...' : aiReplyText,
+                parse_mode: 'Markdown',
+                ...(messageThreadId && { message_thread_id: messageThreadId })
+              })
+            });
+
+            const sendMessageData = await sendMessageResp.json();
+            console.log('✅ Agent response sent to Telegram:', sendMessageData);
+
+            // Store AI response in messages
+            await supabase
+              .from('messages')
+              .insert({
+                content: aiReplyText,
+                chat_type: 'telegram_bot',
+                conversation_id: conversationId,
+                community_id: communityId,
+                sender_id: null,
+                sent_by: 'ai',
+                topic_name: threadName,
+                metadata: {
+                  telegram_chat_id: chatId,
+                  chat_type_detail: chatType,
+                  agent_mode: true,
+                  tools_used: agentData.toolsUsed || [],
+                  iterations: agentData.iterations || 0,
+                  telegram_chat_title: body.message?.chat?.title || null,
+                  telegram_chat_username: body.message?.chat?.username || null
+                }
+              });
+
+            // Log analytics
+            const responseTime = Date.now() - (insertedMessage?.created_at ? new Date(insertedMessage.created_at).getTime() : Date.now());
+            await supabase.from('ai_chat_sessions').insert({
+              community_id: communityId,
+              user_id: userId,
+              chat_type: 'telegram',
+              model_used: modelUsed,
+              tokens_used: tokensUsed,
+              cost_usd: 0,
+              message_count: conversationMessages.length + 2,
+              metadata: {
+                response_time_ms: responseTime,
+                chat_type_detail: chatType,
+                agent_mode: true,
+                tools_used: agentData.toolsUsed || [],
+                iterations: agentData.iterations || 0
+              }
+            });
+
+            return new Response(JSON.stringify({ 
+              ok: true, 
+              agent_mode: true,
+              tools_used: agentData.toolsUsed,
+              iterations: agentData.iterations
+            }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200
+            });
+          }
+
           {
+            // STANDARD MODE (No agent tools) - Use direct OpenAI integration
+            console.log('💬 Standard mode - using direct OpenAI integration');
+            
             // Get community agent configuration
             const { data: communityData } = await supabase
               .from('communities')

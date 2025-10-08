@@ -145,7 +145,7 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
         internalUser = newUser;
       }
 
-      // Create new community with bot name
+      // Create new community with bot name and profile photo
       const { data: newCommunity, error: communityError } = await supabase
         .from('communities')
         .insert([{
@@ -154,6 +154,8 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
           telegram_bot_token: botToken,
           telegram_bot_url: botUrl,
           agent_name: botName,
+          agent_avatar_url: photoUrl,
+          agent_instructions: botDescription,
           privacy_level: 'private',
           universal_id: generateUniversalId()
         }])
@@ -216,6 +218,7 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
         respond_in_private: true
       };
 
+      // Create telegram_agent_tools workflow
       await supabase
         .from('community_workflows')
         .insert({
@@ -223,6 +226,24 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
           workflow_type: 'telegram_agent_tools',
           configuration: workflowConfig,
           is_enabled: true
+        });
+
+      // Enable telegram_integration workflow
+      await supabase
+        .from('community_workflows')
+        .upsert({
+          community_id: newCommunity.id,
+          workflow_type: 'telegram_integration',
+          is_enabled: true,
+          configuration: {
+            chat_types: {
+              private: true,
+              group: false,
+              supergroup: false
+            }
+          }
+        }, {
+          onConflict: 'community_id,workflow_type'
         });
 
       // Set bot details and show success screen
@@ -695,6 +716,26 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
                         .eq('workflow_type', 'telegram_agent_tools');
 
                       if (workflowError) throw workflowError;
+
+                      // Update telegram_integration workflow with chat type settings
+                      const { error: integrationError } = await supabase
+                        .from('community_workflows')
+                        .upsert({
+                          community_id: botDetails.communityId,
+                          workflow_type: 'telegram_integration',
+                          is_enabled: true,
+                          configuration: {
+                            chat_types: {
+                              private: respondInPrivate,
+                              group: respondInGroups,
+                              supergroup: respondInSupergroups
+                            }
+                          }
+                        }, {
+                          onConflict: 'community_id,workflow_type'
+                        });
+
+                      if (integrationError) throw integrationError;
 
                       toast({
                         title: "Bot Configured!",

@@ -33,7 +33,8 @@ import {
   ChevronDown,
   Info,
   Mail,
-  Hash
+  Hash,
+  Activity
 } from 'lucide-react';
 
 interface Community {
@@ -759,10 +760,14 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="telegram" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="telegram" className="flex items-center gap-2">
               <Send className="w-4 h-4" />
               <span className="hidden sm:inline">Telegram</span>
+            </TabsTrigger>
+            <TabsTrigger value="health" className="flex items-center gap-2">
+              <Activity className="w-4 h-4" />
+              <span className="hidden sm:inline">Health</span>
             </TabsTrigger>
             <TabsTrigger value="email" className="flex items-center gap-2">
               <Mail className="w-4 h-4" />
@@ -784,55 +789,6 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
 
           {/* TELEGRAM TAB */}
           <TabsContent value="telegram" className="space-y-4 mt-6">
-            {/* Bot Health Indicator */}
-            <BotHealthIndicator communityId={community.id} />
-            
-            {/* Telegram Bot Connected Status */}
-            {botInfo && (
-              <Card className="gradient-card border-green-500/30 bg-green-50/5">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <span>Telegram Bot Connected</span>
-                  </CardTitle>
-                  <CardDescription>
-                    Your bot is active and responding to messages
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg border border-green-500/20">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-3 rounded-lg bg-green-500/10">
-                        <Bot className="w-6 h-6 text-green-600" />
-                      </div>
-                      <div>
-                        <div className="flex items-center space-x-2 mb-1">
-                          <h4 className="font-semibold text-lg">{botInfo.first_name}</h4>
-                          <Badge variant="default" className="bg-green-600 text-white">
-                            @{botInfo.username}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Bot ID: {botInfo.id}
-                        </p>
-                        <a 
-                          href={`https://t.me/${botInfo.username}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-primary hover:underline inline-flex items-center mt-1"
-                        >
-                          Open in Telegram →
-                        </a>
-                      </div>
-                    </div>
-                    <Badge variant="default" className="bg-green-600">
-                      ✓ Active
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Telegram Bot Configuration - Show if not configured */}
             {!botInfo && (
               <TelegramBotDialog 
@@ -855,78 +811,6 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                   </Button>
                 }
               />
-            )}
-
-            {/* Webhook Status */}
-            {botInfo && community.telegram_bot_token && (
-              <Card className="border-border/30">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Globe className="w-5 h-5 text-primary" />
-                      <span>Webhook Status</span>
-                    </div>
-                    <Button
-                      onClick={handleCheckWebhook}
-                      variant="outline"
-                      size="sm"
-                      disabled={checkingWebhook}
-                    >
-                      {checkingWebhook ? (
-                        <Loader className="w-4 h-4 animate-spin" />
-                      ) : (
-                        'Check Status'
-                      )}
-                    </Button>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {webhookInfo ? (
-                    <div className="space-y-3">
-                      {webhookInfo.url ? (
-                        <Alert className="border-green-500/30 bg-green-500/5">
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                          <AlertTitle>Webhook Active</AlertTitle>
-                          <AlertDescription className="space-y-2">
-                            <p className="text-xs break-all">
-                              <strong>URL:</strong> {webhookInfo.url}
-                            </p>
-                            {webhookInfo.pending_update_count > 0 && (
-                              <p className="text-xs text-yellow-600">
-                                <strong>Pending updates:</strong> {webhookInfo.pending_update_count}
-                              </p>
-                            )}
-                            {webhookInfo.last_error_message && (
-                              <p className="text-xs text-destructive">
-                                <strong>Last error:</strong> {webhookInfo.last_error_message}
-                              </p>
-                            )}
-                          </AlertDescription>
-                        </Alert>
-                      ) : (
-                        <Alert variant="destructive">
-                          <AlertCircle className="h-4 w-4" />
-                          <AlertTitle>Webhook Not Configured</AlertTitle>
-                          <AlertDescription>
-                            <p className="text-xs mb-2">
-                              Your bot won't receive messages until the webhook is set up.
-                            </p>
-                            <Button
-                              onClick={() => setupWebhook(community.telegram_bot_token!)}
-                              variant="outline"
-                              size="sm"
-                            >
-                              Configure Webhook Now
-                            </Button>
-                          </AlertDescription>
-                        </Alert>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Click "Check Status" to view webhook info</p>
-                  )}
-                </CardContent>
-              </Card>
             )}
 
             {/* Telegram Workflow Configuration */}
@@ -1132,6 +1016,145 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                         </div>
                       </div>
                     </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* HEALTH TAB */}
+          <TabsContent value="health" className="space-y-4 mt-6">
+            {/* Bot Health Indicator */}
+            <BotHealthIndicator communityId={community.id} />
+            
+            {/* Telegram Bot Connected Status */}
+            {botInfo && (
+              <Card className="gradient-card border-green-500/30 bg-green-50/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <span>Telegram Bot Connected</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Your bot is active and responding to messages
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg border border-green-500/20">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-3 rounded-lg bg-green-500/10">
+                        <Bot className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div>
+                        <div className="flex items-center space-x-2 mb-1">
+                          <h4 className="font-semibold text-lg">{botInfo.first_name}</h4>
+                          <Badge variant="default" className="bg-green-600 text-white">
+                            @{botInfo.username}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Bot ID: {botInfo.id}
+                        </p>
+                        <a 
+                          href={`https://t.me/${botInfo.username}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline inline-flex items-center mt-1"
+                        >
+                          Open in Telegram →
+                        </a>
+                      </div>
+                    </div>
+                    <Badge variant="default" className="bg-green-600">
+                      ✓ Active
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Show connection prompt if bot not configured */}
+            {!botInfo && (
+              <Card className="border-border/30">
+                <CardContent className="p-6">
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>No Bot Connected</AlertTitle>
+                    <AlertDescription>
+                      Connect a Telegram bot in the Telegram tab to view health status.
+                    </AlertDescription>
+                  </Alert>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Webhook Status */}
+            {botInfo && community.telegram_bot_token && (
+              <Card className="border-border/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Globe className="w-5 h-5 text-primary" />
+                      <span>Webhook Status</span>
+                    </div>
+                    <Button
+                      onClick={handleCheckWebhook}
+                      variant="outline"
+                      size="sm"
+                      disabled={checkingWebhook}
+                    >
+                      {checkingWebhook ? (
+                        <Loader className="w-4 h-4 animate-spin" />
+                      ) : (
+                        'Check Status'
+                      )}
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {webhookInfo ? (
+                    <div className="space-y-3">
+                      {webhookInfo.url ? (
+                        <Alert className="border-green-500/30 bg-green-500/5">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          <AlertTitle>Webhook Active</AlertTitle>
+                          <AlertDescription className="space-y-2">
+                            <p className="text-xs break-all">
+                              <strong>URL:</strong> {webhookInfo.url}
+                            </p>
+                            {webhookInfo.pending_update_count > 0 && (
+                              <p className="text-xs text-yellow-600">
+                                <strong>Pending updates:</strong> {webhookInfo.pending_update_count}
+                              </p>
+                            )}
+                            {webhookInfo.last_error_message && (
+                              <p className="text-xs text-destructive">
+                                <strong>Last error:</strong> {webhookInfo.last_error_message}
+                              </p>
+                            )}
+                          </AlertDescription>
+                        </Alert>
+                      ) : (
+                        <Alert variant="destructive">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertTitle>Webhook Not Configured</AlertTitle>
+                          <AlertDescription>
+                            <p className="text-xs mb-2">
+                              Your bot won't receive messages until the webhook is set up.
+                            </p>
+                            <Button
+                              onClick={() => setupWebhook(community.telegram_bot_token!)}
+                              variant="outline"
+                              size="sm"
+                            >
+                              Configure Webhook Now
+                            </Button>
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Click "Check Status" to view webhook info</p>
                   )}
                 </CardContent>
               </Card>

@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import BotHealthIndicator from './BotHealthIndicator';
 import { TelegramBotDialog } from '../TelegramBotDialog';
 import {
@@ -26,7 +28,9 @@ import {
   Save,
   Globe,
   Play,
-  AlertCircle
+  AlertCircle,
+  ChevronDown,
+  Info
 } from 'lucide-react';
 
 interface Community {
@@ -56,6 +60,7 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
   const [savingBot, setSavingBot] = useState(false);
   const [webhookInfo, setWebhookInfo] = useState<any>(null);
   const [checkingWebhook, setCheckingWebhook] = useState(false);
+  const [showAdvancedTools, setShowAdvancedTools] = useState(false);
   const EDGE_FUNCTION_URL = 'https://efdqqnubowgwsnwvlalp.supabase.co/functions/v1/telegram-webhook';
   const { toast } = useToast();
 
@@ -266,6 +271,62 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
         variant: "destructive"
       });
     }
+  };
+
+  // New function: Toggle all agent tools at once (master toggle)
+  const toggleAgentMode = async (workflowType: string, enable: boolean) => {
+    if (!isAdmin) return;
+    
+    try {
+      const workflow = workflows.find(w => w.type === workflowType);
+      const currentConfig = workflow?.configuration || {};
+      
+      // Set all agent tools to the same value
+      const newAgentTools = {
+        web_search: enable,
+        search_memory: enable,
+        search_chat_history: enable,
+        save_memory: enable
+      };
+
+      const { error } = await supabase
+        .from('community_workflows')
+        .upsert({
+          community_id: community.id,
+          workflow_type: workflowType,
+          is_enabled: workflow?.enabled || false,
+          configuration: {
+            ...currentConfig,
+            agent_tools: newAgentTools
+          }
+        }, {
+          onConflict: 'community_id,workflow_type'
+        });
+
+      if (error) throw error;
+      
+      toast({
+        title: enable ? "Agent Mode Enabled" : "Agent Mode Disabled",
+        description: enable 
+          ? "Advanced AI agent with all tools enabled. The bot will use iterative reasoning and tool calls."
+          : "Simple mode enabled. The bot will respond with basic context only.",
+      });
+      
+      fetchWorkflows();
+    } catch (error: any) {
+      console.error('Error toggling agent mode:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update agent mode",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Helper function to check if agent mode is active (any tool enabled)
+  const isAgentModeActive = (workflow: any): boolean => {
+    const tools = workflow.configuration?.agent_tools || {};
+    return tools.web_search || tools.search_memory || tools.search_chat_history || tools.save_memory;
   };
 
   const toggleAutoIntroGeneration = async (workflowType: string, currentEnabled: boolean) => {
@@ -915,66 +976,133 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                         </div>
                       </div>
                       
+                      {/* Agent Mode Section */}
                       <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-3">Agent Tools</p>
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between p-2 rounded bg-background/50">
-                            <div>
-                              <p className="text-sm font-medium">🌐 Web Search</p>
-                              <p className="text-xs text-muted-foreground">Enable DuckDuckGo search for real-time information</p>
-                            </div>
-                            <Switch 
-                              checked={workflow.configuration?.agent_tools?.web_search || false}
-                              onCheckedChange={() => toggleAgentTool(workflow.type, 'web_search', workflow.configuration?.agent_tools?.web_search || false)}
-                              disabled={!isAdmin}
-                            />
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs font-medium text-muted-foreground">🤖 Agent Mode</p>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Info className="h-3 w-3 text-muted-foreground" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                  <p className="text-xs">
+                                    <strong>Agent Mode OFF:</strong> Simple responses using conversation context only.<br/>
+                                    <strong>Agent Mode ON:</strong> Advanced AI with iterative reasoning and tool access (web search, memory, chat history).
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
-                          
-                          <div className="flex items-center justify-between p-2 rounded bg-background/50">
-                            <div>
-                              <p className="text-sm font-medium">💾 Search Memory</p>
-                              <p className="text-xs text-muted-foreground">Search community knowledge base and saved memories</p>
-                            </div>
-                            <Switch 
-                              checked={workflow.configuration?.agent_tools?.search_memory || false}
-                              onCheckedChange={() => toggleAgentTool(workflow.type, 'search_memory', workflow.configuration?.agent_tools?.search_memory || false)}
-                              disabled={!isAdmin}
-                            />
-                          </div>
-                          
-                          <div className="flex items-center justify-between p-2 rounded bg-background/50">
-                            <div>
-                              <p className="text-sm font-medium">🔍 Search Chat History</p>
-                              <p className="text-xs text-muted-foreground">Search recent messages (last 7-30 days)</p>
-                            </div>
-                            <Switch 
-                              checked={workflow.configuration?.agent_tools?.search_chat_history || false}
-                              onCheckedChange={() => toggleAgentTool(workflow.type, 'search_chat_history', workflow.configuration?.agent_tools?.search_chat_history || false)}
-                              disabled={!isAdmin}
-                            />
-                          </div>
-                          
-                          <div className="flex items-center justify-between p-2 rounded bg-background/50">
-                            <div>
-                              <p className="text-sm font-medium">💿 Save Memory</p>
-                              <p className="text-xs text-muted-foreground">Allow AI to save important information to memory</p>
-                            </div>
-                            <Switch 
-                              checked={workflow.configuration?.agent_tools?.save_memory || false}
-                              onCheckedChange={() => toggleAgentTool(workflow.type, 'save_memory', workflow.configuration?.agent_tools?.save_memory || false)}
-                              disabled={!isAdmin}
-                            />
-                          </div>
+                          {isAgentModeActive(workflow) && (
+                            <Badge variant="default" className="text-xs">Active</Badge>
+                          )}
                         </div>
+
+                        {/* Master Agent Mode Toggle */}
+                        <div className="flex items-center justify-between p-3 rounded-lg border border-primary/20 bg-primary/5 mb-3">
+                          <div>
+                            <p className="text-sm font-medium">Enable Agent Mode</p>
+                            <p className="text-xs text-muted-foreground">
+                              {isAgentModeActive(workflow) 
+                                ? "Advanced AI with tool access enabled" 
+                                : "Currently using simple mode"}
+                            </p>
+                          </div>
+                          <Switch 
+                            checked={isAgentModeActive(workflow)}
+                            onCheckedChange={(checked) => toggleAgentMode(workflow.type, checked)}
+                            disabled={!isAdmin}
+                          />
+                        </div>
+
+                        {/* Advanced Tool Configuration (Collapsible) */}
+                        {isAgentModeActive(workflow) && (
+                          <Collapsible open={showAdvancedTools} onOpenChange={setShowAdvancedTools}>
+                            <CollapsibleTrigger className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full justify-between p-2 rounded hover:bg-accent">
+                              <span>Advanced Tool Settings</span>
+                              <ChevronDown className={`h-4 w-4 transition-transform ${showAdvancedTools ? 'rotate-180' : ''}`} />
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="space-y-2 mt-2">
+                              <div className="flex items-center justify-between p-2 rounded bg-background/50">
+                                <div>
+                                  <p className="text-sm font-medium">🌐 Web Search</p>
+                                  <p className="text-xs text-muted-foreground">Search web for real-time information (Tavily + DuckDuckGo)</p>
+                                </div>
+                                <Switch 
+                                  checked={workflow.configuration?.agent_tools?.web_search || false}
+                                  onCheckedChange={() => toggleAgentTool(workflow.type, 'web_search', workflow.configuration?.agent_tools?.web_search || false)}
+                                  disabled={!isAdmin}
+                                />
+                              </div>
+                              
+                              <div className="flex items-center justify-between p-2 rounded bg-background/50">
+                                <div>
+                                  <p className="text-sm font-medium">💾 Search Memory</p>
+                                  <p className="text-xs text-muted-foreground">Search community knowledge base and saved memories</p>
+                                </div>
+                                <Switch 
+                                  checked={workflow.configuration?.agent_tools?.search_memory || false}
+                                  onCheckedChange={() => toggleAgentTool(workflow.type, 'search_memory', workflow.configuration?.agent_tools?.search_memory || false)}
+                                  disabled={!isAdmin}
+                                />
+                              </div>
+                              
+                              <div className="flex items-center justify-between p-2 rounded bg-background/50">
+                                <div>
+                                  <p className="text-sm font-medium">🔍 Search Chat History</p>
+                                  <p className="text-xs text-muted-foreground">Search recent messages (last 7-30 days)</p>
+                                </div>
+                                <Switch 
+                                  checked={workflow.configuration?.agent_tools?.search_chat_history || false}
+                                  onCheckedChange={() => toggleAgentTool(workflow.type, 'search_chat_history', workflow.configuration?.agent_tools?.search_chat_history || false)}
+                                  disabled={!isAdmin}
+                                />
+                              </div>
+                              
+                              <div className="flex items-center justify-between p-2 rounded bg-background/50">
+                                <div>
+                                  <p className="text-sm font-medium">💿 Save Memory</p>
+                                  <p className="text-xs text-muted-foreground">Allow AI to save important information to memory</p>
+                                </div>
+                                <Switch 
+                                  checked={workflow.configuration?.agent_tools?.save_memory || false}
+                                  onCheckedChange={() => toggleAgentTool(workflow.type, 'save_memory', workflow.configuration?.agent_tools?.save_memory || false)}
+                                  disabled={!isAdmin}
+                                />
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        )}
                       </div>
 
                       <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-3">Auto-Intro Generation</p>
+                        <div className="flex items-center gap-2 mb-3">
+                          <p className="text-xs font-medium text-muted-foreground">Auto-Intro Generation</p>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Info className="h-3 w-3 text-muted-foreground" />
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <p className="text-xs">
+                                  <strong>How it works:</strong><br/>
+                                  1. User posts in specified intro channels/topics<br/>
+                                  2. AI analyzes message + user profile<br/>
+                                  3. Generates personalized intro automatically<br/>
+                                  4. Posts intro for them in the channel<br/><br/>
+                                  Perfect for onboarding new members!
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
                         <div className="space-y-2">
                           <div className="flex items-center justify-between p-2 rounded bg-background/50">
                             <div>
                               <p className="text-sm font-medium">✨ Auto-Generate Intros</p>
-                              <p className="text-xs text-muted-foreground">Automatically create and save intros from messages in intros channels</p>
+                              <p className="text-xs text-muted-foreground">AI creates personalized intros when users post in intro channels</p>
                             </div>
                             <Switch 
                               checked={workflow.configuration?.auto_intro_generation?.enabled || false}
@@ -1001,7 +1129,7 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                                 className="mt-1 text-xs"
                               />
                               <p className="text-[10px] text-muted-foreground mt-1">
-                                Messages in supergroup channels with these names will auto-generate intros
+                                Messages in supergroup channels with these names will trigger auto-intro generation
                               </p>
                             </div>
                           )}

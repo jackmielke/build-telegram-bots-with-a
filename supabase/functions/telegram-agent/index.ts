@@ -98,19 +98,61 @@ async function executeTool(
     switch (toolName) {
       case "web_search": {
         console.log(`🌐 Web searching: "${args.query}"`);
-        
-        // Use DuckDuckGo's JSON API
+
+        // Prefer Tavily (if API key configured), fallback to DuckDuckGo Instant Answer API
+        try {
+          const tavilyKey = Deno.env.get("TAVILY_API_KEY");
+          if (tavilyKey) {
+            // Tavily is designed for AI agents and returns summaries + sources
+            const tavilyResp = await fetch("https://api.tavily.com/search", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                api_key: tavilyKey,
+                query: args.query,
+                search_depth: "advanced",
+                include_answer: true,
+                max_results: 5
+              })
+            });
+
+            if (tavilyResp.ok) {
+              const data = await tavilyResp.json();
+              const results: string[] = [];
+
+              if (data.answer) {
+                results.push(`Answer: ${data.answer}`);
+              }
+
+              if (Array.isArray(data.results) && data.results.length > 0) {
+                const top = data.results
+                  .slice(0, 3)
+                  .map((r: any) => `• ${r.title || r.url} - ${r.url}`)
+                  .join("\n");
+                results.push(`Top sources:\n${top}`);
+              }
+
+              if (results.length > 0) {
+                return results.join("\n\n");
+              }
+              // If Tavily returned but with no content, fall through to DDG
+            } else {
+              console.warn("Tavily API returned non-OK status:", tavilyResp.status);
+            }
+          }
+        } catch (e) {
+          console.error("Tavily search failed, falling back to DuckDuckGo:", e);
+        }
+
+        // Fallback: DuckDuckGo Instant Answer (limited coverage for live events)
         const searchUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(args.query)}&format=json&no_html=1`;
         const response = await fetch(searchUrl);
         const data = await response.json();
-        
-        // Format results
-        const results = [];
-        
+
+        const results: string[] = [];
         if (data.AbstractText) {
-          results.push(`**Summary**: ${data.AbstractText}`);
+          results.push(`Summary: ${data.AbstractText}`);
         }
-        
         if (data.RelatedTopics && data.RelatedTopics.length > 0) {
           const topics = data.RelatedTopics
             .filter((t: any) => t.Text)
@@ -118,12 +160,12 @@ async function executeTool(
             .map((t: any) => `• ${t.Text}`)
             .join('\n');
           if (topics) {
-            results.push(`**Related Info**:\n${topics}`);
+            results.push(`Related Info:\n${topics}`);
           }
         }
-        
-        return results.length > 0 
-          ? results.join('\n\n') 
+
+        return results.length > 0
+          ? results.join('\n\n')
           : `No results found for "${args.query}". Try a different search term.`;
       }
 

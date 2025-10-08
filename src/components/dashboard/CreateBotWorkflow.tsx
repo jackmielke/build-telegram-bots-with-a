@@ -364,9 +364,9 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
                     1
                   </div>
                   <div className="flex-1 pt-1">
-                    <p className="font-semibold mb-1.5 text-base">Open BotFather on Telegram</p>
+                    <p className="font-semibold mb-1.5 text-base">Open BotFather and create your bot</p>
                     <p className="text-sm text-muted-foreground mb-3">
-                      Message @BotFather to create your bot
+                      Message @BotFather and send the <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/newbot</code> command to create your bot. Follow BotFather's instructions to set up everything as you want, including the bot's name, username, description, and profile photo.
                     </p>
                     <a 
                       href="https://t.me/BotFather" 
@@ -377,42 +377,6 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
                       Open BotFather
                       <ExternalLink className="w-3.5 h-3.5" />
                     </a>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
-                    2
-                  </div>
-                  <div className="flex-1 pt-1">
-                    <p className="font-semibold mb-1.5 text-base">Create a new bot</p>
-                    <p className="text-sm text-muted-foreground">
-                      Send <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/newbot</code> and follow the prompts to set your bot's name and username
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
-                    3
-                  </div>
-                  <div className="flex-1 pt-1">
-                    <p className="font-semibold mb-1.5 text-base">Customize your bot (optional)</p>
-                    <p className="text-sm text-muted-foreground">
-                      Use <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/setdescription</code> and <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/setuserpic</code> to add a description and profile photo
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
-                    4
-                  </div>
-                  <div className="flex-1 pt-1">
-                    <p className="font-semibold mb-1.5 text-base">Copy your bot token</p>
-                    <p className="text-sm text-muted-foreground">
-                      BotFather will give you an API token - copy it and paste it in the next step
-                    </p>
                   </div>
                 </div>
               </div>

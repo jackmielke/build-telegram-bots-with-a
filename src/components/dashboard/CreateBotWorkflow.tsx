@@ -17,7 +17,7 @@ interface CreateBotWorkflowProps {
 }
 
 export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps) => {
-  const [step, setStep] = useState<'guide' | 'token' | 'creating' | 'success' | 'configure'>('guide');
+  const [step, setStep] = useState<'setup' | 'creating' | 'success' | 'configure'>('setup');
   const [botToken, setBotToken] = useState('');
   const [creating, setCreating] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState('You are a helpful community assistant.');
@@ -267,7 +267,7 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
       });
 
     } catch (error: any) {
-      setStep('token');
+      setStep('setup');
       toast({
         title: "Connection Failed",
         description: error.message || "Failed to create bot. Please check your token.",
@@ -329,7 +329,7 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
 
   const handleClose = () => {
     if (!creating) {
-      setStep('guide');
+      setStep('setup');
       setBotToken('');
       setBotDetails(null);
       setSystemPrompt('You are a helpful community assistant.');
@@ -344,7 +344,7 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[550px]">
-        {step === 'guide' && (
+        {step === 'setup' && (
           <>
             <DialogHeader className="text-center space-y-3 pb-2">
               <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
@@ -354,7 +354,7 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
                 Create Your Telegram Bot
               </DialogTitle>
               <DialogDescription className="text-base">
-                Create a bot with BotFather to get started
+                Create your bot with BotFather, then paste the token below
               </DialogDescription>
             </DialogHeader>
 
@@ -364,10 +364,10 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
                   href="https://t.me/BotFather" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-primary hover:underline font-medium text-lg"
+                  className="inline-flex items-center gap-2 text-primary hover:underline font-medium"
                 >
-                  Open BotFather to create your bot
-                  <ExternalLink className="w-5 h-5" />
+                  Open BotFather
+                  <ExternalLink className="w-4 h-4" />
                 </a>
 
                 <Collapsible>
@@ -383,45 +383,12 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
                       You can also customize your bot's description and profile photo using <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/setdescription</code> and <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/setuserpic</code>.
                     </p>
                     <p>
-                      Once created, BotFather will give you an API token - copy it for the next step.
+                      Once created, BotFather will give you an API token - paste it below.
                     </p>
                   </CollapsibleContent>
                 </Collapsible>
               </div>
 
-              <div className="flex justify-center pt-2">
-                <Button onClick={() => setStep('token')} size="lg" className="gradient-primary hover:shadow-glow">
-                  I've Created My Bot
-                  <Check className="w-4 h-4 ml-2" />
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
-
-        {step === 'token' && (
-          <>
-            <DialogHeader className="text-center space-y-3 pb-2">
-              <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                <Bot className="w-7 h-7 text-primary" />
-              </div>
-              <DialogTitle className="text-2xl">
-                Enter Your Bot Token
-              </DialogTitle>
-              <DialogDescription className="text-base">
-                Paste the token you received from{' '}
-                <a 
-                  href="https://t.me/BotFather" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline font-medium"
-                >
-                  BotFather
-                </a>
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-5 py-2">
               <div className="space-y-2">
                 <Label htmlFor="bot_token" className="text-sm font-medium">Bot Token</Label>
                 <Input
@@ -436,19 +403,11 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
                 </p>
               </div>
 
-              <div className="flex gap-3 pt-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setStep('guide')}
-                  className="flex-1"
-                  size="lg"
-                >
-                  Back
-                </Button>
+              <div className="flex justify-center pt-2">
                 <Button
                   onClick={handleSubmitToken}
                   disabled={creating || !botToken.trim()}
-                  className="flex-1 gradient-primary"
+                  className="gradient-primary"
                   size="lg"
                 >
                   Create Bot

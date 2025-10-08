@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Zap, MessageSquare, BarChart3, Brain } from 'lucide-react';
+import { Loader2, Zap, MessageSquare, BarChart3, Brain, Play } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import vibeLogo from '@/assets/vibe-logo.png';
 
@@ -85,12 +85,22 @@ const Auth = () => {
           <div className="space-y-3">
             <div className="text-sm font-semibold text-primary mb-2">VIBE AI</div>
             <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
-              Build Intelligent Telegram Communities
+              Build Intelligent Telegram Bots & Communities
             </h1>
             <p className="text-xl text-muted-foreground">
               No code required. AI agents that learn, remember, and improve daily.
             </p>
           </div>
+
+          <Button
+            onClick={() => window.open('https://www.loom.com/share/39454b410c664fb2a185c766dadbbe38?sid=822920ef-b54e-4909-861c-0b8675e7aeba', '_blank')}
+            variant="outline"
+            size="lg"
+            className="hover:bg-primary/10 hover:border-primary"
+          >
+            <Play className="w-4 h-4 mr-2" />
+            Watch Demo
+          </Button>
 
           <div className="space-y-4 pt-4">
             <div className="flex items-start gap-3">

@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Users, Crown, Shield, Plus, LogOut, Heart, Sparkles, Compass, Bot, Play } from 'lucide-react';
+import { Loader2, Users, Crown, Shield, Plus, LogOut, Heart, Sparkles, Compass, Bot } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import CreateCommunityDialog from '@/components/CreateCommunityDialog';
 import { CreateBotWorkflow } from '@/components/dashboard/CreateBotWorkflow';
@@ -229,14 +229,6 @@ const Communities = () => {
               <h1 className="text-xl font-semibold">Vibe AI</h1>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                onClick={() => window.open('https://www.loom.com/share/39454b410c664fb2a185c766dadbbe38?sid=822920ef-b54e-4909-861c-0b8675e7aeba', '_blank')}
-                variant="outline"
-                className="hover:bg-primary/10"
-              >
-                <Play className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Watch Demo</span>
-              </Button>
               <Button
                 onClick={() => setShowCreateBotWorkflow(true)}
                 className="gradient-primary"

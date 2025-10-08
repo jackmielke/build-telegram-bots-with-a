@@ -10,9 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 // Import dashboard sections
 import HomePage from '@/components/dashboard/HomePage';
 import ChatHistoryDashboard from '@/components/dashboard/ChatHistoryDashboard';
-import AgentSetup from '@/components/dashboard/AgentSetup';
-import WorkflowBuilder from '@/components/dashboard/WorkflowBuilder';
-import LLMSettings from '@/components/dashboard/LLMSettings';
+import UnifiedAgentSetup from '@/components/dashboard/UnifiedAgentSetup';
 import MemoryManagement from '@/components/dashboard/MemoryManagement';
 import CommunitySettings from '@/components/dashboard/CommunitySettings';
 
@@ -46,7 +44,6 @@ const CommunityDashboard = () => {
   const [community, setCommunity] = useState<Community | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('home');
-  const [agentSubTab, setAgentSubTab] = useState('setup');
 
   useEffect(() => {
     const checkAuthAndFetchCommunity = async () => {
@@ -250,37 +247,11 @@ const CommunityDashboard = () => {
           </TabsContent>
 
           <TabsContent value="agent" className="space-y-6">
-            <Tabs value={agentSubTab} onValueChange={setAgentSubTab} className="space-y-6">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="setup">Setup</TabsTrigger>
-                <TabsTrigger value="workflows">Workflows</TabsTrigger>
-                <TabsTrigger value="llm">LLM</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="setup">
-                <AgentSetup 
-                  community={community} 
-                  isAdmin={isAdmin} 
-                  onUpdate={(updatedCommunity) => setCommunity(prev => ({ ...prev, ...updatedCommunity }))} 
-                />
-              </TabsContent>
-
-              <TabsContent value="workflows">
-                <WorkflowBuilder 
-                  community={community} 
-                  isAdmin={isAdmin} 
-                  onUpdate={(updatedCommunity) => setCommunity(prev => ({ ...prev, ...updatedCommunity }))} 
-                />
-              </TabsContent>
-
-              <TabsContent value="llm">
-                <LLMSettings 
-                  community={community} 
-                  isAdmin={isAdmin} 
-                  onUpdate={(updatedCommunity) => setCommunity(prev => ({ ...prev, ...updatedCommunity }))} 
-                />
-              </TabsContent>
-            </Tabs>
+            <UnifiedAgentSetup 
+              community={community} 
+              isAdmin={isAdmin} 
+              onUpdate={(updatedCommunity) => setCommunity(prev => ({ ...prev, ...updatedCommunity }))} 
+            />
           </TabsContent>
 
           <TabsContent value="memory" className="space-y-6">

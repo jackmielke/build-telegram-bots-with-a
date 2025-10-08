@@ -8,9 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
-import { Bot, Brain, MessageSquare, Upload, Loader2, Sparkles, Zap, Settings, ChevronDown, Activity } from 'lucide-react';
+import { Bot, Brain, MessageSquare, Upload, Loader2, Sparkles, Zap, Settings } from 'lucide-react';
 import WorkflowBuilder from './WorkflowBuilder';
 import BotHealthIndicator from './BotHealthIndicator';
 
@@ -48,9 +47,6 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [statusOpen, setStatusOpen] = useState(false);
-  const [llmOpen, setLlmOpen] = useState(false);
-  const [identityOpen, setIdentityOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -192,51 +188,23 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
         </CardContent>
       </Card>
 
-      {/* 3. STATUS & HEALTH (Collapsible) */}
+      {/* 3. HEALTH & STATUS */}
       {community.telegram_bot_token && (
-        <Collapsible open={statusOpen} onOpenChange={setStatusOpen}>
-          <Card className="gradient-card border-border/50">
-            <CollapsibleTrigger className="w-full">
-              <CardHeader className="cursor-pointer hover:bg-muted/30 transition-colors rounded-t-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Activity className="w-5 h-5 text-primary" />
-                    <CardTitle className="text-base">Status & Health</CardTitle>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">
-                      Telegram Connected
-                    </Badge>
-                    <ChevronDown className={`w-4 h-4 transition-transform ${statusOpen ? 'rotate-180' : ''}`} />
-                  </div>
-                </div>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent className="pt-0">
-                <BotHealthIndicator communityId={community.id} />
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
+        <BotHealthIndicator communityId={community.id} />
       )}
 
-      {/* 4. LLM SETTINGS (Collapsible) */}
-      <Collapsible open={llmOpen} onOpenChange={setLlmOpen}>
-        <Card className="gradient-card border-border/50">
-          <CollapsibleTrigger className="w-full">
-            <CardHeader className="cursor-pointer hover:bg-muted/30 transition-colors rounded-t-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Settings className="w-5 h-5 text-primary" />
-                  <CardTitle className="text-base">LLM & Model Settings</CardTitle>
-                </div>
-                <ChevronDown className={`w-4 h-4 transition-transform ${llmOpen ? 'rotate-180' : ''}`} />
-              </div>
-            </CardHeader>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent className="space-y-6">
+      {/* 4. LLM SETTINGS */}
+      <Card className="gradient-card border-border/50">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Settings className="w-5 h-5 text-primary" />
+            <span>LLM & Model Settings</span>
+          </CardTitle>
+          <CardDescription>
+            Configure the AI model and behavior parameters
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="agent_model">AI Model</Label>
             <Select
@@ -301,27 +269,21 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
               </p>
             </div>
           </div>
-            </CardContent>
-          </CollapsibleContent>
-        </Card>
-      </Collapsible>
+        </CardContent>
+      </Card>
 
-      {/* 5. IDENTITY & APPEARANCE (Collapsible) */}
-      <Collapsible open={identityOpen} onOpenChange={setIdentityOpen}>
-        <Card className="gradient-card border-border/50">
-          <CollapsibleTrigger className="w-full">
-            <CardHeader className="cursor-pointer hover:bg-muted/30 transition-colors rounded-t-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Bot className="w-5 h-5 text-primary" />
-                  <CardTitle className="text-base">Identity & Appearance</CardTitle>
-                </div>
-                <ChevronDown className={`w-4 h-4 transition-transform ${identityOpen ? 'rotate-180' : ''}`} />
-              </div>
-            </CardHeader>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent className="space-y-4 md:space-y-6">
+      {/* 5. IDENTITY & APPEARANCE */}
+      <Card className="gradient-card border-border/50">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Bot className="w-5 h-5 text-primary" />
+            <span>Identity & Appearance</span>
+          </CardTitle>
+          <CardDescription>
+            Configure your AI agent's name, avatar, and first impression
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 md:space-y-6">
           {/* Avatar */}
           <div className="space-y-2">
             <Label>Agent Avatar</Label>
@@ -438,10 +400,8 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
               </Button>
             )}
           </div>
-            </CardContent>
-          </CollapsibleContent>
-        </Card>
-      </Collapsible>
+        </CardContent>
+      </Card>
 
       {/* SAVE BUTTON */}
       {isAdmin && (

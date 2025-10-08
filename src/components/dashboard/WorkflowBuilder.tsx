@@ -872,8 +872,8 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-xs">
                                   <p className="text-xs">
-                                    <strong>Agent Mode OFF:</strong> Simple responses using conversation context only.<br/>
-                                    <strong>Agent Mode ON:</strong> Advanced AI with iterative reasoning and tool access (web search, memory, chat history).
+                                    <strong>Agent Mode OFF:</strong> Uses conversation context, memories, and instructions.<br/>
+                                    <strong>Agent Mode ON:</strong> Advanced AI with iterative reasoning and tool access (web search, dynamic memory management, chat history search).
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
@@ -972,7 +972,7 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                               </TooltipTrigger>
                               <TooltipContent className="max-w-xs">
                                 <p className="text-xs">
-                                  AI generates personalized intros when users post in specified intro channels
+                                  AI automatically processes user intros from specified channels and saves high-quality summaries to memory. No messages are sent to Telegram.
                                 </p>
                               </TooltipContent>
                             </Tooltip>
@@ -982,7 +982,7 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                           <div className="flex items-center justify-between p-2 rounded bg-background/50">
                             <div>
                               <p className="text-sm font-medium">✨ Auto-Generate Intros</p>
-                              <p className="text-xs text-muted-foreground">AI creates personalized intros in intro channels</p>
+                              <p className="text-xs text-muted-foreground">AI processes incoming intros and saves them to memory (no messages sent)</p>
                             </div>
                             <Switch 
                               checked={telegramWorkflow.configuration?.auto_intro_generation?.enabled || false}

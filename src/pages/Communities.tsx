@@ -312,8 +312,14 @@ const Communities = () => {
                                 alt={community.name}
                                 className="w-full h-full object-cover"
                               />
+                            ) : community.agent_avatar_url ? (
+                              <img 
+                                src={community.agent_avatar_url} 
+                                alt={community.agent_name || community.name}
+                                className="w-full h-full object-cover"
+                              />
                             ) : (
-                              <Users className="w-6 h-6 text-primary" />
+                              <Bot className="w-6 h-6 text-primary" />
                             )}
                           </div>
                           <div className="min-w-0 flex-1">
@@ -401,8 +407,14 @@ const Communities = () => {
                           alt={community.name}
                           className="w-full h-full object-cover"
                         />
+                      ) : community.agent_avatar_url ? (
+                        <img 
+                          src={community.agent_avatar_url} 
+                          alt={community.agent_name || community.name}
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
-                        <Users className="w-6 h-6 text-primary" />
+                        <Bot className="w-6 h-6 text-primary" />
                       )}
                     </div>
                     <div className="min-w-0 flex-1">

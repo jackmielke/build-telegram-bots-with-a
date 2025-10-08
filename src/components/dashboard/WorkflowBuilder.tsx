@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -30,7 +31,9 @@ import {
   Play,
   AlertCircle,
   ChevronDown,
-  Info
+  Info,
+  Mail,
+  Hash
 } from 'lucide-react';
 
 interface Community {
@@ -738,218 +741,215 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
     }
   };
 
+  // Get the telegram workflow
+  const telegramWorkflow = workflows.find(w => w.type === 'telegram_integration');
+  const otherWorkflows = workflows.filter(w => w.type !== 'telegram_integration');
+
   return (
-    <div className="space-y-6">
-      {/* Bot Health Indicator */}
-      <BotHealthIndicator communityId={community.id} />
-      
-      {/* Telegram Bot Connected Status - Show at top when configured */}
-      {botInfo && (
-        <Card className="gradient-card border-green-500/30 bg-green-50/5">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-              <span>Telegram Bot Connected</span>
-            </CardTitle>
-            <CardDescription>
-              Your bot is active and responding to messages
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg border border-green-500/20">
-              <div className="flex items-center space-x-3">
-                <div className="p-3 rounded-lg bg-green-500/10">
-                  <Bot className="w-6 h-6 text-green-600" />
-                </div>
-                <div>
-                  <div className="flex items-center space-x-2 mb-1">
-                    <h4 className="font-semibold text-lg">{botInfo.first_name}</h4>
-                    <Badge variant="default" className="bg-green-600 text-white">
-                      @{botInfo.username}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Bot ID: {botInfo.id}
-                  </p>
-                  <a 
-                    href={`https://t.me/${botInfo.username}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-primary hover:underline inline-flex items-center mt-1"
-                  >
-                    Open in Telegram →
-                  </a>
-                </div>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                <Badge variant="default" className="bg-green-600">
-                  ✓ Active
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Telegram Bot Configuration - Show if not configured */}
-      {!botInfo && (
-        <TelegramBotDialog 
-          communityId={community.id}
-          onSuccess={() => {
-            // Refresh bot info after successful connection
-            if (community.telegram_bot_token) {
-              testBotConnection(community.telegram_bot_token).then(result => {
-                if (result.success) {
-                  setBotInfo(result.botInfo);
-                  checkWebhookStatus(community.telegram_bot_token);
-                }
-              });
-            }
-            fetchWorkflows();
-          }}
-          trigger={
-            <Button variant="hero" size="lg" className="w-full">
-              <Send className="w-5 h-5 mr-2" />
-              Connect Telegram Bot
-            </Button>
-          }
-        />
-      )}
-
-      {/* Webhook Status - Show when bot is connected */}
-      {botInfo && community.telegram_bot_token && (
-        <Card className="gradient-card border-border/50">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Globe className="w-5 h-5 text-primary" />
-                <span>Webhook Status</span>
-              </div>
-              <Button
-                onClick={handleCheckWebhook}
-                variant="outline"
-                size="sm"
-                disabled={checkingWebhook}
-              >
-                {checkingWebhook ? (
-                  <Loader className="w-4 h-4 animate-spin" />
-                ) : (
-                  'Check Status'
-                )}
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {webhookInfo ? (
-              <div className="space-y-3">
-                {webhookInfo.url ? (
-                  <Alert className="border-green-500/30 bg-green-500/5">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <AlertTitle>Webhook Active</AlertTitle>
-                    <AlertDescription className="space-y-2">
-                      <p className="text-xs break-all">
-                        <strong>URL:</strong> {webhookInfo.url}
-                      </p>
-                      {webhookInfo.pending_update_count > 0 && (
-                        <p className="text-xs text-yellow-600">
-                          <strong>Pending updates:</strong> {webhookInfo.pending_update_count}
-                        </p>
-                      )}
-                      {webhookInfo.last_error_message && (
-                        <p className="text-xs text-destructive">
-                          <strong>Last error:</strong> {webhookInfo.last_error_message}
-                        </p>
-                      )}
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Webhook Not Configured</AlertTitle>
-                    <AlertDescription>
-                      <p className="text-xs mb-2">
-                        Your bot won't receive messages until the webhook is set up.
-                      </p>
-                      <Button
-                        onClick={() => setupWebhook(community.telegram_bot_token!)}
-                        variant="outline"
-                        size="sm"
-                      >
-                        Configure Webhook Now
-                      </Button>
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Click "Check Status" to view webhook info</p>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Workflow Overview */}
+    <>
       <Card className="gradient-card border-border/50">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Zap className="w-5 h-5 text-primary" />
-            <span>Workflow Builder</span>
-          </CardTitle>
-          <CardDescription>
-            Configure automated workflows and integrations for your AI agent
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {workflows.map((workflow) => (
-              <Card key={workflow.id} className="border-border/30">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
+      <CardHeader>
+        <CardTitle className="flex items-center space-x-2">
+          <Zap className="w-5 h-5 text-primary" />
+          <span>Workflows</span>
+        </CardTitle>
+        <CardDescription>
+          Configure automated workflows and agent integrations
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="telegram" className="w-full">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="telegram" className="flex items-center gap-2">
+              <Send className="w-4 h-4" />
+              <span className="hidden sm:inline">Telegram</span>
+            </TabsTrigger>
+            <TabsTrigger value="email" className="flex items-center gap-2">
+              <Mail className="w-4 h-4" />
+              <span className="hidden sm:inline">Email</span>
+            </TabsTrigger>
+            <TabsTrigger value="slack" className="flex items-center gap-2">
+              <Hash className="w-4 h-4" />
+              <span className="hidden sm:inline">Slack</span>
+            </TabsTrigger>
+            <TabsTrigger value="discord" className="flex items-center gap-2">
+              <MessageSquare className="w-4 h-4" />
+              <span className="hidden sm:inline">Discord</span>
+            </TabsTrigger>
+            <TabsTrigger value="webhook" className="flex items-center gap-2">
+              <Globe className="w-4 h-4" />
+              <span className="hidden sm:inline">Webhook</span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* TELEGRAM TAB */}
+          <TabsContent value="telegram" className="space-y-4 mt-6">
+            {/* Bot Health Indicator */}
+            <BotHealthIndicator communityId={community.id} />
+            
+            {/* Telegram Bot Connected Status */}
+            {botInfo && (
+              <Card className="gradient-card border-green-500/30 bg-green-50/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <span>Telegram Bot Connected</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Your bot is active and responding to messages
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg border border-green-500/20">
                     <div className="flex items-center space-x-3">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        {getWorkflowIcon(workflow.icon)}
+                      <div className="p-3 rounded-lg bg-green-500/10">
+                        <Bot className="w-6 h-6 text-green-600" />
                       </div>
                       <div>
-                        <h4 className="font-medium">{workflow.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {workflow.description}
+                        <div className="flex items-center space-x-2 mb-1">
+                          <h4 className="font-semibold text-lg">{botInfo.first_name}</h4>
+                          <Badge variant="default" className="bg-green-600 text-white">
+                            @{botInfo.username}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Bot ID: {botInfo.id}
                         </p>
+                        <a 
+                          href={`https://t.me/${botInfo.username}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline inline-flex items-center mt-1"
+                        >
+                          Open in Telegram →
+                        </a>
                       </div>
                     </div>
+                    <Badge variant="default" className="bg-green-600">
+                      ✓ Active
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Telegram Bot Configuration - Show if not configured */}
+            {!botInfo && (
+              <TelegramBotDialog 
+                communityId={community.id}
+                onSuccess={() => {
+                  if (community.telegram_bot_token) {
+                    testBotConnection(community.telegram_bot_token).then(result => {
+                      if (result.success) {
+                        setBotInfo(result.botInfo);
+                        checkWebhookStatus(community.telegram_bot_token);
+                      }
+                    });
+                  }
+                  fetchWorkflows();
+                }}
+                trigger={
+                  <Button variant="hero" size="lg" className="w-full">
+                    <Send className="w-5 h-5 mr-2" />
+                    Connect Telegram Bot
+                  </Button>
+                }
+              />
+            )}
+
+            {/* Webhook Status */}
+            {botInfo && community.telegram_bot_token && (
+              <Card className="border-border/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Globe className="w-5 h-5 text-primary" />
+                      <span>Webhook Status</span>
+                    </div>
+                    <Button
+                      onClick={handleCheckWebhook}
+                      variant="outline"
+                      size="sm"
+                      disabled={checkingWebhook}
+                    >
+                      {checkingWebhook ? (
+                        <Loader className="w-4 h-4 animate-spin" />
+                      ) : (
+                        'Check Status'
+                      )}
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {webhookInfo ? (
+                    <div className="space-y-3">
+                      {webhookInfo.url ? (
+                        <Alert className="border-green-500/30 bg-green-500/5">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          <AlertTitle>Webhook Active</AlertTitle>
+                          <AlertDescription className="space-y-2">
+                            <p className="text-xs break-all">
+                              <strong>URL:</strong> {webhookInfo.url}
+                            </p>
+                            {webhookInfo.pending_update_count > 0 && (
+                              <p className="text-xs text-yellow-600">
+                                <strong>Pending updates:</strong> {webhookInfo.pending_update_count}
+                              </p>
+                            )}
+                            {webhookInfo.last_error_message && (
+                              <p className="text-xs text-destructive">
+                                <strong>Last error:</strong> {webhookInfo.last_error_message}
+                              </p>
+                            )}
+                          </AlertDescription>
+                        </Alert>
+                      ) : (
+                        <Alert variant="destructive">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertTitle>Webhook Not Configured</AlertTitle>
+                          <AlertDescription>
+                            <p className="text-xs mb-2">
+                              Your bot won't receive messages until the webhook is set up.
+                            </p>
+                            <Button
+                              onClick={() => setupWebhook(community.telegram_bot_token!)}
+                              variant="outline"
+                              size="sm"
+                            >
+                              Configure Webhook Now
+                            </Button>
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Click "Check Status" to view webhook info</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Telegram Workflow Configuration */}
+            {telegramWorkflow && (
+              <Card className="border-border/30">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="font-medium text-lg">Telegram Integration Settings</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Configure AI responses in Telegram chats
+                      </p>
+                    </div>
                     <Switch 
-                      checked={workflow.enabled}
-                      onCheckedChange={() => toggleWorkflow(workflow.type, workflow.enabled)}
+                      checked={telegramWorkflow.enabled}
+                      onCheckedChange={() => toggleWorkflow(telegramWorkflow.type, telegramWorkflow.enabled)}
                       disabled={!isAdmin}
                     />
                   </div>
-                  
-                  <div className="flex items-center justify-between mb-3">
-                    <Badge variant={workflow.enabled ? 'default' : 'outline'}>
-                      {workflow.enabled ? 'Active' : 'Inactive'}
-                    </Badge>
-                    
-                    {/* Test Button */}
-                    {workflow.enabled && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedWorkflow(workflow);
-                          setShowTestDialog(true);
-                          setTestInput('');
-                          setTestResult(null);
-                        }}
-                        className="ml-2"
-                      >
-                        <TestTube className="w-4 h-4 mr-1" />
-                        Test
-                      </Button>
-                    )}
-                  </div>
 
-                  {/* Telegram Chat Type Sub-toggles */}
-                  {workflow.type === 'telegram_integration' && workflow.enabled && (
-                    <div className="mt-4 pt-3 border-t border-border/30 space-y-4">
+                  {telegramWorkflow.enabled && (
+                    <div className="space-y-4 pt-4 border-t border-border/30">
+                      {/* Chat Types */}
                       <div>
                         <p className="text-xs font-medium text-muted-foreground mb-3">Chat Types</p>
                         <div className="space-y-2">
@@ -958,7 +958,7 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                             { type: 'group', label: 'Groups', desc: 'Regular group chats' },
                             { type: 'supergroup', label: 'Supergroups', desc: 'Large groups with admin features' }
                           ].map((chatType) => {
-                            const isEnabled = workflow.configuration?.chat_types?.[chatType.type] || false;
+                            const isEnabled = telegramWorkflow.configuration?.chat_types?.[chatType.type] || false;
                             return (
                               <div key={chatType.type} className="flex items-center justify-between p-2 rounded bg-background/50">
                                 <div>
@@ -967,7 +967,7 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                                 </div>
                                 <Switch 
                                   checked={isEnabled}
-                                  onCheckedChange={() => toggleChatType(workflow.type, chatType.type, isEnabled)}
+                                  onCheckedChange={() => toggleChatType(telegramWorkflow.type, chatType.type, isEnabled)}
                                   disabled={!isAdmin}
                                 />
                               </div>
@@ -995,7 +995,7 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                               </Tooltip>
                             </TooltipProvider>
                           </div>
-                          {isAgentModeActive(workflow) && (
+                          {isAgentModeActive(telegramWorkflow) && (
                             <Badge variant="default" className="text-xs">Active</Badge>
                           )}
                         </div>
@@ -1005,20 +1005,20 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                           <div>
                             <p className="text-sm font-medium">Enable Agent Mode</p>
                             <p className="text-xs text-muted-foreground">
-                              {isAgentModeActive(workflow) 
+                              {isAgentModeActive(telegramWorkflow) 
                                 ? "Advanced AI with tool access enabled" 
                                 : "Currently using simple mode"}
                             </p>
                           </div>
                           <Switch 
-                            checked={isAgentModeActive(workflow)}
-                            onCheckedChange={(checked) => toggleAgentMode(workflow.type, checked)}
+                            checked={isAgentModeActive(telegramWorkflow)}
+                            onCheckedChange={(checked) => toggleAgentMode(telegramWorkflow.type, checked)}
                             disabled={!isAdmin}
                           />
                         </div>
 
-                        {/* Advanced Tool Configuration (Collapsible) */}
-                        {isAgentModeActive(workflow) && (
+                        {/* Advanced Tool Configuration */}
+                        {isAgentModeActive(telegramWorkflow) && (
                           <Collapsible open={showAdvancedTools} onOpenChange={setShowAdvancedTools}>
                             <CollapsibleTrigger className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full justify-between p-2 rounded hover:bg-accent">
                               <span>Advanced Tool Settings</span>
@@ -1028,11 +1028,11 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                               <div className="flex items-center justify-between p-2 rounded bg-background/50">
                                 <div>
                                   <p className="text-sm font-medium">🌐 Web Search</p>
-                                  <p className="text-xs text-muted-foreground">Search web for real-time information (Tavily + DuckDuckGo)</p>
+                                  <p className="text-xs text-muted-foreground">Search web for real-time information</p>
                                 </div>
                                 <Switch 
-                                  checked={workflow.configuration?.agent_tools?.web_search || false}
-                                  onCheckedChange={() => toggleAgentTool(workflow.type, 'web_search', workflow.configuration?.agent_tools?.web_search || false)}
+                                  checked={telegramWorkflow.configuration?.agent_tools?.web_search || false}
+                                  onCheckedChange={() => toggleAgentTool(telegramWorkflow.type, 'web_search', telegramWorkflow.configuration?.agent_tools?.web_search || false)}
                                   disabled={!isAdmin}
                                 />
                               </div>
@@ -1040,11 +1040,11 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                               <div className="flex items-center justify-between p-2 rounded bg-background/50">
                                 <div>
                                   <p className="text-sm font-medium">💾 Search Memory</p>
-                                  <p className="text-xs text-muted-foreground">Search community knowledge base and saved memories</p>
+                                  <p className="text-xs text-muted-foreground">Search community knowledge base</p>
                                 </div>
                                 <Switch 
-                                  checked={workflow.configuration?.agent_tools?.search_memory || false}
-                                  onCheckedChange={() => toggleAgentTool(workflow.type, 'search_memory', workflow.configuration?.agent_tools?.search_memory || false)}
+                                  checked={telegramWorkflow.configuration?.agent_tools?.search_memory || false}
+                                  onCheckedChange={() => toggleAgentTool(telegramWorkflow.type, 'search_memory', telegramWorkflow.configuration?.agent_tools?.search_memory || false)}
                                   disabled={!isAdmin}
                                 />
                               </div>
@@ -1052,11 +1052,11 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                               <div className="flex items-center justify-between p-2 rounded bg-background/50">
                                 <div>
                                   <p className="text-sm font-medium">🔍 Search Chat History</p>
-                                  <p className="text-xs text-muted-foreground">Search recent messages (last 7-30 days)</p>
+                                  <p className="text-xs text-muted-foreground">Search recent messages</p>
                                 </div>
                                 <Switch 
-                                  checked={workflow.configuration?.agent_tools?.search_chat_history || false}
-                                  onCheckedChange={() => toggleAgentTool(workflow.type, 'search_chat_history', workflow.configuration?.agent_tools?.search_chat_history || false)}
+                                  checked={telegramWorkflow.configuration?.agent_tools?.search_chat_history || false}
+                                  onCheckedChange={() => toggleAgentTool(telegramWorkflow.type, 'search_chat_history', telegramWorkflow.configuration?.agent_tools?.search_chat_history || false)}
                                   disabled={!isAdmin}
                                 />
                               </div>
@@ -1064,11 +1064,11 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                               <div className="flex items-center justify-between p-2 rounded bg-background/50">
                                 <div>
                                   <p className="text-sm font-medium">💿 Save Memory</p>
-                                  <p className="text-xs text-muted-foreground">Allow AI to save important information to memory</p>
+                                  <p className="text-xs text-muted-foreground">Allow AI to save important information</p>
                                 </div>
                                 <Switch 
-                                  checked={workflow.configuration?.agent_tools?.save_memory || false}
-                                  onCheckedChange={() => toggleAgentTool(workflow.type, 'save_memory', workflow.configuration?.agent_tools?.save_memory || false)}
+                                  checked={telegramWorkflow.configuration?.agent_tools?.save_memory || false}
+                                  onCheckedChange={() => toggleAgentTool(telegramWorkflow.type, 'save_memory', telegramWorkflow.configuration?.agent_tools?.save_memory || false)}
                                   disabled={!isAdmin}
                                 />
                               </div>
@@ -1077,6 +1077,7 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                         )}
                       </div>
 
+                      {/* Auto-Intro Generation */}
                       <div>
                         <div className="flex items-center gap-2 mb-3">
                           <p className="text-xs font-medium text-muted-foreground">Auto-Intro Generation</p>
@@ -1087,12 +1088,7 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                               </TooltipTrigger>
                               <TooltipContent className="max-w-xs">
                                 <p className="text-xs">
-                                  <strong>How it works:</strong><br/>
-                                  1. User posts in specified intro channels/topics<br/>
-                                  2. AI analyzes message + user profile<br/>
-                                  3. Generates personalized intro automatically<br/>
-                                  4. Posts intro for them in the channel<br/><br/>
-                                  Perfect for onboarding new members!
+                                  AI generates personalized intros when users post in specified intro channels
                                 </p>
                               </TooltipContent>
                             </Tooltip>
@@ -1102,28 +1098,28 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                           <div className="flex items-center justify-between p-2 rounded bg-background/50">
                             <div>
                               <p className="text-sm font-medium">✨ Auto-Generate Intros</p>
-                              <p className="text-xs text-muted-foreground">AI creates personalized intros when users post in intro channels</p>
+                              <p className="text-xs text-muted-foreground">AI creates personalized intros in intro channels</p>
                             </div>
                             <Switch 
-                              checked={workflow.configuration?.auto_intro_generation?.enabled || false}
-                              onCheckedChange={() => toggleAutoIntroGeneration(workflow.type, workflow.configuration?.auto_intro_generation?.enabled || false)}
+                              checked={telegramWorkflow.configuration?.auto_intro_generation?.enabled || false}
+                              onCheckedChange={() => toggleAutoIntroGeneration(telegramWorkflow.type, telegramWorkflow.configuration?.auto_intro_generation?.enabled || false)}
                               disabled={!isAdmin}
                             />
                           </div>
                           
-                          {workflow.configuration?.auto_intro_generation?.enabled && (
+                          {telegramWorkflow.configuration?.auto_intro_generation?.enabled && (
                             <div className="p-2 rounded bg-background/50">
-                              <Label htmlFor={`thread-names-${workflow.type}`} className="text-xs">
+                              <Label htmlFor="thread-names" className="text-xs">
                                 Intro Channel Names (comma-separated)
                               </Label>
                               <Input
-                                id={`thread-names-${workflow.type}`}
-                                defaultValue={(workflow.configuration?.auto_intro_generation?.thread_names || ['intros', 'introductions']).join(', ')}
+                                id="thread-names"
+                                defaultValue={(telegramWorkflow.configuration?.auto_intro_generation?.thread_names || ['intros', 'introductions']).join(', ')}
                                 placeholder="intros, introductions, introduce yourself"
                                 onBlur={(e) => {
                                   const names = e.target.value.split(',').map(s => s.trim()).filter(s => s);
                                   if (names.length > 0) {
-                                    updateIntroThreadNames(workflow.type, names);
+                                    updateIntroThreadNames(telegramWorkflow.type, names);
                                   }
                                 }}
                                 className="mt-1 text-xs"
@@ -1139,149 +1135,169 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                   )}
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Coming Soon Features */}
-      <Card className="gradient-card border-border/50">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Globe className="w-5 h-5 text-primary" />
-            <span>Coming Soon</span>
-          </CardTitle>
-          <CardDescription>
-            Advanced workflow features in development
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 rounded-lg border border-border/30 bg-background/50">
-              <h4 className="font-medium mb-2">Visual Workflow Editor</h4>
-              <p className="text-sm text-muted-foreground">
-                Drag-and-drop workflow builder with conditional logic
-              </p>
-            </div>
-            <div className="p-4 rounded-lg border border-border/30 bg-background/50">
-              <h4 className="font-medium mb-2">Scheduled Messages</h4>
-              <p className="text-sm text-muted-foreground">
-                Send proactive AI messages based on triggers
-              </p>
-            </div>
-            <div className="p-4 rounded-lg border border-border/30 bg-background/50">
-              <h4 className="font-medium mb-2">Webhook Integrations</h4>
-              <p className="text-sm text-muted-foreground">
-                Connect with external services and APIs
-              </p>
-            </div>
-            <div className="p-4 rounded-lg border border-border/30 bg-background/50">
-              <h4 className="font-medium mb-2">Advanced Analytics</h4>
-              <p className="text-sm text-muted-foreground">
-                Detailed workflow performance metrics
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Workflow Test Dialog */}
-      <Dialog open={showTestDialog} onOpenChange={setShowTestDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2">
-              <TestTube className="w-5 h-5" />
-              <span>Test {selectedWorkflow?.name}</span>
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="p-4 rounded-lg bg-muted/50">
-              <h4 className="font-medium mb-2">Workflow Details</h4>
-              <p className="text-sm text-muted-foreground mb-2">
-                {selectedWorkflow?.description}
-              </p>
-              <div className="flex items-center space-x-2">
-                <Badge variant="default">Active</Badge>
-                {selectedWorkflow?.type === 'telegram_integration' && selectedWorkflow?.configuration?.chat_types && (
-                  <div className="flex space-x-1">
-                    {Object.entries(selectedWorkflow.configuration.chat_types)
-                      .filter(([_, enabled]) => enabled)
-                      .map(([type, _]) => (
-                        <Badge key={type} variant="outline" className="text-xs">
-                          {type}
-                        </Badge>
-                      ))
-                    }
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="test-input">Test Input</Label>
-              <Textarea
-                id="test-input"
-                value={testInput}
-                onChange={(e) => setTestInput(e.target.value)}
-                placeholder={getTestPlaceholder(selectedWorkflow?.type)}
-                rows={3}
-              />
-            </div>
-
-            {testResult && (
-              <div className={`p-4 rounded-lg border ${
-                testResult.success 
-                  ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20' 
-                  : 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20'
-              }`}>
-                <div className="flex items-center space-x-2 mb-2">
-                  {testResult.success ? (
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                  ) : (
-                    <XCircle className="w-5 h-5 text-red-600" />
-                  )}
-                  <h4 className="font-medium">
-                    {testResult.success ? 'Test Passed' : 'Test Failed'}
-                  </h4>
-                </div>
-                <p className="text-sm mb-2">{testResult.message}</p>
-                {testResult.data && (
-                  <details className="text-xs">
-                    <summary className="cursor-pointer font-medium">Response Details</summary>
-                    <pre className="mt-2 p-2 bg-background rounded overflow-x-auto">
-                      {JSON.stringify(testResult.data, null, 2)}
-                    </pre>
-                  </details>
-                )}
-              </div>
             )}
+          </TabsContent>
 
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setShowTestDialog(false)}>
-                Close
-              </Button>
-              <Button 
-                onClick={() => testWorkflow(selectedWorkflow, testInput)}
-                disabled={testLoading || !testInput.trim()}
-              >
-                {testLoading ? (
-                  <>
-                    <Loader className="w-4 h-4 mr-2 animate-spin" />
-                    Testing...
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-4 h-4 mr-2" />
-                    Run Test
-                  </>
-                )}
-              </Button>
+          {/* OTHER WORKFLOW TABS */}
+          {otherWorkflows.map((workflow) => (
+            <TabsContent key={workflow.type} value={workflow.type.replace('_integration', '')} className="space-y-4 mt-6">
+              <Card className="border-border/30">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-3 rounded-lg bg-primary/10">
+                        {getWorkflowIcon(workflow.icon)}
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-lg">{workflow.name}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {workflow.description}
+                        </p>
+                      </div>
+                    </div>
+                    <Switch 
+                      checked={workflow.enabled}
+                      onCheckedChange={() => toggleWorkflow(workflow.type, workflow.enabled)}
+                      disabled={!isAdmin}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center gap-2 mb-4">
+                    <Badge variant={workflow.enabled ? 'default' : 'outline'}>
+                      {workflow.enabled ? 'Active' : 'Inactive'}
+                    </Badge>
+                    
+                    {workflow.enabled && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedWorkflow(workflow);
+                          setShowTestDialog(true);
+                          setTestInput('');
+                          setTestResult(null);
+                        }}
+                      >
+                        <TestTube className="w-4 h-4 mr-1" />
+                        Test
+                      </Button>
+                    )}
+                  </div>
+
+                  {!workflow.enabled && (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Coming Soon</AlertTitle>
+                      <AlertDescription>
+                        This workflow integration is currently in development. Enable it to get notified when it's ready.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          ))}
+        </Tabs>
+      </CardContent>
+    </Card>
+
+    {/* Workflow Test Dialog */}
+    <Dialog open={showTestDialog} onOpenChange={setShowTestDialog}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center space-x-2">
+            <TestTube className="w-5 h-5" />
+            <span>Test {selectedWorkflow?.name}</span>
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <div className="p-4 rounded-lg bg-muted/50">
+            <h4 className="font-medium mb-2">Workflow Details</h4>
+            <p className="text-sm text-muted-foreground mb-2">
+              {selectedWorkflow?.description}
+            </p>
+            <div className="flex items-center space-x-2">
+              <Badge variant="default">Active</Badge>
+              {selectedWorkflow?.type === 'telegram_integration' && selectedWorkflow?.configuration?.chat_types && (
+                <div className="flex space-x-1">
+                  {Object.entries(selectedWorkflow.configuration.chat_types)
+                    .filter(([_, enabled]) => enabled)
+                    .map(([type, _]) => (
+                      <Badge key={type} variant="outline" className="text-xs">
+                        {type}
+                      </Badge>
+                    ))
+                  }
+                </div>
+              )}
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="test-input">Test Input</Label>
+            <Textarea
+              id="test-input"
+              value={testInput}
+              onChange={(e) => setTestInput(e.target.value)}
+              placeholder={getTestPlaceholder(selectedWorkflow?.type)}
+              rows={3}
+            />
+          </div>
+
+          {testResult && (
+            <div className={`p-4 rounded-lg border ${
+              testResult.success 
+                ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20' 
+                : 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20'
+            }`}>
+              <div className="flex items-center space-x-2 mb-2">
+                {testResult.success ? (
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                ) : (
+                  <XCircle className="w-5 h-5 text-red-600" />
+                )}
+                <h4 className="font-medium">
+                  {testResult.success ? 'Test Passed' : 'Test Failed'}
+                </h4>
+              </div>
+              <p className="text-sm mb-2">{testResult.message}</p>
+              {testResult.data && (
+                <details className="text-xs">
+                  <summary className="cursor-pointer font-medium">Response Details</summary>
+                  <pre className="mt-2 p-2 bg-background rounded overflow-x-auto">
+                    {JSON.stringify(testResult.data, null, 2)}
+                  </pre>
+                </details>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setShowTestDialog(false)}>
+              Close
+            </Button>
+            <Button 
+              onClick={() => testWorkflow(selectedWorkflow, testInput)}
+              disabled={testLoading || !testInput.trim()}
+            >
+              {testLoading ? (
+                <>
+                  <Loader className="w-4 h-4 mr-2 animate-spin" />
+                  Testing...
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4 mr-2" />
+                  Run Test
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };
 

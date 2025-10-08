@@ -169,24 +169,11 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
       </Card>
 
       {/* 2. WORKFLOWS */}
-      <Card className="gradient-card border-border/50">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Zap className="w-5 h-5 text-primary" />
-            <span>Workflows</span>
-          </CardTitle>
-          <CardDescription>
-            Configure automated workflows and agent tools
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <WorkflowBuilder
-            community={community}
-            isAdmin={isAdmin}
-            onUpdate={(updated) => onUpdate({ ...community, ...updated })}
-          />
-        </CardContent>
-      </Card>
+      <WorkflowBuilder
+        community={community}
+        isAdmin={isAdmin}
+        onUpdate={(updated) => onUpdate({ ...community, ...updated })}
+      />
 
       {/* 3. HEALTH & STATUS */}
       {community.telegram_bot_token && (

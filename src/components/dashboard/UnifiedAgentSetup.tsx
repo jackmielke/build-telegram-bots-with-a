@@ -175,12 +175,7 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
         onUpdate={(updated) => onUpdate({ ...community, ...updated })}
       />
 
-      {/* 3. HEALTH & STATUS */}
-      {community.telegram_bot_token && (
-        <BotHealthIndicator communityId={community.id} />
-      )}
-
-      {/* 4. LLM SETTINGS */}
+      {/* 3. LLM SETTINGS */}
       <Card className="gradient-card border-border/50">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
@@ -259,7 +254,7 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
         </CardContent>
       </Card>
 
-      {/* 5. IDENTITY & APPEARANCE */}
+      {/* 4. IDENTITY & APPEARANCE */}
       <Card className="gradient-card border-border/50">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">

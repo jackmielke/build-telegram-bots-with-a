@@ -15,6 +15,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import BotHealthIndicator from './BotHealthIndicator';
 import { TelegramBotDialog } from '../TelegramBotDialog';
+import botfatherGroupSettings from '@/assets/botfather-group-settings.png';
 import {
   Zap, 
   Send, 
@@ -855,10 +856,49 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
                                   disabled={!isAdmin}
                                 />
                               </div>
-                            );
+                          );
                           })}
                         </div>
                       </div>
+
+                      {/* Group Settings Instructions */}
+                      {(telegramWorkflow.configuration?.chat_types?.group || 
+                        telegramWorkflow.configuration?.chat_types?.supergroup) && (
+                        <div className="p-4 rounded-lg border border-warning/50 bg-warning/5 space-y-3">
+                          <div className="flex items-start gap-2">
+                            <Info className="w-5 h-5 text-warning shrink-0 mt-0.5" />
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium text-foreground">
+                                Important: Enable Group Access for Your Bot
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                To use your bot in group chats, you need to configure the bot settings in BotFather:
+                              </p>
+                              <ol className="text-xs text-muted-foreground space-y-1 ml-4 list-decimal">
+                                <li>Open @BotFather in Telegram</li>
+                                <li>Send <code className="px-1.5 py-0.5 bg-muted rounded font-mono">/mybots</code> and select your bot</li>
+                                <li>Go to <strong>Bot Settings → Mode Settings</strong></li>
+                                <li>Turn <strong>ON</strong> the <span className="text-foreground font-medium">"Allow Groups"</span> toggle</li>
+                                <li>Turn <strong>OFF</strong> the <span className="text-foreground font-medium">"Group Privacy"</span> toggle (so the bot can read all messages)</li>
+                                <li>Add your bot to the desired group chat</li>
+                              </ol>
+                              <Collapsible>
+                                <CollapsibleTrigger className="text-xs text-primary hover:underline flex items-center gap-1 mt-2">
+                                  <span>Show example screenshot</span>
+                                  <ChevronDown className="w-3 h-3" />
+                                </CollapsibleTrigger>
+                                <CollapsibleContent className="mt-3">
+                                  <img 
+                                    src={botfatherGroupSettings}
+                                    alt="BotFather group settings showing Allow Groups and Group Privacy toggles"
+                                    className="rounded-lg border border-border/50 w-full max-w-sm"
+                                  />
+                                </CollapsibleContent>
+                              </Collapsible>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       
                       {/* Agent Mode Section */}
                       <div>

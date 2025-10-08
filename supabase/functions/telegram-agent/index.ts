@@ -170,32 +170,20 @@ async function executeTool(
       }
 
       case "search_memory": {
-        console.log(`🧠 Searching memories for: "${args.query}"`);
+        console.log(`🧠 Gathering all memories into context`);
         
         const { data: memories } = await supabase
           .from('memories')
           .select('content, created_at, tags')
           .eq('community_id', communityId)
           .order('created_at', { ascending: false })
-          .limit(20);
+          .limit(50);
         
         if (!memories || memories.length === 0) {
           return "No memories found in the community knowledge base.";
         }
         
-        // Simple keyword matching (you could enhance with vector search later)
-        const queryLower = args.query.toLowerCase();
-        const relevantMemories = memories.filter((m: any) => 
-          m.content.toLowerCase().includes(queryLower) ||
-          m.tags?.some((t: string) => t.toLowerCase().includes(queryLower))
-        );
-        
-        if (relevantMemories.length === 0) {
-          return `No memories found matching "${args.query}".`;
-        }
-        
-        const formatted = relevantMemories
-          .slice(0, 5)
+        const formatted = memories
           .map((m: any) => {
             const date = new Date(m.created_at).toLocaleDateString();
             const tags = m.tags?.length > 0 ? ` [${m.tags.join(', ')}]` : '';
@@ -203,7 +191,7 @@ async function executeTool(
           })
           .join('\n');
         
-        return `Found ${relevantMemories.length} relevant memories:\n${formatted}`;
+        return `Community Knowledge Base (${memories.length} memories):\n${formatted}`;
       }
 
       case "search_chat_history": {

@@ -151,32 +151,34 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
         }}
       />
 
-      {/* Hero CTA - New Bot */}
-      <Card className="gradient-card border-primary/20 bg-gradient-to-br from-primary/10 to-accent/10">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center">
-                <Bot className="w-7 h-7 text-primary" />
+      {/* Hero CTA - New Bot - Show only if no bot connected */}
+      {!hasTelegram && (
+        <Card className="gradient-card border-primary/20 bg-gradient-to-br from-primary/10 to-accent/10">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center">
+                  <Bot className="w-7 h-7 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold">Create a New Bot</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Set up a Telegram bot in minutes with AI-powered responses
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-xl font-semibold">Create a New Bot</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Set up a Telegram bot in minutes with AI-powered responses
-                </p>
-              </div>
+              <Button 
+                onClick={() => setShowCreateBotWorkflow(true)}
+                size="lg"
+                className="gradient-primary hover:shadow-glow"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                New Bot
+              </Button>
             </div>
-            <Button 
-              onClick={() => setShowCreateBotWorkflow(true)}
-              size="lg"
-              className="gradient-primary hover:shadow-glow"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              New Bot
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent Conversations */}
       <Card className="gradient-card border-border/50">

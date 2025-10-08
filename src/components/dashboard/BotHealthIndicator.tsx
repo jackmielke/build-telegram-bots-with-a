@@ -420,7 +420,7 @@ const BotHealthIndicator = ({ communityId }: BotHealthIndicatorProps) => {
         {/* Troubleshoot section */}
         <div className="pt-2 border-t border-border/40 space-y-2">
           <p className="text-xs text-muted-foreground font-medium">Troubleshoot</p>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
               size="sm"

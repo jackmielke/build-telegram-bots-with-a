@@ -23,10 +23,12 @@ interface Community {
 const ExploreCommunities = () => {
   const [communities, setCommunities] = useState<Community[]>([]);
   const [filteredCommunities, setFilteredCommunities] = useState<Community[]>([]);
+  const [displayedCommunities, setDisplayedCommunities] = useState<Community[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [user, setUser] = useState<any>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [displayCount, setDisplayCount] = useState(10);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -65,7 +67,12 @@ const ExploreCommunities = () => {
       );
       setFilteredCommunities(filtered);
     }
+    setDisplayCount(10); // Reset display count when search changes
   }, [searchQuery, communities]);
+
+  useEffect(() => {
+    setDisplayedCommunities(filteredCommunities.slice(0, displayCount));
+  }, [filteredCommunities, displayCount]);
 
   const fetchCommunities = async (internalUserId: string) => {
     try {
@@ -110,6 +117,9 @@ const ExploreCommunities = () => {
         has_pending_request: pendingRequestIds.has(community.id),
         member_count: countMap.get(community.id) || 0
       })) || [];
+
+      // Sort by member count descending
+      formattedCommunities.sort((a, b) => (b.member_count || 0) - (a.member_count || 0));
 
       setCommunities(formattedCommunities);
       setFilteredCommunities(formattedCommunities);
@@ -229,13 +239,13 @@ const ExploreCommunities = () => {
             />
           </div>
           <p className="text-sm text-muted-foreground mt-2">
-            {filteredCommunities.length} {filteredCommunities.length === 1 ? 'community' : 'communities'} found
+            Showing {displayedCommunities.length} of {filteredCommunities.length} {filteredCommunities.length === 1 ? 'community' : 'communities'}
           </p>
         </div>
 
         {/* Communities Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCommunities.map((community) => (
+          {displayedCommunities.map((community) => (
             <Card
               key={community.id}
               className="group hover:shadow-glow transition-all duration-300 border-border/50 hover:border-primary/50"
@@ -317,6 +327,20 @@ const ExploreCommunities = () => {
             </Card>
           ))}
         </div>
+
+        {/* Load More Button */}
+        {displayedCommunities.length < filteredCommunities.length && (
+          <div className="flex justify-center mt-8">
+            <Button
+              onClick={() => setDisplayCount(prev => prev + 10)}
+              variant="outline"
+              size="lg"
+              className="hover:bg-primary/10 hover:border-primary"
+            >
+              Load More
+            </Button>
+          </div>
+        )}
 
         {filteredCommunities.length === 0 && (
           <div className="text-center py-12">

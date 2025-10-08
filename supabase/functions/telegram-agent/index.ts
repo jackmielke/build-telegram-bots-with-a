@@ -29,16 +29,10 @@ const AGENT_TOOLS = [
     type: "function",
     function: {
       name: "search_memory",
-      description: "Search the community's saved memories and knowledge base for relevant information. Use this to recall past conversations, saved facts, or community information.",
+      description: "Gather all memories from the community's knowledge base to provide context. Use this when you need to access saved community information, past facts, or stored knowledge.",
       parameters: {
         type: "object",
-        properties: {
-          query: {
-            type: "string",
-            description: "What to search for in community memories"
-          }
-        },
-        required: ["query"]
+        properties: {}
       }
     }
   },
@@ -177,7 +171,7 @@ async function executeTool(
           .select('content, created_at, tags')
           .eq('community_id', communityId)
           .order('created_at', { ascending: false })
-          .limit(50);
+          .limit(200);
         
         if (!memories || memories.length === 0) {
           return "No memories found in the community knowledge base.";

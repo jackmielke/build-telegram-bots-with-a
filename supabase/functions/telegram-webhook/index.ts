@@ -399,15 +399,7 @@ serve(async (req) => {
             
             // Build intro message from template (supports placeholders)
             const templateRaw = (communityData?.agent_intro_message || 
-              `Hey {first_name}, welcome! How's it going? What can I help you with today at {community_name}?
-
-Some quick things I can do:
-- answer questions about the community
-- help you connect with others
-- provide info and resources
-- assist with projects and ideas
-
-Tell me what you need and I'll get on it.`).trim();
+              `Hi {first_name}, I'm the {agent_name} bot. Ask me anything!`).trim();
 
             const vars = {
               first_name: firstName || (telegramUsername || 'there'),

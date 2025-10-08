@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Bot, ExternalLink, Loader2, Check, MessageSquare, Settings } from 'lucide-react';
+import { Bot, ExternalLink, Loader2, Check, MessageSquare, Settings, Undo } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface CreateBotWorkflowProps {
@@ -20,6 +20,8 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
   const [botToken, setBotToken] = useState('');
   const [creating, setCreating] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState('You are a helpful community assistant.');
+  const [previousPrompt, setPreviousPrompt] = useState('');
+  const [improvingPrompt, setImprovingPrompt] = useState(false);
   const [respondInPrivate, setRespondInPrivate] = useState(true);
   const [respondInGroups, setRespondInGroups] = useState(false);
   const [respondInSupergroups, setRespondInSupergroups] = useState(false);
@@ -78,6 +80,21 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
         }
       } catch (error) {
         console.error('Error fetching bot photo:', error);
+      }
+
+      // Fetch bot description
+      let botDescription = 'You are a helpful community assistant.';
+      try {
+        const descResponse = await fetch(
+          `https://api.telegram.org/bot${botToken}/getMyDescription`
+        );
+        const descData = await descResponse.json();
+        
+        if (descData.ok && descData.result.description) {
+          botDescription = descData.result.description;
+        }
+      } catch (error) {
+        console.error('Error fetching bot description:', error);
       }
 
       const botUsername = testData.result.username;
@@ -217,6 +234,9 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
         communityId: newCommunity.id
       });
 
+      // Set the system prompt from bot description
+      setSystemPrompt(botDescription);
+
       setStep('success');
 
       toast({
@@ -236,12 +256,62 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
     }
   };
 
+  const handleImprovePrompt = async () => {
+    if (!systemPrompt.trim()) {
+      toast({
+        title: "No prompt to improve",
+        description: "Please enter a system prompt first.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setImprovingPrompt(true);
+    setPreviousPrompt(systemPrompt);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('improve-prompt', {
+        body: { prompt: systemPrompt }
+      });
+
+      if (error) throw error;
+
+      if (data?.improvedPrompt) {
+        setSystemPrompt(data.improvedPrompt);
+        toast({
+          title: "Prompt Improved!",
+          description: "Your system prompt has been enhanced."
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Improvement Failed",
+        description: error.message || "Failed to improve prompt.",
+        variant: "destructive"
+      });
+    } finally {
+      setImprovingPrompt(false);
+    }
+  };
+
+  const handleUndoPrompt = () => {
+    if (previousPrompt) {
+      setSystemPrompt(previousPrompt);
+      setPreviousPrompt('');
+      toast({
+        title: "Prompt Restored",
+        description: "Reverted to previous version."
+      });
+    }
+  };
+
   const handleClose = () => {
     if (!creating) {
       setStep('guide');
       setBotToken('');
       setBotDetails(null);
       setSystemPrompt('You are a helpful community assistant.');
+      setPreviousPrompt('');
       setRespondInPrivate(true);
       setRespondInGroups(false);
       setRespondInSupergroups(false);
@@ -530,10 +600,43 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
                   onChange={(e) => setSystemPrompt(e.target.value)}
                   placeholder="Define how your bot should behave..."
                   className="min-h-[120px]"
+                  disabled={improvingPrompt}
                 />
-                <p className="text-xs text-muted-foreground">
-                  This prompt defines your bot's personality and how it responds to messages.
-                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleImprovePrompt}
+                    disabled={improvingPrompt || !systemPrompt.trim()}
+                  >
+                    {improvingPrompt ? (
+                      <>
+                        <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                        Improving...
+                      </>
+                    ) : (
+                      <>
+                        <Bot className="w-3 h-3 mr-1.5" />
+                        Improve Prompt
+                      </>
+                    )}
+                  </Button>
+                  {previousPrompt && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleUndoPrompt}
+                    >
+                      <Undo className="w-3 h-3 mr-1.5" />
+                      Undo
+                    </Button>
+                  )}
+                  <p className="text-xs text-muted-foreground flex-1">
+                    This prompt defines your bot's personality and behavior.
+                  </p>
+                </div>
               </div>
 
               {/* Memories Section */}

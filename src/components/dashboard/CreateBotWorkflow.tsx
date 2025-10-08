@@ -437,7 +437,15 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
                 Enter Your Bot Token
               </DialogTitle>
               <DialogDescription className="text-base">
-                Paste the token you received from BotFather
+                Paste the token you received from{' '}
+                <a 
+                  href="https://t.me/BotFather" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline font-medium"
+                >
+                  BotFather
+                </a>
               </DialogDescription>
             </DialogHeader>
 

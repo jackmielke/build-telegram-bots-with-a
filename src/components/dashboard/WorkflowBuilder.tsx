@@ -1025,56 +1025,9 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
           {/* HEALTH TAB */}
           <TabsContent value="health" className="space-y-4 mt-6">
             {/* Bot Health Indicator */}
-            <BotHealthIndicator communityId={community.id} />
-            
-            {/* Telegram Bot Connected Status */}
-            {botInfo && (
-              <Card className="gradient-card border-green-500/30 bg-green-50/5">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <span>Telegram Bot Connected</span>
-                  </CardTitle>
-                  <CardDescription>
-                    Your bot is active and responding to messages
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg border border-green-500/20">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-3 rounded-lg bg-green-500/10">
-                        <Bot className="w-6 h-6 text-green-600" />
-                      </div>
-                      <div>
-                        <div className="flex items-center space-x-2 mb-1">
-                          <h4 className="font-semibold text-lg">{botInfo.first_name}</h4>
-                          <Badge variant="default" className="bg-green-600 text-white">
-                            @{botInfo.username}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Bot ID: {botInfo.id}
-                        </p>
-                        <a 
-                          href={`https://t.me/${botInfo.username}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-primary hover:underline inline-flex items-center mt-1"
-                        >
-                          Open in Telegram →
-                        </a>
-                      </div>
-                    </div>
-                    <Badge variant="default" className="bg-green-600">
-                      ✓ Active
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Show connection prompt if bot not configured */}
-            {!botInfo && (
+            {botInfo ? (
+              <BotHealthIndicator communityId={community.id} />
+            ) : (
               <Card className="border-border/30">
                 <CardContent className="p-6">
                   <Alert>

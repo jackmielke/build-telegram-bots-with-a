@@ -7,7 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Bot, ExternalLink, Loader2, Check, MessageSquare, Settings, Undo } from 'lucide-react';
+import { Bot, ExternalLink, Loader2, Check, MessageSquare, Settings, Undo, Info } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useNavigate } from 'react-router-dom';
 
 interface CreateBotWorkflowProps {
@@ -353,32 +354,39 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
                 Create Your Telegram Bot
               </DialogTitle>
               <DialogDescription className="text-base">
-                Follow these steps to create a new bot with BotFather
+                Create a bot with BotFather to get started
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-5 py-2">
               <div className="space-y-4">
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
-                    1
-                  </div>
-                  <div className="flex-1 pt-1">
-                    <p className="font-semibold mb-1.5 text-base">Open BotFather and create your bot</p>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Message @BotFather and send the <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/newbot</code> command to create your bot. Follow BotFather's instructions to set up everything as you want, including the bot's name, username, description, and profile photo.
+                <a 
+                  href="https://t.me/BotFather" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-primary hover:underline font-medium text-lg"
+                >
+                  Open BotFather to create your bot
+                  <ExternalLink className="w-5 h-5" />
+                </a>
+
+                <Collapsible>
+                  <CollapsibleTrigger className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    <Info className="w-4 h-4" />
+                    Need help?
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-3 text-sm text-muted-foreground space-y-2 pl-6">
+                    <p>
+                      Send <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/newbot</code> to @BotFather and follow the prompts to set your bot's name and username.
                     </p>
-                    <a 
-                      href="https://t.me/BotFather" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline font-medium"
-                    >
-                      Open BotFather
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
-                </div>
+                    <p>
+                      You can also customize your bot's description and profile photo using <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/setdescription</code> and <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/setuserpic</code>.
+                    </p>
+                    <p>
+                      Once created, BotFather will give you an API token - copy it for the next step.
+                    </p>
+                  </CollapsibleContent>
+                </Collapsible>
               </div>
 
               <div className="flex justify-center pt-2">

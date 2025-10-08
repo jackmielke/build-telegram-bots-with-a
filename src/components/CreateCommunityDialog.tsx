@@ -158,7 +158,7 @@ const CreateCommunityDialog = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description (optional</Label>
+              <Label htmlFor="description">Description (optional)</Label>
               <Textarea id="description" placeholder="What's your community about?" value={description} onChange={e => setDescription(e.target.value)} disabled={loading} maxLength={500} rows={4} />
             </div>
 

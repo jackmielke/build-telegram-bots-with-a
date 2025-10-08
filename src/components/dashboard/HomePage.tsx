@@ -2,9 +2,12 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Users, MessageSquare, DollarSign, Bot, Zap, TrendingUp, Activity, Calendar, ArrowRight } from 'lucide-react';
+import { Users, MessageSquare, DollarSign, Bot, Zap, TrendingUp, Activity, Calendar, ArrowRight, Sparkles, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { TelegramBotDialog } from '@/components/TelegramBotDialog';
+import BotOnboarding from '@/components/dashboard/BotOnboarding';
+import { CreateBotWorkflow } from '@/components/dashboard/CreateBotWorkflow';
+
 interface Community {
   id: string;
   name: string;
@@ -14,10 +17,12 @@ interface Community {
   telegram_bot_token: string | null;
   telegram_bot_url: string | null;
 }
+
 interface HomePageProps {
   community: Community;
   onNavigate: (tab: string, conversationId?: string) => void;
 }
+
 interface RecentConversation {
   conversation_id: string;
   chat_type: string;
@@ -25,55 +30,72 @@ interface RecentConversation {
   last_message_at: string;
   display_name: string;
 }
-const HomePage = ({
-  community,
-  onNavigate
-}: HomePageProps) => {
+
+const HomePage = ({ community, onNavigate }: HomePageProps) => {
   const hasTelegram = !!community.telegram_bot_token;
   const [recentConversations, setRecentConversations] = useState<RecentConversation[]>([]);
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [showBotDialog, setShowBotDialog] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [showCreateBotWorkflow, setShowCreateBotWorkflow] = useState(false);
+
   useEffect(() => {
     fetchRecentConversations();
+    
+    // Check if onboarding was completed
+    const completed = localStorage.getItem(`onboarding_completed_${community.id}`);
+    setOnboardingCompleted(!!completed);
+    
     // Auto-open bot dialog if no telegram bot is connected
     if (!hasTelegram) {
       setShowBotDialog(true);
     }
   }, [community.id, hasTelegram]);
+
   const fetchRecentConversations = async () => {
     try {
-      const {
-        data,
-        error
-      } = await supabase.from('conversations').select('*').eq('community_id', community.id).order('last_message_at', {
-        ascending: false
-      }).limit(5);
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('community_id', community.id)
+        .order('last_message_at', { ascending: false })
+        .limit(5);
+
       if (error) throw error;
-      const enriched = await Promise.all((data || []).map(async conv => {
-        const {
-          data: firstMessage
-        } = await supabase.from('messages').select('metadata, sent_by').eq('conversation_id', conv.conversation_id).order('created_at', {
-          ascending: true
-        }).limit(1).single();
-        let displayName = conv.topic_name || 'Untitled';
-        if (firstMessage?.metadata) {
-          const meta = firstMessage.metadata as any;
-          if (conv.chat_type === 'telegram_bot') {
-            if (meta.chat_type_detail === 'private') {
-              displayName = `DM: ${meta.telegram_first_name || meta.telegram_username || 'User'}`;
-            } else if (meta.telegram_chat_title) {
-              displayName = meta.telegram_chat_title;
+
+      const enriched = await Promise.all(
+        (data || []).map(async (conv) => {
+          const { data: firstMessage } = await supabase
+            .from('messages')
+            .select('metadata, sent_by')
+            .eq('conversation_id', conv.conversation_id)
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .single();
+
+          let displayName = conv.topic_name || 'Untitled';
+          if (firstMessage?.metadata) {
+            const meta = firstMessage.metadata as any;
+            if (conv.chat_type === 'telegram_bot') {
+              if (meta.chat_type_detail === 'private') {
+                displayName = `DM: ${meta.telegram_first_name || meta.telegram_username || 'User'}`;
+              } else if (meta.telegram_chat_title) {
+                displayName = meta.telegram_chat_title;
+              }
             }
           }
-        }
-        return {
-          conversation_id: conv.conversation_id,
-          chat_type: conv.chat_type,
-          message_count: conv.message_count,
-          last_message_at: conv.last_message_at,
-          display_name: displayName
-        };
-      }));
+
+          return {
+            conversation_id: conv.conversation_id,
+            chat_type: conv.chat_type,
+            message_count: conv.message_count,
+            last_message_at: conv.last_message_at,
+            display_name: displayName
+          };
+        })
+      );
+
       setRecentConversations(enriched);
     } catch (error) {
       console.error('Error fetching recent conversations:', error);
@@ -81,6 +103,7 @@ const HomePage = ({
       setLoadingConversations(false);
     }
   };
+
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -88,17 +111,72 @@ const HomePage = ({
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
+
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString();
   };
-  return <div className="space-y-6">
+
+  return (
+    <div className="space-y-6">
+      {/* New Bot Workflow */}
+      <CreateBotWorkflow 
+        open={showCreateBotWorkflow}
+        onOpenChange={setShowCreateBotWorkflow}
+      />
+
       {/* Telegram Bot Dialog - Auto-opens if no bot connected */}
-      <TelegramBotDialog communityId={community.id} open={showBotDialog} onOpenChange={setShowBotDialog} onSuccess={() => {
-      setShowBotDialog(false);
-      window.location.reload(); // Refresh to show connected state
-    }} />
+      <TelegramBotDialog
+        communityId={community.id}
+        open={showBotDialog}
+        onOpenChange={setShowBotDialog}
+        onSuccess={() => {
+          setShowBotDialog(false);
+          setShowOnboarding(true); // Show onboarding after bot connection
+        }}
+      />
+
+      {/* Bot Onboarding - Shows after bot is connected */}
+      <BotOnboarding
+        open={showOnboarding}
+        onOpenChange={setShowOnboarding}
+        communityId={community.id}
+        communityName={community.name}
+        onComplete={() => {
+          localStorage.setItem(`onboarding_completed_${community.id}`, 'true');
+          setOnboardingCompleted(true);
+          setShowOnboarding(false);
+          window.location.reload(); // Refresh to show updated state
+        }}
+      />
+
+      {/* Hero CTA - New Bot */}
+      <Card className="gradient-card border-primary/20 bg-gradient-to-br from-primary/10 to-accent/10">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center">
+                <Bot className="w-7 h-7 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold">Create a New Bot</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Set up a Telegram bot in minutes with AI-powered responses
+                </p>
+              </div>
+            </div>
+            <Button 
+              onClick={() => setShowCreateBotWorkflow(true)}
+              size="lg"
+              className="gradient-primary hover:shadow-glow"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              New Bot
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Recent Conversations */}
       <Card className="gradient-card border-border/50">
@@ -113,21 +191,36 @@ const HomePage = ({
                 Latest activity in your community
               </CardDescription>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => onNavigate('conversations')}>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => onNavigate('conversations')}
+            >
               View All
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
         </CardHeader>
         <CardContent>
-          {loadingConversations ? <div className="text-center py-8 text-muted-foreground">
+          {loadingConversations ? (
+            <div className="text-center py-8 text-muted-foreground">
               <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50 animate-pulse" />
               <p className="text-sm">Loading conversations...</p>
-            </div> : recentConversations.length === 0 ? <div className="text-center py-8 text-muted-foreground">
+            </div>
+          ) : recentConversations.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
               <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              
-            </div> : <div className="space-y-2">
-              {recentConversations.map(conv => <Button key={conv.conversation_id} variant="ghost" className="w-full h-auto p-3 justify-start hover:bg-primary/10 border border-border/30" onClick={() => onNavigate('conversations', conv.conversation_id)}>
+              <p className="text-sm">No conversations yet</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {recentConversations.map((conv) => (
+                <Button
+                  key={conv.conversation_id}
+                  variant="ghost"
+                  className="w-full h-auto p-3 justify-start hover:bg-primary/10 border border-border/30"
+                  onClick={() => onNavigate('conversations', conv.conversation_id)}
+                >
                   <div className="flex items-center gap-3 w-full text-left">
                     <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
                       {conv.chat_type === 'telegram_bot' ? <Bot className="w-5 h-5" /> : <MessageSquare className="w-5 h-5" />}
@@ -147,13 +240,16 @@ const HomePage = ({
                     </div>
                     <ArrowRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   </div>
-                </Button>)}
-            </div>}
+                </Button>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Telegram Connection CTA - Show if not connected */}
-      {!hasTelegram && <Card className="gradient-card border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
+      {!hasTelegram && (
+        <Card className="gradient-card border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
@@ -168,12 +264,46 @@ const HomePage = ({
             </div>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => onNavigate('workflows')} className="gradient-primary hover:shadow-glow" size="lg">
+            <Button 
+              onClick={() => setShowBotDialog(true)} 
+              className="gradient-primary hover:shadow-glow"
+              size="lg"
+            >
               <Zap className="w-4 h-4 mr-2" />
               Connect Telegram Bot
             </Button>
           </CardContent>
-        </Card>}
+        </Card>
+      )}
+
+      {/* Onboarding CTA - Show if bot connected but onboarding not completed */}
+      {hasTelegram && !onboardingCompleted && (
+        <Card className="gradient-card border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
+                <Sparkles className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-xl">Complete Your Bot Setup</CardTitle>
+                <CardDescription className="text-base mt-1">
+                  Configure your AI agent's behavior, knowledge, and permissions
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={() => setShowOnboarding(true)} 
+              className="gradient-primary hover:shadow-glow"
+              size="lg"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              Start Setup
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -228,7 +358,8 @@ const HomePage = ({
       </div>
 
       {/* Bot Status */}
-      {hasTelegram && <Card className="gradient-card border-border/50">
+      {hasTelegram && (
+        <Card className="gradient-card border-border/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Activity className="w-5 h-5 text-primary" />
@@ -242,14 +373,22 @@ const HomePage = ({
                 Connected
               </Badge>
             </div>
-            {community.telegram_bot_url && <div className="flex items-center justify-between">
+            {community.telegram_bot_url && (
+              <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Bot Link</span>
-                <a href={community.telegram_bot_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">
+                <a 
+                  href={community.telegram_bot_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm text-primary hover:underline"
+                >
                   Open in Telegram
                 </a>
-              </div>}
+              </div>
+            )}
           </CardContent>
-        </Card>}
+        </Card>
+      )}
 
       {/* Quick Actions */}
       <Card className="gradient-card border-border/50">
@@ -264,28 +403,46 @@ const HomePage = ({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Button variant="outline" className="flex flex-col items-center gap-2 h-auto py-4" onClick={() => onNavigate('conversations')}>
+            <Button 
+              variant="outline" 
+              className="flex flex-col items-center gap-2 h-auto py-4"
+              onClick={() => onNavigate('conversations')}
+            >
               <MessageSquare className="w-5 h-5 text-primary" />
               <span className="text-xs">Conversations</span>
             </Button>
             
-            <Button variant="outline" className="flex flex-col items-center gap-2 h-auto py-4" onClick={() => onNavigate('agent')}>
+            <Button 
+              variant="outline" 
+              className="flex flex-col items-center gap-2 h-auto py-4"
+              onClick={() => onNavigate('agent')}
+            >
               <Bot className="w-5 h-5 text-primary" />
               <span className="text-xs">Agent Setup</span>
             </Button>
             
-            <Button variant="outline" className="flex flex-col items-center gap-2 h-auto py-4" onClick={() => onNavigate('memory')}>
+            <Button 
+              variant="outline" 
+              className="flex flex-col items-center gap-2 h-auto py-4"
+              onClick={() => onNavigate('memory')}
+            >
               <Users className="w-5 h-5 text-primary" />
               <span className="text-xs">Memory</span>
             </Button>
             
-            <Button variant="outline" className="flex flex-col items-center gap-2 h-auto py-4" onClick={() => onNavigate('settings')}>
+            <Button 
+              variant="outline" 
+              className="flex flex-col items-center gap-2 h-auto py-4"
+              onClick={() => onNavigate('settings')}
+            >
               <TrendingUp className="w-5 h-5 text-primary" />
               <span className="text-xs">Settings</span>
             </Button>
           </div>
         </CardContent>
       </Card>
-    </div>;
+    </div>
+  );
 };
+
 export default HomePage;

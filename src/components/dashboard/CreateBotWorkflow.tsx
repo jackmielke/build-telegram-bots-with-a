@@ -375,16 +375,33 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
                     <Info className="w-4 h-4" />
                     Need help?
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-3 text-sm text-muted-foreground space-y-2 pl-6">
-                    <p>
-                      Send <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/newbot</code> to @BotFather and follow the prompts to set your bot's name and username.
-                    </p>
-                    <p>
-                      You can also customize your bot's description and profile photo using <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/setdescription</code> and <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/setuserpic</code>.
-                    </p>
-                    <p>
-                      Once created, BotFather will give you an API token - paste it below.
-                    </p>
+                  <CollapsibleContent className="mt-3 text-sm text-muted-foreground space-y-3 pl-6">
+                    <div className="space-y-2">
+                      <p className="font-medium text-foreground">
+                        ✨ Easiest way:
+                      </p>
+                      <p>
+                        Click <strong>"Open"</strong> in the bottom left of the BotFather chat to launch the Mini App, then create your bot there. It's the simplest method!
+                      </p>
+                    </div>
+                    
+                    <Collapsible>
+                      <CollapsibleTrigger className="flex items-center gap-2 text-sm hover:text-foreground transition-colors">
+                        <Info className="w-4 h-4" />
+                        If that didn't work, try this:
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-2 space-y-2 pl-6">
+                        <p>
+                          Send <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/newbot</code> to @BotFather and follow the prompts to set your bot's name and username.
+                        </p>
+                        <p>
+                          You can also customize your bot's description and profile photo using <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/setdescription</code> and <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/setuserpic</code>.
+                        </p>
+                        <p>
+                          Once created, BotFather will give you an API token - paste it below.
+                        </p>
+                      </CollapsibleContent>
+                    </Collapsible>
                   </CollapsibleContent>
                 </Collapsible>
               </div>

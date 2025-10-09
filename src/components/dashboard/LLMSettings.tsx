@@ -80,6 +80,36 @@ const LLMSettings = ({ community, isAdmin, onUpdate }: LLMSettingsProps) => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* AI Provider Selection - Coming Soon */}
+          <div className="space-y-2">
+            <Label htmlFor="ai_provider" className="flex items-center gap-2">
+              AI Provider
+              <Badge variant="secondary" className="text-xs">Coming Soon</Badge>
+            </Label>
+            <Select value="openrouter" disabled>
+              <SelectTrigger>
+                <SelectValue placeholder="Select AI provider" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="openrouter">
+                  <div>
+                    <div className="font-medium">OpenRouter</div>
+                    <div className="text-xs text-muted-foreground">Multiple model providers</div>
+                  </div>
+                </SelectItem>
+                <SelectItem value="lovable" disabled>
+                  <div>
+                    <div className="font-medium">Lovable AI</div>
+                    <div className="text-xs text-muted-foreground">GPT + Gemini models</div>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Currently using OpenRouter. Lovable AI option coming soon.
+            </p>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="agent_model">AI Model</Label>
             <Select

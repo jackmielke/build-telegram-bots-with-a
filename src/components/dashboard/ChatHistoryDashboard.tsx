@@ -19,6 +19,9 @@ interface Conversation {
   last_message_at: string;
   community_id: string;
   display_name?: string;
+  telegram_chat_id?: string;
+  telegram_chat_title?: string;
+  thread_name?: string;
 }
 
 interface ChatHistoryDashboardProps {
@@ -30,6 +33,7 @@ const ChatHistoryDashboard = ({ communityId, isAdmin }: ChatHistoryDashboardProp
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [filteredConversations, setFilteredConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
+  const [selectedSupergroup, setSelectedSupergroup] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [chatTypeFilter, setChatTypeFilter] = useState<string>('all');
@@ -106,12 +110,18 @@ const ChatHistoryDashboard = ({ communityId, isAdmin }: ChatHistoryDashboardProp
             .single();
 
           let displayName = conv.topic_name || 'Untitled Conversation';
+          let telegramChatId: string | undefined;
+          let telegramChatTitle: string | undefined;
+          let threadName: string | undefined;
 
           if (firstMessage) {
             const metadata = firstMessage.metadata as any;
             
             // For Telegram chats, extract chat title or user name
             if (conv.chat_type === 'telegram_bot') {
+              telegramChatId = metadata?.telegram_chat_id?.toString();
+              telegramChatTitle = metadata?.telegram_chat_title;
+              
               if (metadata?.chat_type_detail === 'private') {
                 // For private chats, use the user's name
                 const userName = metadata?.telegram_first_name || 
@@ -120,23 +130,13 @@ const ChatHistoryDashboard = ({ communityId, isAdmin }: ChatHistoryDashboardProp
                                 'Unknown User';
                 displayName = `DM: ${userName}`;
               } else if (metadata?.chat_type_detail === 'group' || metadata?.chat_type_detail === 'supergroup') {
-                // For group chats, extract title from conversation_id or metadata
-                const chatId = conv.conversation_id.replace('telegram_', '');
-                displayName = `Group Chat ${chatId}`;
+                // For group/supergroup, use chat title as base
+                displayName = metadata?.telegram_chat_title || `Chat ${metadata?.telegram_chat_id}`;
                 
-                // Try to get the actual group name from messages
-                const { data: groupMessages } = await supabase
-                  .from('messages')
-                  .select('metadata')
-                  .eq('conversation_id', conv.conversation_id)
-                  .limit(1);
-                
-                if (groupMessages?.[0]?.metadata) {
-                  const groupMetadata = groupMessages[0].metadata as any;
-                  // The group name might be in various places in metadata
-                  if (groupMetadata?.telegram_chat_title) {
-                    displayName = groupMetadata.telegram_chat_title;
-                  }
+                // Check if this is a forum topic/thread
+                if (metadata?.telegram_message_thread_id) {
+                  threadName = metadata?.telegram_topic_name || `Thread ${metadata?.telegram_message_thread_id}`;
+                  displayName = `${displayName} › ${threadName}`;
                 }
               }
             } else if (firstMessage.users?.name) {
@@ -149,7 +149,10 @@ const ChatHistoryDashboard = ({ communityId, isAdmin }: ChatHistoryDashboardProp
 
           return {
             ...conv,
-            display_name: displayName
+            display_name: displayName,
+            telegram_chat_id: telegramChatId,
+            telegram_chat_title: telegramChatTitle,
+            thread_name: threadName
           };
         })
       );
@@ -169,6 +172,11 @@ const ChatHistoryDashboard = ({ communityId, isAdmin }: ChatHistoryDashboardProp
   const filterConversations = () => {
     let filtered = [...conversations];
 
+    // Filter by selected supergroup
+    if (selectedSupergroup) {
+      filtered = filtered.filter(conv => conv.telegram_chat_id === selectedSupergroup);
+    }
+
     // Filter by chat type
     if (chatTypeFilter !== 'all') {
       filtered = filtered.filter(conv => conv.chat_type === chatTypeFilter);
@@ -178,6 +186,8 @@ const ChatHistoryDashboard = ({ communityId, isAdmin }: ChatHistoryDashboardProp
     if (searchQuery) {
       filtered = filtered.filter(conv => 
         conv.topic_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        conv.display_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        conv.thread_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         conv.conversation_id.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
@@ -229,6 +239,19 @@ const ChatHistoryDashboard = ({ communityId, isAdmin }: ChatHistoryDashboardProp
     if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString();
   };
+
+  // Get unique supergroups for filtering
+  const supergroups = conversations
+    .filter(c => c.telegram_chat_id && c.telegram_chat_title)
+    .reduce((acc, conv) => {
+      if (conv.telegram_chat_id && !acc.find(sg => sg.id === conv.telegram_chat_id)) {
+        acc.push({
+          id: conv.telegram_chat_id,
+          title: conv.telegram_chat_title || conv.telegram_chat_id
+        });
+      }
+      return acc;
+    }, [] as Array<{ id: string; title: string }>);
 
   if (selectedConversation) {
     return (
@@ -297,29 +320,49 @@ const ChatHistoryDashboard = ({ communityId, isAdmin }: ChatHistoryDashboardProp
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search conversations..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search conversations..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={chatTypeFilter} onValueChange={setChatTypeFilter}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectValue placeholder="Filter by type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="ai">AI Chat</SelectItem>
+                  <SelectItem value="telegram_bot">Telegram Bot</SelectItem>
+                  <SelectItem value="group">Group Chat</SelectItem>
+                  <SelectItem value="supergroup">Supergroup</SelectItem>
+                  <SelectItem value="community">Community</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Select value={chatTypeFilter} onValueChange={setChatTypeFilter}>
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="Filter by type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="ai">AI Chat</SelectItem>
-                <SelectItem value="telegram_bot">Telegram Bot</SelectItem>
-                <SelectItem value="group">Group Chat</SelectItem>
-                <SelectItem value="supergroup">Supergroup</SelectItem>
-                <SelectItem value="community">Community</SelectItem>
-              </SelectContent>
-            </Select>
+            {supergroups.length > 0 && (
+              <Select 
+                value={selectedSupergroup || "all"} 
+                onValueChange={(value) => setSelectedSupergroup(value === "all" ? null : value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Filter by supergroup" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Supergroups</SelectItem>
+                  {supergroups.map(sg => (
+                    <SelectItem key={sg.id} value={sg.id}>
+                      {sg.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -361,10 +404,17 @@ const ChatHistoryDashboard = ({ communityId, isAdmin }: ChatHistoryDashboardProp
                         {getChatTypeIcon(conversation.chat_type)}
                       </div>
                       <div className="flex-1 min-w-0 overflow-hidden">
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <h3 className="font-semibold text-sm md:text-base truncate">
-                            {conversation.display_name || conversation.topic_name || 'Untitled Conversation'}
-                          </h3>
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-sm md:text-base truncate">
+                              {conversation.telegram_chat_title || conversation.display_name || conversation.topic_name || 'Untitled Conversation'}
+                            </h3>
+                            {conversation.thread_name && (
+                              <p className="text-xs text-muted-foreground truncate">
+                                {conversation.thread_name}
+                              </p>
+                            )}
+                          </div>
                           <Badge variant="secondary" className="text-[10px] md:text-xs flex-shrink-0">
                             {getChatTypeLabel(conversation.chat_type)}
                           </Badge>

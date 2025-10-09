@@ -600,6 +600,29 @@ serve(async (req) => {
           // Check if this is a new user (first message in conversation)
           const isNewUser = !conversationHistory || conversationHistory.length === 0;
 
+          // For supergroups with threads, try to fetch the thread name first
+          let threadName: string | null = null;
+          if (chatType === 'supergroup' && messageThreadId) {
+            try {
+              const topicInfoResp = await fetch(
+                `https://api.telegram.org/bot${botToken}/getForumTopicIconStickers?chat_id=${chatId}&message_thread_id=${messageThreadId}`
+              );
+              
+              // Try alternative endpoint if first one fails
+              if (!topicInfoResp.ok) {
+                // Extract thread name from reply_to_message if available
+                if (body.message?.reply_to_message?.forum_topic_created) {
+                  threadName = body.message.reply_to_message.forum_topic_created.name;
+                } else if (body.message?.is_topic_message) {
+                  // If we can't get the name yet, mark it for enrichment
+                  threadName = `Thread ${messageThreadId}`;
+                }
+              }
+            } catch (err) {
+              console.log('Could not fetch thread name upfront:', err);
+            }
+          }
+
           // Store incoming user message with proper sender_id
           const { data: insertedMessage, error: insertUserMsgError } = await supabase
             .from('messages')
@@ -610,12 +633,13 @@ serve(async (req) => {
               community_id: communityId,
               sender_id: userId, // NOW PROPERLY LINKED!
               sent_by: telegramUsername || firstName || 'telegram_user',
-              topic_name: null, // Will be updated after we detect the thread name
+              topic_name: threadName, // Set thread name if we have it
               metadata: {
                 telegram_chat_id: chatId,
                 telegram_user_id: telegramUserId,
                 telegram_message_id: body.message?.message_id,
                 telegram_message_thread_id: messageThreadId,
+                telegram_topic_name: threadName, // Store in metadata too
                 chat_type_detail: chatType,
                 telegram_username: telegramUsername,
                 telegram_first_name: firstName,
@@ -631,9 +655,8 @@ serve(async (req) => {
             console.error('Error storing user message:', insertUserMsgError);
           }
 
-          // Check for auto-intro generation if this is a supergroup with topics
-          let threadName: string | null = null;
-          if (chatType === 'supergroup' && messageThreadId && insertedMessage) {
+          // Try to fetch thread name if we don't have it yet (for supergroups)
+          if (chatType === 'supergroup' && messageThreadId && insertedMessage && !threadName) {
             // Get bot token to fetch thread/topic info
             const introCheckBotToken = await getBotToken(supabase, communityId);
             if (introCheckBotToken) {
@@ -648,11 +671,17 @@ serve(async (req) => {
                   threadName = topicData.result?.name?.toLowerCase() || null;
                   console.log('📍 Thread detected:', threadName);
                   
-                  // Update message with thread name
+                  // Update message with thread name in both topic_name and metadata
                   if (threadName) {
                     await supabase
                       .from('messages')
-                      .update({ topic_name: threadName })
+                      .update({ 
+                        topic_name: threadName,
+                        metadata: {
+                          ...insertedMessage.metadata,
+                          telegram_topic_name: threadName
+                        }
+                      })
                       .eq('id', insertedMessage.id);
                   }
                   

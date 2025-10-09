@@ -12,3 +12,6 @@ project_id = "efdqqnubowgwsnwvlalp"
 
   [functions.telegram-agent]
   verify_jwt = false
+
+  [functions.webhook-handler]
+  verify_jwt = false

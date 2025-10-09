@@ -238,7 +238,9 @@ export type Database = {
           created_by: string | null
           description: string | null
           experiences: string[] | null
+          game_design_gravity_y: number | null
           game_design_sky_color: string | null
+          game_design_time_scale: number | null
           id: string
           invite_code: string | null
           last_activity_at: string | null
@@ -251,6 +253,10 @@ export type Database = {
           total_tokens_used: number | null
           universal_id: string
           updated_at: string
+          webhook_api_key: string | null
+          webhook_enabled: boolean | null
+          webhook_last_used_at: string | null
+          webhook_request_count: number | null
         }
         Insert: {
           agent_avatar_url?: string | null
@@ -266,7 +272,9 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           experiences?: string[] | null
+          game_design_gravity_y?: number | null
           game_design_sky_color?: string | null
+          game_design_time_scale?: number | null
           id?: string
           invite_code?: string | null
           last_activity_at?: string | null
@@ -279,6 +287,10 @@ export type Database = {
           total_tokens_used?: number | null
           universal_id: string
           updated_at?: string
+          webhook_api_key?: string | null
+          webhook_enabled?: boolean | null
+          webhook_last_used_at?: string | null
+          webhook_request_count?: number | null
         }
         Update: {
           agent_avatar_url?: string | null
@@ -294,7 +306,9 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           experiences?: string[] | null
+          game_design_gravity_y?: number | null
           game_design_sky_color?: string | null
+          game_design_time_scale?: number | null
           id?: string
           invite_code?: string | null
           last_activity_at?: string | null
@@ -307,6 +321,10 @@ export type Database = {
           total_tokens_used?: number | null
           universal_id?: string
           updated_at?: string
+          webhook_api_key?: string | null
+          webhook_enabled?: boolean | null
+          webhook_last_used_at?: string | null
+          webhook_request_count?: number | null
         }
         Relationships: []
       }
@@ -849,6 +867,66 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      projects: {
+        Row: {
+          community_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_featured: boolean | null
+          status: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          community_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_featured?: boolean | null
+          status?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          community_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_featured?: boolean | null
+          status?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       push_subscriptions: {
         Row: {

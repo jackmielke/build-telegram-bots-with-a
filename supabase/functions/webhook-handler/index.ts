@@ -40,7 +40,7 @@ serve(async (req) => {
     // Validate API key and get community
     const { data: community, error: communityError } = await supabase
       .from('communities')
-      .select('id, name, agent_instructions, agent_name, agent_model, webhook_enabled')
+      .select('id, name, agent_instructions, agent_name, agent_model, webhook_enabled, webhook_request_count')
       .eq('webhook_api_key', api_key)
       .single();
 
@@ -63,10 +63,11 @@ serve(async (req) => {
     console.log(`✅ Valid API key for community: ${community.name} (${community.id})`);
 
     // Update webhook usage stats
+    const currentCount = community.webhook_request_count || 0;
     await supabase
       .from('communities')
       .update({
-        webhook_request_count: supabase.sql`webhook_request_count + 1`,
+        webhook_request_count: currentCount + 1,
         webhook_last_used_at: new Date().toISOString()
       })
       .eq('id', community.id);

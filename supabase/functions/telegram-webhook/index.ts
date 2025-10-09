@@ -600,26 +600,27 @@ serve(async (req) => {
           // Check if this is a new user (first message in conversation)
           const isNewUser = !conversationHistory || conversationHistory.length === 0;
 
-          // For supergroups with threads, try to fetch the thread name first
+          // For supergroups with threads, extract the thread name
           let threadName: string | null = null;
           if (chatType === 'supergroup' && messageThreadId) {
-            try {
-              const topicInfoResp = await fetch(
-                `https://api.telegram.org/bot${botToken}/getForumTopicIconStickers?chat_id=${chatId}&message_thread_id=${messageThreadId}`
+            // First try to get it from reply_to_message (most reliable)
+            if (body.message?.reply_to_message?.forum_topic_created?.name) {
+              threadName = body.message.reply_to_message.forum_topic_created.name;
+              console.log('📍 Thread name from forum_topic_created:', threadName);
+            } else if (body.message?.is_topic_message) {
+              // If not in current message, check conversation history for the thread name
+              const threadMessages = conversationHistory?.filter(
+                (msg: any) => msg.metadata && typeof msg.metadata === 'object' && 'telegram_topic_name' in msg.metadata
               );
-              
-              // Try alternative endpoint if first one fails
-              if (!topicInfoResp.ok) {
-                // Extract thread name from reply_to_message if available
-                if (body.message?.reply_to_message?.forum_topic_created) {
-                  threadName = body.message.reply_to_message.forum_topic_created.name;
-                } else if (body.message?.is_topic_message) {
-                  // If we can't get the name yet, mark it for enrichment
-                  threadName = `Thread ${messageThreadId}`;
-                }
+              if (threadMessages && threadMessages.length > 0) {
+                const firstMsg = threadMessages[0] as any;
+                threadName = firstMsg.metadata?.telegram_topic_name;
+                console.log('📍 Thread name from history:', threadName);
+              } else {
+                // Last resort: mark for later enrichment
+                threadName = `Thread ${messageThreadId}`;
+                console.log('📍 Thread name unknown, using placeholder');
               }
-            } catch (err) {
-              console.log('Could not fetch thread name upfront:', err);
             }
           }
 
@@ -653,104 +654,73 @@ serve(async (req) => {
           
           if (insertUserMsgError) {
             console.error('Error storing user message:', insertUserMsgError);
+          } else {
+            console.log('✅ Stored message with thread name:', threadName);
           }
 
-          // Try to fetch thread name if we don't have it yet (for supergroups)
-          if (chatType === 'supergroup' && messageThreadId && insertedMessage && !threadName) {
-            // Get bot token to fetch thread/topic info
-            const introCheckBotToken = await getBotToken(supabase, communityId);
-            if (introCheckBotToken) {
-              try {
-                // Fetch forum topic info from Telegram
-                const topicInfoResp = await fetch(
-                  `https://api.telegram.org/bot${introCheckBotToken}/getForumTopicInfo?chat_id=${chatId}&message_thread_id=${messageThreadId}`
-                );
+          // Check for auto-intro generation if this is a supergroup with topics
+          if (chatType === 'supergroup' && messageThreadId && insertedMessage && threadName) {
+            // Check if auto-intro generation is enabled and this is an intros thread
+            const autoIntroConfig = workflowStatus.configuration?.auto_intro_generation;
+            if (autoIntroConfig?.enabled) {
+              const introThreadNames = autoIntroConfig.thread_names || ['intros', 'introductions', 'introduce yourself'];
+              const isIntroThread = introThreadNames.some(name => 
+                threadName?.toLowerCase().includes(name.toLowerCase())
+              );
+              
+              if (isIntroThread && userMessage.length > 50) {
+                console.log('🎯 Auto-generating intro for message in thread:', threadName);
                 
-                if (topicInfoResp.ok) {
-                  const topicData = await topicInfoResp.json();
-                  threadName = topicData.result?.name?.toLowerCase() || null;
-                  console.log('📍 Thread detected:', threadName);
-                  
-                  // Update message with thread name in both topic_name and metadata
-                  if (threadName) {
-                    await supabase
-                      .from('messages')
-                      .update({ 
-                        topic_name: threadName,
-                        metadata: {
-                          ...insertedMessage.metadata,
-                          telegram_topic_name: threadName
-                        }
+                // Call generate-intro edge function
+                try {
+                  const introResponse = await fetch(
+                    `${supabaseUrl}/functions/v1/generate-intro`,
+                    {
+                      method: 'POST',
+                      headers: {
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Content-Type': 'application/json'
+                      },
+                      body: JSON.stringify({
+                        conversationId: conversationId,
+                        communityId: communityId,
+                        singleMessage: userMessage // Generate intro from this single message
                       })
-                      .eq('id', insertedMessage.id);
-                  }
-                  
-                  // Check if auto-intro generation is enabled and this is an intros thread
-                  const autoIntroConfig = workflowStatus.configuration?.auto_intro_generation;
-                  if (autoIntroConfig?.enabled) {
-                    const introThreadNames = autoIntroConfig.thread_names || ['intros', 'introductions', 'introduce yourself'];
-                    const isIntroThread = introThreadNames.some(name => 
-                      threadName?.includes(name.toLowerCase())
-                    );
-                    
-                    if (isIntroThread && userMessage.length > 50) { // Only auto-generate for substantial messages
-                      console.log('🎯 Auto-generating intro for message in thread:', threadName);
-                      
-                      // Call generate-intro edge function
-                      try {
-                        const introResponse = await fetch(
-                          `${supabaseUrl}/functions/v1/generate-intro`,
-                          {
-                            method: 'POST',
-                            headers: {
-                              'Authorization': `Bearer ${supabaseKey}`,
-                              'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                              conversationId: conversationId,
-                              communityId: communityId,
-                              singleMessage: userMessage // Generate intro from this single message
-                            })
-                          }
-                        );
-                        
-                        if (introResponse.ok) {
-                          const introData = await introResponse.json();
-                          const generatedIntro = introData.intro;
-                          
-                          // Save as memory
-                          const { error: memoryError } = await supabase
-                            .from('memories')
-                            .insert({
-                              community_id: communityId,
-                              content: generatedIntro,
-                              tags: ['intro', 'auto-generated', 'telegram'],
-                              created_by: userId,
-                              metadata: {
-                                source: 'telegram_auto_intro',
-                                thread_name: threadName,
-                                telegram_username: telegramUsername,
-                                telegram_user_id: telegramUserId,
-                                message_id: insertedMessage.id
-                              }
-                            });
-                          
-                          if (memoryError) {
-                            console.error('❌ Error saving auto-generated intro:', memoryError);
-                          } else {
-                            console.log('✅ Auto-generated intro saved to memories');
-                          }
-                        } else {
-                          console.error('❌ Error generating intro:', await introResponse.text());
-                        }
-                      } catch (introError) {
-                        console.error('❌ Error in auto-intro generation:', introError);
-                      }
                     }
+                  );
+                  
+                  if (introResponse.ok) {
+                    const introData = await introResponse.json();
+                    const generatedIntro = introData.intro;
+                    
+                    // Save as memory
+                    const { error: memoryError } = await supabase
+                      .from('memories')
+                      .insert({
+                        community_id: communityId,
+                        content: generatedIntro,
+                        tags: ['intro', 'auto-generated', 'telegram'],
+                        created_by: userId,
+                        metadata: {
+                          source: 'telegram_auto_intro',
+                          thread_name: threadName,
+                          telegram_username: telegramUsername,
+                          telegram_user_id: telegramUserId,
+                          message_id: insertedMessage.id
+                        }
+                      });
+                    
+                    if (memoryError) {
+                      console.error('❌ Error saving auto-generated intro:', memoryError);
+                    } else {
+                      console.log('✅ Auto-generated intro saved to memories');
+                    }
+                  } else {
+                    console.error('❌ Error generating intro:', await introResponse.text());
                   }
+                } catch (introError) {
+                  console.error('❌ Error in auto-intro generation:', introError);
                 }
-              } catch (topicError) {
-                console.log('ℹ️ Could not fetch topic info (may not be a forum):', topicError);
               }
             }
           }

@@ -35,7 +35,11 @@ import {
   Info,
   Mail,
   Hash,
-  Activity
+  Activity,
+  Key,
+  Copy,
+  RefreshCw,
+  ExternalLink
 } from 'lucide-react';
 
 interface Community {
@@ -66,7 +70,11 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
   const [webhookInfo, setWebhookInfo] = useState<any>(null);
   const [checkingWebhook, setCheckingWebhook] = useState(false);
   const [showAdvancedTools, setShowAdvancedTools] = useState(false);
+  const [webhookApiKey, setWebhookApiKey] = useState<string | null>(null);
+  const [generatingApiKey, setGeneratingApiKey] = useState(false);
+  const [loadingWebhookData, setLoadingWebhookData] = useState(false);
   const EDGE_FUNCTION_URL = 'https://efdqqnubowgwsnwvlalp.supabase.co/functions/v1/telegram-webhook';
+  const WEBHOOK_HANDLER_URL = 'https://efdqqnubowgwsnwvlalp.supabase.co/functions/v1/webhook-handler';
   const { toast } = useToast();
 
   // Define available workflow types
@@ -106,6 +114,7 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
 
   useEffect(() => {
     fetchWorkflows();
+    loadWebhookData();
     if (community.telegram_bot_token) {
       testBotConnection(community.telegram_bot_token).then(result => {
         if (result.success) {
@@ -115,6 +124,111 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
       });
     }
   }, [community.id, community.telegram_bot_token]);
+
+  const loadWebhookData = async () => {
+    try {
+      setLoadingWebhookData(true);
+      const { data, error } = await supabase
+        .from('communities')
+        .select('webhook_api_key, webhook_enabled')
+        .eq('id', community.id)
+        .single();
+
+      if (error) throw error;
+      setWebhookApiKey(data.webhook_api_key);
+    } catch (error) {
+      console.error('Error loading webhook data:', error);
+    } finally {
+      setLoadingWebhookData(false);
+    }
+  };
+
+  const generateWebhookApiKey = async () => {
+    try {
+      setGeneratingApiKey(true);
+      const newKey = `wh_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+      
+      const { error } = await supabase
+        .from('communities')
+        .update({ 
+          webhook_api_key: newKey,
+          webhook_enabled: true 
+        })
+        .eq('id', community.id);
+
+      if (error) throw error;
+
+      setWebhookApiKey(newKey);
+      toast({
+        title: "API Key Generated",
+        description: "Your webhook API key has been created and enabled.",
+      });
+    } catch (error: any) {
+      console.error('Error generating API key:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate API key",
+        variant: "destructive"
+      });
+    } finally {
+      setGeneratingApiKey(false);
+    }
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied!",
+      description: `${label} copied to clipboard`,
+    });
+  };
+
+  const generateIntegrationPrompt = () => {
+    if (!webhookApiKey) return '';
+    
+    return `Please build a chatbot interface that integrates with my community AI agent via webhook API.
+
+**Requirements:**
+1. Create a simple chat interface with:
+   - Message input field
+   - Send button
+   - Chat history display showing both user and AI messages
+
+2. When user sends a message, call this webhook endpoint:
+   - URL: ${WEBHOOK_HANDLER_URL}
+   - Method: POST
+   - Headers: { "Content-Type": "application/json" }
+   - Body: { "message": "<user message>", "api_key": "${webhookApiKey}" }
+
+3. The API will return:
+   { "success": true, "response": "<AI response>", "metadata": {...} }
+
+4. Display the AI's response in the chat interface.
+
+**Technical Details:**
+- The AI agent has access to community knowledge, memories, and custom instructions
+- Model used: Based on community configuration (GPT or Gemini)
+- Response format: JSON with success flag and response text
+- Error handling: Check for 401 (invalid key), 403 (disabled), 429 (rate limit), 500 (server error)
+
+**Example Code:**
+\`\`\`javascript
+const response = await fetch('${WEBHOOK_HANDLER_URL}', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    message: userMessage,
+    api_key: '${webhookApiKey}'
+  })
+});
+const data = await response.json();
+if (data.success) {
+  // Display data.response in chat
+}
+\`\`\`
+
+Please create this chatbot interface now!`;
+  };
 
   const fetchWorkflows = async () => {
     try {
@@ -1154,8 +1268,193 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
             )}
           </TabsContent>
 
+          {/* WEBHOOK TAB */}
+          <TabsContent value="webhook" className="space-y-4 mt-6">
+            <Card className="border-border/30">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Globe className="w-5 h-5 text-primary" />
+                  <span>Webhook API Integration</span>
+                </CardTitle>
+                <CardDescription>
+                  Connect your community AI agent to external applications via webhook
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* API Key Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium text-sm">API Key</h4>
+                      <p className="text-xs text-muted-foreground">
+                        Generate a secure API key to authenticate webhook requests
+                      </p>
+                    </div>
+                    {!webhookApiKey && (
+                      <Button
+                        onClick={generateWebhookApiKey}
+                        disabled={generatingApiKey || !isAdmin}
+                        variant="default"
+                        size="sm"
+                      >
+                        {generatingApiKey ? (
+                          <Loader className="w-4 h-4 animate-spin mr-2" />
+                        ) : (
+                          <Key className="w-4 h-4 mr-2" />
+                        )}
+                        Generate API Key
+                      </Button>
+                    )}
+                  </div>
+
+                  {webhookApiKey && (
+                    <div className="space-y-3">
+                      <Alert className="border-green-500/30 bg-green-500/5">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <AlertTitle>API Key Active</AlertTitle>
+                        <AlertDescription className="space-y-3 mt-2">
+                          <div className="flex items-center gap-2">
+                            <code className="flex-1 px-3 py-2 bg-background rounded text-xs font-mono break-all">
+                              {webhookApiKey}
+                            </code>
+                            <Button
+                              onClick={() => copyToClipboard(webhookApiKey, 'API Key')}
+                              variant="outline"
+                              size="sm"
+                            >
+                              <Copy className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={generateWebhookApiKey}
+                              variant="outline"
+                              size="sm"
+                              disabled={!isAdmin}
+                            >
+                              <RefreshCw className="w-3 h-3 mr-1" />
+                              Regenerate
+                            </Button>
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+
+                      {/* Webhook Endpoint */}
+                      <div>
+                        <Label className="text-xs font-medium">Webhook Endpoint</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <code className="flex-1 px-3 py-2 bg-muted rounded text-xs font-mono break-all">
+                            {WEBHOOK_HANDLER_URL}
+                          </code>
+                          <Button
+                            onClick={() => copyToClipboard(WEBHOOK_HANDLER_URL, 'Endpoint URL')}
+                            variant="outline"
+                            size="sm"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Usage Stats */}
+                      <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Status</p>
+                          <p className="text-sm font-medium text-green-600">Active</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Authentication</p>
+                          <p className="text-sm font-medium">API Key</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Integration Guide */}
+                {webhookApiKey && (
+                  <div className="space-y-4 pt-4 border-t border-border/30">
+                    <div>
+                      <h4 className="font-medium text-sm mb-2">Quick Start</h4>
+                      <p className="text-xs text-muted-foreground mb-3">
+                        Use this prompt in any Lovable project to instantly build a chatbot that connects to your community AI:
+                      </p>
+                      
+                      <div className="relative">
+                        <Textarea
+                          value={generateIntegrationPrompt()}
+                          readOnly
+                          className="font-mono text-xs min-h-[300px] pr-12"
+                        />
+                        <Button
+                          onClick={() => copyToClipboard(generateIntegrationPrompt(), 'Integration prompt')}
+                          variant="outline"
+                          size="sm"
+                          className="absolute top-2 right-2"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Example Request */}
+                    <div>
+                      <h4 className="font-medium text-sm mb-2">Example API Request</h4>
+                      <div className="bg-muted p-4 rounded-lg space-y-2">
+                        <div className="text-xs">
+                          <span className="text-muted-foreground">Method:</span>{' '}
+                          <code className="bg-background px-2 py-0.5 rounded">POST</code>
+                        </div>
+                        <div className="text-xs">
+                          <span className="text-muted-foreground">Content-Type:</span>{' '}
+                          <code className="bg-background px-2 py-0.5 rounded">application/json</code>
+                        </div>
+                        <div className="text-xs space-y-1">
+                          <p className="text-muted-foreground">Body:</p>
+                          <pre className="bg-background p-2 rounded text-[10px] overflow-x-auto">
+{`{
+  "message": "Hello! What can you tell me?",
+  "api_key": "${webhookApiKey}"
+}`}
+                          </pre>
+                        </div>
+                        <div className="text-xs space-y-1">
+                          <p className="text-muted-foreground">Response:</p>
+                          <pre className="bg-background p-2 rounded text-[10px] overflow-x-auto">
+{`{
+  "success": true,
+  "response": "Hello! I'm the AI assistant...",
+  "metadata": {
+    "community": "${community.name}",
+    "model": "gemini-2.5-flash",
+    "tokens_used": 245,
+    "memories_loaded": 12
+  }
+}`}
+                          </pre>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Important Notes */}
+                    <Alert>
+                      <Info className="h-4 w-4" />
+                      <AlertTitle>Important Notes</AlertTitle>
+                      <AlertDescription className="text-xs space-y-1">
+                        <p>• Keep your API key secure - never expose it in client-side code</p>
+                        <p>• The AI has access to all community memories and instructions</p>
+                        <p>• Rate limits apply based on your Lovable AI usage</p>
+                        <p>• Test your integration before deploying to production</p>
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* OTHER WORKFLOW TABS */}
-          {otherWorkflows.map((workflow) => (
+          {otherWorkflows.filter(w => w.type !== 'webhook_integration').map((workflow) => (
             <TabsContent key={workflow.type} value={workflow.type.replace('_integration', '')} className="space-y-4 mt-6">
               <Card className="border-border/30">
                 <CardContent className="p-6">

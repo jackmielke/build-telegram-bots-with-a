@@ -1186,12 +1186,15 @@ export type Database = {
           instagram_handle: string | null
           intentions: string | null
           interests_skills: string[] | null
+          is_claimed: boolean | null
           name: string | null
           original_item_id: number | null
           phone_number: string | null
           phone_verified: boolean | null
           profile_picture_url: string | null
           source_url: string | null
+          telegram_photo_url: string | null
+          telegram_user_id: number | null
           telegram_username: string | null
           twitter_handle: string | null
           universal_id: string
@@ -1210,12 +1213,15 @@ export type Database = {
           instagram_handle?: string | null
           intentions?: string | null
           interests_skills?: string[] | null
+          is_claimed?: boolean | null
           name?: string | null
           original_item_id?: number | null
           phone_number?: string | null
           phone_verified?: boolean | null
           profile_picture_url?: string | null
           source_url?: string | null
+          telegram_photo_url?: string | null
+          telegram_user_id?: number | null
           telegram_username?: string | null
           twitter_handle?: string | null
           universal_id: string
@@ -1234,12 +1240,15 @@ export type Database = {
           instagram_handle?: string | null
           intentions?: string | null
           interests_skills?: string[] | null
+          is_claimed?: boolean | null
           name?: string | null
           original_item_id?: number | null
           phone_number?: string | null
           phone_verified?: boolean | null
           profile_picture_url?: string | null
           source_url?: string | null
+          telegram_photo_url?: string | null
+          telegram_user_id?: number | null
           telegram_username?: string | null
           twitter_handle?: string | null
           universal_id?: string

@@ -69,16 +69,71 @@ async function isWorkflowEnabled(
   }
 }
 
+// Fetch Telegram profile photo
+async function getTelegramProfilePhoto(
+  botToken: string,
+  userId: number
+): Promise<string | null> {
+  try {
+    // Get user profile photos
+    const photosResponse = await fetch(
+      `https://api.telegram.org/bot${botToken}/getUserProfilePhotos?user_id=${userId}&limit=1`
+    );
+    const photosData = await photosResponse.json();
+    
+    if (!photosData.ok || !photosData.result.photos || photosData.result.photos.length === 0) {
+      console.log(`No profile photo found for user ${userId}`);
+      return null;
+    }
+    
+    // Get the largest photo (last in the array)
+    const photos = photosData.result.photos[0];
+    const largestPhoto = photos[photos.length - 1];
+    
+    // Get file path
+    const fileResponse = await fetch(
+      `https://api.telegram.org/bot${botToken}/getFile?file_id=${largestPhoto.file_id}`
+    );
+    const fileData = await fileResponse.json();
+    
+    if (!fileData.ok || !fileData.result.file_path) {
+      console.log(`Could not get file path for photo ${largestPhoto.file_id}`);
+      return null;
+    }
+    
+    // Return the full URL to the photo
+    const photoUrl = `https://api.telegram.org/file/bot${botToken}/${fileData.result.file_path}`;
+    console.log(`Found profile photo for user ${userId}: ${photoUrl}`);
+    return photoUrl;
+  } catch (error) {
+    console.error('Error fetching Telegram profile photo:', error);
+    return null;
+  }
+}
+
 // Find or create user based on Telegram info
 async function findOrCreateUser(
   supabase: any,
+  botToken: string,
   telegramUserId: number,
   telegramUsername: string | null,
   firstName: string | null,
   lastName: string | null
 ): Promise<string | null> {
   try {
-    // First try to find existing user by telegram_username
+    // First try to find existing user by telegram_user_id (most reliable)
+    const { data: existingUserById } = await supabase
+      .from('users')
+      .select('id')
+      .eq('telegram_user_id', telegramUserId)
+      .maybeSingle();
+    
+    if (existingUserById) {
+      console.log(`Found existing user by telegram_user_id: ${telegramUserId}`);
+      return existingUserById.id;
+    }
+
+    // Try to find by telegram_username
     if (telegramUsername) {
       const { data: existingUser } = await supabase
         .from('users')
@@ -88,6 +143,11 @@ async function findOrCreateUser(
       
       if (existingUser) {
         console.log(`Found existing user by telegram_username: ${telegramUsername}`);
+        // Update their telegram_user_id
+        await supabase
+          .from('users')
+          .update({ telegram_user_id: telegramUserId })
+          .eq('id', existingUser.id);
         return existingUser.id;
       }
       
@@ -99,19 +159,20 @@ async function findOrCreateUser(
         .maybeSingle();
       
       if (userByUsername) {
-        // Update their telegram_username if not set
-        if (!userByUsername.telegram_username) {
-          await supabase
-            .from('users')
-            .update({ telegram_username: telegramUsername })
-            .eq('id', userByUsername.id);
-          console.log(`Updated telegram_username for existing user: ${telegramUsername}`);
-        }
+        // Update their telegram info if not set
+        await supabase
+          .from('users')
+          .update({ 
+            telegram_username: telegramUsername,
+            telegram_user_id: telegramUserId 
+          })
+          .eq('id', userByUsername.id);
+        console.log(`Updated telegram info for existing user: ${telegramUsername}`);
         return userByUsername.id;
       }
     }
 
-    // If not found, create new user with unique username
+    // If not found, create new unclaimed user profile
     const displayName = firstName 
       ? `${firstName}${lastName ? ' ' + lastName : ''}`
       : telegramUsername || `telegram_user_${telegramUserId}`;
@@ -130,13 +191,19 @@ async function findOrCreateUser(
       username = `${username}_tg${telegramUserId}`;
     }
 
+    // Fetch profile photo from Telegram
+    const photoUrl = await getTelegramProfilePhoto(botToken, telegramUserId);
+
     const { data: newUser, error } = await supabase
       .from('users')
       .insert({
         name: displayName,
         telegram_username: telegramUsername,
+        telegram_user_id: telegramUserId,
+        telegram_photo_url: photoUrl,
         username: username,
-        bio: `Telegram user (ID: ${telegramUserId})`
+        is_claimed: false,
+        avatar_url: photoUrl // Also set avatar_url for app display
       })
       .select('id')
       .single();
@@ -146,7 +213,7 @@ async function findOrCreateUser(
       return null;
     }
 
-    console.log(`Created new user: ${username} (${displayName})`);
+    console.log(`Created new unclaimed profile: ${username} (${displayName}) with photo`);
     return newUser.id;
   } catch (error) {
     console.error('Error in findOrCreateUser:', error);
@@ -430,6 +497,7 @@ serve(async (req) => {
             // Find or create user for /start command
             const startUserId = await findOrCreateUser(
               supabase,
+              botToken,
               telegramUserId,
               telegramUsername,
               firstName,
@@ -500,14 +568,25 @@ serve(async (req) => {
             });
           }
           
+          // Get bot token before creating/finding user
+          const botToken = await getBotToken(supabase, communityId);
+          if (!botToken) {
+            console.error('No Telegram bot token configured for community:', communityId);
+            return new Response(JSON.stringify({ ok: true, message: 'Bot token not configured' }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200
+            });
+          }
+          
           // Find or create user
-          const userId = await findOrCreateUser(
-            supabase,
-            telegramUserId,
-            telegramUsername,
-            firstName,
-            lastName
-          );
+        const userId = await findOrCreateUser(
+          supabase,
+          botToken,
+          telegramUserId,
+          telegramUsername,
+          firstName,
+          lastName
+        );
           
           // Fetch conversation history BEFORE storing new message (sliding window: last 7 messages)
           const { data: conversationHistory } = await supabase
@@ -645,15 +724,6 @@ serve(async (req) => {
                 console.log('ℹ️ Could not fetch topic info (may not be a forum):', topicError);
               }
             }
-          }
-
-          const botToken = await getBotToken(supabase, communityId);
-          if (!botToken) {
-            console.error('No Telegram bot token configured for community:', communityId);
-            return new Response(JSON.stringify({ ok: true, message: 'Bot token not configured' }), {
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              status: 200
-            });
           }
 
           // Get bot info to check for mentions in groups

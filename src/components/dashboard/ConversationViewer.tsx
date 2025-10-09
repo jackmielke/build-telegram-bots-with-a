@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Bot, User, Calendar, DollarSign, BarChart3, Download, Eye, Sparkles } from 'lucide-react';
+import { ArrowLeft, Bot, User, Calendar, DollarSign, BarChart3, Download, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AIContextViewer } from './AIContextViewer';
 
@@ -20,6 +20,7 @@ interface Message {
   created_at: string;
   metadata: any;
   message_type: string;
+  topic_name?: string;
   users?: {
     name: string;
     avatar_url: string;
@@ -40,10 +41,8 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
   const [hasMore, setHasMore] = useState(true);
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [promptDialogOpen, setPromptDialogOpen] = useState(false);
-  const [introDialogOpen, setIntroDialogOpen] = useState(false);
-  const [generatedIntro, setGeneratedIntro] = useState('');
-  const [isGeneratingIntro, setIsGeneratingIntro] = useState(false);
-  const [isSavingIntro, setIsSavingIntro] = useState(false);
+  const [editingThreadName, setEditingThreadName] = useState(false);
+  const [newThreadName, setNewThreadName] = useState('');
   const MESSAGES_PER_PAGE = 50;
   const { toast } = useToast();
 
@@ -165,76 +164,45 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
     setPromptDialogOpen(true);
   };
 
-  const generateIntro = async () => {
-    setIsGeneratingIntro(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-intro', {
-        body: {
-          conversationId,
-          communityId
-        }
-      });
-
-      if (error) throw error;
-
-      if (data?.intro) {
-        setGeneratedIntro(data.intro);
-        setIntroDialogOpen(true);
-      } else {
-        throw new Error('No intro generated');
-      }
-    } catch (error) {
-      console.error('Error generating intro:', error);
+  const updateThreadName = async () => {
+    if (!newThreadName.trim()) {
       toast({
         title: "Error",
-        description: "Failed to generate intro. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsGeneratingIntro(false);
-    }
-  };
-
-  const saveIntro = async () => {
-    if (!generatedIntro.trim()) {
-      toast({
-        title: "Error",
-        description: "Intro cannot be empty",
+        description: "Thread name cannot be empty",
         variant: "destructive"
       });
       return;
     }
 
-    setIsSavingIntro(true);
     try {
       const { error } = await supabase
-        .from('memories')
-        .insert({
-          community_id: communityId,
-          content: generatedIntro,
-          tags: ['intro', 'auto-generated']
-        });
+        .from('messages')
+        .update({ topic_name: newThreadName })
+        .eq('conversation_id', conversationId)
+        .eq('community_id', communityId);
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Intro saved as a memory"
+        description: "Thread name updated"
       });
 
-      setIntroDialogOpen(false);
-      setGeneratedIntro('');
+      setEditingThreadName(false);
+      setNewThreadName('');
+      fetchConversation();
     } catch (error) {
-      console.error('Error saving intro:', error);
+      console.error('Error updating thread name:', error);
       toast({
         title: "Error",
-        description: "Failed to save intro. Please try again.",
+        description: "Failed to update thread name",
         variant: "destructive"
       });
-    } finally {
-      setIsSavingIntro(false);
     }
   };
+
+  const currentThreadName = messages[0]?.topic_name || 'Unnamed Thread';
+  const isPlaceholderName = currentThreadName.startsWith('Thread ');
 
   return (
     <div className="space-y-4 w-full max-w-full">
@@ -245,28 +213,48 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
             <ArrowLeft className="w-4 h-4 md:mr-2" />
             <span className="hidden md:inline">Back</span>
           </Button>
-          <div className="min-w-0">
-            <h2 className="text-base md:text-lg font-semibold truncate">
-              Conversation Details
-            </h2>
-            <p className="text-xs md:text-sm text-muted-foreground">
-              {messages.length} messages
-            </p>
+          <div className="min-w-0 flex-1">
+            {editingThreadName ? (
+              <div className="flex gap-2 items-center">
+                <input
+                  type="text"
+                  value={newThreadName}
+                  onChange={(e) => setNewThreadName(e.target.value)}
+                  placeholder="Enter thread name"
+                  className="flex-1 px-2 py-1 text-sm border rounded"
+                  autoFocus
+                />
+                <Button size="sm" onClick={updateThreadName}>Save</Button>
+                <Button size="sm" variant="ghost" onClick={() => setEditingThreadName(false)}>Cancel</Button>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base md:text-lg font-semibold truncate">
+                    {currentThreadName}
+                  </h2>
+                  {isPlaceholderName && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setNewThreadName(currentThreadName);
+                        setEditingThreadName(true);
+                      }}
+                      className="text-xs"
+                    >
+                      Add Name
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs md:text-sm text-muted-foreground">
+                  {messages.length} messages
+                </p>
+              </>
+            )}
           </div>
         </div>
         <div className="flex gap-2 flex-shrink-0">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={generateIntro} 
-            disabled={isGeneratingIntro}
-            className="flex items-center gap-1"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span className="text-xs">
-              {isGeneratingIntro ? 'Generating...' : 'Intro'}
-            </span>
-          </Button>
           <Button 
             variant="outline" 
             size="sm" 
@@ -453,43 +441,6 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
         </DialogContent>
       </Dialog>
 
-      {/* Generate Intro Dialog */}
-      <Dialog open={introDialogOpen} onOpenChange={setIntroDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Generated Intro</DialogTitle>
-            <DialogDescription>
-              Review and edit the AI-generated intro before saving it as a memory
-            </DialogDescription>
-          </DialogHeader>
-          
-          <Textarea
-            value={generatedIntro}
-            onChange={(e) => setGeneratedIntro(e.target.value)}
-            className="min-h-[300px]"
-            placeholder="Generated intro will appear here..."
-          />
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIntroDialogOpen(false);
-                setGeneratedIntro('');
-              }}
-              disabled={isSavingIntro}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={saveIntro}
-              disabled={isSavingIntro || !generatedIntro.trim()}
-            >
-              {isSavingIntro ? 'Saving...' : 'Save as Memory'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

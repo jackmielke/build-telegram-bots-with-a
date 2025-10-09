@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Zap, MessageSquare, BarChart3, Brain, Play } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import vibeLogo from '@/assets/vibe-logo.png';
+import { MovingBorderButton } from '@/components/ui/moving-border';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -92,15 +93,18 @@ const Auth = () => {
             </p>
           </div>
 
-          <Button
+          <MovingBorderButton
             onClick={() => window.open('https://www.loom.com/share/39454b410c664fb2a185c766dadbbe38?sid=822920ef-b54e-4909-861c-0b8675e7aeba', '_blank')}
-            variant="outline"
-            size="lg"
-            className="hover:bg-primary/10 hover:border-primary"
+            borderRadius="0.75rem"
+            duration={3000}
+            containerClassName="h-12 w-auto"
+            className="bg-background border-white text-white hover:bg-background/90"
           >
-            <Play className="w-4 h-4 mr-2" />
-            Watch Demo
-          </Button>
+            <div className="flex items-center gap-2 px-6">
+              <Play className="w-4 h-4" />
+              <span>Watch Demo</span>
+            </div>
+          </MovingBorderButton>
 
           <div className="space-y-4 pt-4">
             <div className="flex items-start gap-3">

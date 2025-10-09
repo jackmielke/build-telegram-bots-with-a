@@ -73,6 +73,9 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
   const [webhookApiKey, setWebhookApiKey] = useState<string | null>(null);
   const [generatingApiKey, setGeneratingApiKey] = useState(false);
   const [loadingWebhookData, setLoadingWebhookData] = useState(false);
+  const [testMessage, setTestMessage] = useState('');
+  const [testResponse, setTestResponse] = useState('');
+  const [testingWebhook, setTestingWebhook] = useState(false);
   const EDGE_FUNCTION_URL = 'https://efdqqnubowgwsnwvlalp.supabase.co/functions/v1/telegram-webhook';
   const WEBHOOK_HANDLER_URL = 'https://efdqqnubowgwsnwvlalp.supabase.co/functions/v1/webhook-handler';
   const { toast } = useToast();
@@ -181,6 +184,48 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
       title: "Copied!",
       description: `${label} copied to clipboard`,
     });
+  };
+
+  const testWebhook = async () => {
+    if (!testMessage.trim() || !webhookApiKey) return;
+
+    setTestingWebhook(true);
+    setTestResponse('');
+
+    try {
+      const response = await fetch(WEBHOOK_HANDLER_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: testMessage,
+          api_key: webhookApiKey,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Webhook request failed');
+      }
+
+      setTestResponse(data.response || 'No response received');
+      toast({
+        title: "Success",
+        description: "Webhook test successful!",
+      });
+    } catch (error) {
+      console.error('Webhook test error:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Failed to test webhook',
+        variant: "destructive"
+      });
+      setTestResponse('Error: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setTestingWebhook(false);
+    }
   };
 
   const generateIntegrationPrompt = () => {
@@ -1471,8 +1516,61 @@ Please create this chatbot interface now!`;
                       </CollapsibleContent>
                     </Collapsible>
 
+                    {/* Test Chat Interface */}
+                    <Card className="border-border/30 mt-6">
+                      <CardHeader>
+                        <CardTitle className="flex items-center space-x-2 text-base">
+                          <MessageSquare className="w-5 h-5 text-primary" />
+                          <span>Test Your Webhook</span>
+                        </CardTitle>
+                        <CardDescription className="text-xs">
+                          Send a test message to verify your webhook is working correctly
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="test-message" className="text-sm">Test Message</Label>
+                          <Textarea
+                            id="test-message"
+                            placeholder="Type your test message here..."
+                            value={testMessage}
+                            onChange={(e) => setTestMessage(e.target.value)}
+                            className="min-h-[80px] resize-none"
+                            disabled={testingWebhook}
+                          />
+                        </div>
+
+                        <Button
+                          onClick={testWebhook}
+                          disabled={!testMessage.trim() || testingWebhook}
+                          className="w-full"
+                        >
+                          {testingWebhook ? (
+                            <>
+                              <Loader className="w-4 h-4 animate-spin mr-2" />
+                              Testing...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="w-4 h-4 mr-2" />
+                              Send Test Message
+                            </>
+                          )}
+                        </Button>
+
+                        {testResponse && (
+                          <div className="space-y-2">
+                            <Label className="text-sm">AI Response</Label>
+                            <div className="p-4 bg-muted/30 rounded-lg border">
+                              <p className="text-sm whitespace-pre-wrap">{testResponse}</p>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
                     {/* Status Footer */}
-                    <div className="flex items-center justify-between p-3 bg-green-500/5 border border-green-500/20 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-green-500/5 border border-green-500/20 rounded-lg mt-4">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                         <span className="text-sm font-medium text-green-700 dark:text-green-400">Webhook API Active</span>

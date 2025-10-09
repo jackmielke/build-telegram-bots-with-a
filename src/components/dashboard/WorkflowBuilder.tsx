@@ -1281,51 +1281,131 @@ Please create this chatbot interface now!`;
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* API Key Section */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium text-sm">API Key</h4>
-                      <p className="text-xs text-muted-foreground">
-                        Generate a secure API key to authenticate webhook requests
+                {!webhookApiKey ? (
+                  /* Generate API Key CTA */
+                  <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                    <div className="p-4 rounded-full bg-primary/10">
+                      <Key className="w-8 h-8 text-primary" />
+                    </div>
+                    <div className="text-center space-y-2">
+                      <h3 className="font-medium text-lg">Generate Your Webhook API</h3>
+                      <p className="text-sm text-muted-foreground max-w-md">
+                        Create a secure API key to enable webhook access. You'll get a ready-to-use prompt
+                        that you can paste into any project to instantly connect to your AI agent.
                       </p>
                     </div>
-                    {!webhookApiKey && (
-                      <Button
-                        onClick={generateWebhookApiKey}
-                        disabled={generatingApiKey || !isAdmin}
-                        variant="default"
-                        size="sm"
-                      >
-                        {generatingApiKey ? (
-                          <Loader className="w-4 h-4 animate-spin mr-2" />
-                        ) : (
-                          <Key className="w-4 h-4 mr-2" />
-                        )}
-                        Generate API Key
-                      </Button>
-                    )}
+                    <Button
+                      onClick={generateWebhookApiKey}
+                      disabled={generatingApiKey || !isAdmin}
+                      variant="default"
+                      size="lg"
+                      className="mt-4"
+                    >
+                      {generatingApiKey ? (
+                        <>
+                          <Loader className="w-5 h-5 animate-spin mr-2" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Key className="w-5 h-5 mr-2" />
+                          Generate API Key
+                        </>
+                      )}
+                    </Button>
                   </div>
-
-                  {webhookApiKey && (
+                ) : (
+                  /* Main Integration Prompt Section */
+                  <div className="space-y-4">
+                    {/* Hero Section - Quick Start */}
                     <div className="space-y-3">
-                      <Alert className="border-green-500/30 bg-green-500/5">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        <AlertTitle>API Key Active</AlertTitle>
-                        <AlertDescription className="space-y-3 mt-2">
-                          <div className="flex items-center gap-2">
-                            <code className="flex-1 px-3 py-2 bg-background rounded text-xs font-mono break-all">
-                              {webhookApiKey}
-                            </code>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="font-semibold text-lg flex items-center gap-2">
+                            <Zap className="w-5 h-5 text-primary" />
+                            Quick Start - Copy & Paste
+                          </h3>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Copy this prompt and paste it into any Lovable project to instantly build a chatbot
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <Alert className="border-primary/30 bg-primary/5">
+                        <Info className="h-4 w-4 text-primary" />
+                        <AlertDescription className="text-xs">
+                          This prompt contains your API key and webhook endpoint pre-configured. Just paste it into Lovable and your chatbot will be ready!
+                        </AlertDescription>
+                      </Alert>
+
+                      {/* The Copyable Prompt - HERO ELEMENT */}
+                      <div className="relative">
+                        <div className="absolute -top-2 left-3 px-2 bg-background z-10">
+                          <span className="text-xs font-medium text-primary">👇 Copy This Prompt</span>
+                        </div>
+                        <div className="relative border-2 border-primary/30 rounded-lg p-4 bg-gradient-to-br from-primary/5 to-background">
+                          <Textarea
+                            value={generateIntegrationPrompt()}
+                            readOnly
+                            className="font-mono text-xs min-h-[320px] bg-background/50 border-border/50 resize-none"
+                          />
+                          <div className="absolute top-4 right-4 flex gap-2">
                             <Button
-                              onClick={() => copyToClipboard(webhookApiKey, 'API Key')}
-                              variant="outline"
+                              onClick={() => copyToClipboard(generateIntegrationPrompt(), 'Integration prompt')}
+                              variant="default"
                               size="sm"
+                              className="shadow-lg"
                             >
-                              <Copy className="w-4 h-4" />
+                              <Copy className="w-4 h-4 mr-2" />
+                              Copy Prompt
                             </Button>
                           </div>
-                          <div className="flex gap-2">
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Collapsible Technical Details */}
+                    <Collapsible className="space-y-2">
+                      <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                        <ChevronDown className="w-4 h-4" />
+                        View Technical Details & API Key
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="space-y-4 pt-2">
+                        {/* API Key Details */}
+                        <div className="p-4 bg-muted/30 rounded-lg space-y-3">
+                          <div>
+                            <Label className="text-xs font-medium text-muted-foreground">API Key</Label>
+                            <div className="flex items-center gap-2 mt-1">
+                              <code className="flex-1 px-3 py-2 bg-background rounded text-xs font-mono break-all border">
+                                {webhookApiKey}
+                              </code>
+                              <Button
+                                onClick={() => copyToClipboard(webhookApiKey, 'API Key')}
+                                variant="outline"
+                                size="sm"
+                              >
+                                <Copy className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div>
+                            <Label className="text-xs font-medium text-muted-foreground">Webhook Endpoint</Label>
+                            <div className="flex items-center gap-2 mt-1">
+                              <code className="flex-1 px-3 py-2 bg-background rounded text-xs font-mono break-all border">
+                                {WEBHOOK_HANDLER_URL}
+                              </code>
+                              <Button
+                                onClick={() => copyToClipboard(WEBHOOK_HANDLER_URL, 'Endpoint URL')}
+                                variant="outline"
+                                size="sm"
+                              >
+                                <Copy className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2 pt-2">
                             <Button
                               onClick={generateWebhookApiKey}
                               variant="outline"
@@ -1333,94 +1413,35 @@ Please create this chatbot interface now!`;
                               disabled={!isAdmin}
                             >
                               <RefreshCw className="w-3 h-3 mr-1" />
-                              Regenerate
+                              Regenerate Key
                             </Button>
                           </div>
-                        </AlertDescription>
-                      </Alert>
+                        </div>
 
-                      {/* Webhook Endpoint */}
-                      <div>
-                        <Label className="text-xs font-medium">Webhook Endpoint</Label>
-                        <div className="flex items-center gap-2 mt-1">
-                          <code className="flex-1 px-3 py-2 bg-muted rounded text-xs font-mono break-all">
-                            {WEBHOOK_HANDLER_URL}
-                          </code>
-                          <Button
-                            onClick={() => copyToClipboard(WEBHOOK_HANDLER_URL, 'Endpoint URL')}
-                            variant="outline"
-                            size="sm"
-                          >
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Usage Stats */}
-                      <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Status</p>
-                          <p className="text-sm font-medium text-green-600">Active</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Authentication</p>
-                          <p className="text-sm font-medium">API Key</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Integration Guide */}
-                {webhookApiKey && (
-                  <div className="space-y-4 pt-4 border-t border-border/30">
-                    <div>
-                      <h4 className="font-medium text-sm mb-2">Quick Start</h4>
-                      <p className="text-xs text-muted-foreground mb-3">
-                        Use this prompt in any Lovable project to instantly build a chatbot that connects to your community AI:
-                      </p>
-                      
-                      <div className="relative">
-                        <Textarea
-                          value={generateIntegrationPrompt()}
-                          readOnly
-                          className="font-mono text-xs min-h-[300px] pr-12"
-                        />
-                        <Button
-                          onClick={() => copyToClipboard(generateIntegrationPrompt(), 'Integration prompt')}
-                          variant="outline"
-                          size="sm"
-                          className="absolute top-2 right-2"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Example Request */}
-                    <div>
-                      <h4 className="font-medium text-sm mb-2">Example API Request</h4>
-                      <div className="bg-muted p-4 rounded-lg space-y-2">
-                        <div className="text-xs">
-                          <span className="text-muted-foreground">Method:</span>{' '}
-                          <code className="bg-background px-2 py-0.5 rounded">POST</code>
-                        </div>
-                        <div className="text-xs">
-                          <span className="text-muted-foreground">Content-Type:</span>{' '}
-                          <code className="bg-background px-2 py-0.5 rounded">application/json</code>
-                        </div>
-                        <div className="text-xs space-y-1">
-                          <p className="text-muted-foreground">Body:</p>
-                          <pre className="bg-background p-2 rounded text-[10px] overflow-x-auto">
+                        {/* Example Request */}
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-sm">Example API Request</h4>
+                          <div className="bg-muted/30 p-3 rounded-lg space-y-2">
+                            <div className="text-xs">
+                              <span className="text-muted-foreground">Method:</span>{' '}
+                              <code className="bg-background px-2 py-0.5 rounded border text-[11px]">POST</code>
+                            </div>
+                            <div className="text-xs">
+                              <span className="text-muted-foreground">Content-Type:</span>{' '}
+                              <code className="bg-background px-2 py-0.5 rounded border text-[11px]">application/json</code>
+                            </div>
+                            <div className="text-xs space-y-1">
+                              <p className="text-muted-foreground">Body:</p>
+                              <pre className="bg-background p-2 rounded border text-[10px] overflow-x-auto">
 {`{
   "message": "Hello! What can you tell me?",
   "api_key": "${webhookApiKey}"
 }`}
-                          </pre>
-                        </div>
-                        <div className="text-xs space-y-1">
-                          <p className="text-muted-foreground">Response:</p>
-                          <pre className="bg-background p-2 rounded text-[10px] overflow-x-auto">
+                              </pre>
+                            </div>
+                            <div className="text-xs space-y-1">
+                              <p className="text-muted-foreground">Response:</p>
+                              <pre className="bg-background p-2 rounded border text-[10px] overflow-x-auto">
 {`{
   "success": true,
   "response": "Hello! I'm the AI assistant...",
@@ -1431,22 +1452,35 @@ Please create this chatbot interface now!`;
     "memories_loaded": 12
   }
 }`}
-                          </pre>
+                              </pre>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
 
-                    {/* Important Notes */}
-                    <Alert>
-                      <Info className="h-4 w-4" />
-                      <AlertTitle>Important Notes</AlertTitle>
-                      <AlertDescription className="text-xs space-y-1">
-                        <p>• Keep your API key secure - never expose it in client-side code</p>
-                        <p>• The AI has access to all community memories and instructions</p>
-                        <p>• Rate limits apply based on your Lovable AI usage</p>
-                        <p>• Test your integration before deploying to production</p>
-                      </AlertDescription>
-                    </Alert>
+                        {/* Important Notes */}
+                        <Alert>
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertTitle className="text-sm">Security & Usage Notes</AlertTitle>
+                          <AlertDescription className="text-xs space-y-1 mt-2">
+                            <p>• Keep your API key secure - never expose it in client-side code</p>
+                            <p>• The AI has access to all community memories and instructions</p>
+                            <p>• Rate limits apply based on your Lovable AI usage</p>
+                            <p>• Regenerating the key will invalidate the previous one</p>
+                          </AlertDescription>
+                        </Alert>
+                      </CollapsibleContent>
+                    </Collapsible>
+
+                    {/* Status Footer */}
+                    <div className="flex items-center justify-between p-3 bg-green-500/5 border border-green-500/20 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                        <span className="text-sm font-medium text-green-700 dark:text-green-400">Webhook API Active</span>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        Ready to integrate
+                      </Badge>
+                    </div>
                   </div>
                 )}
               </CardContent>

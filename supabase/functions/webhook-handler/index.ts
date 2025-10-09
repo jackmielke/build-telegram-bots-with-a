@@ -103,8 +103,22 @@ ${community.agent_instructions || 'Be helpful, friendly, and concise.'}${memorie
 
     console.log('🤖 Calling Lovable AI...');
     
-    // Call Lovable AI
-    const model = community.agent_model || 'google/gemini-2.5-flash';
+    // Call Lovable AI - convert model names to Lovable AI format
+    let model = community.agent_model || 'google/gemini-2.5-flash';
+    
+    // Map OpenAI model names to Lovable AI format
+    if (model.includes('gpt-5-mini')) {
+      model = 'openai/gpt-5-mini';
+    } else if (model.includes('gpt-5-nano')) {
+      model = 'openai/gpt-5-nano';
+    } else if (model.includes('gpt-5')) {
+      model = 'openai/gpt-5';
+    } else if (model.includes('gpt-4')) {
+      model = 'openai/gpt-4o';
+    }
+    
+    console.log(`Using model: ${model}`);
+    
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {

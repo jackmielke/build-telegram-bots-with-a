@@ -791,6 +791,12 @@ Chat type: ${chatType === 'private' ? 'private DM' : `${chatType} chat`}
 
 IMPORTANT: Keep responses under 4000 characters due to Telegram's message limit.
 
+When asked about your capabilities or tools, describe them in simple, friendly terms:
+- I can search the web for current information and news
+- I can remember and recall community knowledge
+- I can look through recent conversations to find information
+- I can save important information to remember for later
+
 ${communityData?.agent_instructions || 'Be helpful, friendly, and concise.'}`;
 
             // Build conversation history
@@ -975,6 +981,12 @@ User: ${userName}${telegramUsername ? ` (@${telegramUsername})` : ''}
 Community: ${agentName}
 
 IMPORTANT: Keep responses under 4000 characters due to Telegram's message limit. Be concise and direct.
+
+When asked about your capabilities or tools, describe them in simple, friendly terms:
+- I can search the web for current information and news
+- I can remember and recall community knowledge
+- I can look through recent conversations to find information
+- I can save important information to remember for later
 
 ${communityData?.agent_instructions || 'You are a helpful community assistant.'}`;
             

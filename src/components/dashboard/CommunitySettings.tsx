@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,6 +42,7 @@ interface CommunitySettingsProps {
 }
 
 const CommunitySettings = ({ community, isAdmin, onUpdate }: CommunitySettingsProps) => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: community.name,
     description: community.description || '',
@@ -651,7 +653,10 @@ const CommunitySettings = ({ community, isAdmin, onUpdate }: CommunitySettingsPr
                   key={member.id}
                   className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border/30"
                 >
-                  <div className="flex items-center space-x-3">
+                  <div 
+                    className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => navigate(`/user/${member.users.id}`)}
+                  >
                     <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
                       {member.users.avatar_url ? (
                         <img 

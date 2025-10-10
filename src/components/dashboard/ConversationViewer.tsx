@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Bot, User, Calendar, DollarSign, BarChart3, Download, Eye, Pencil } from 'lucide-react';
+import { ArrowLeft, Bot, User, Calendar, DollarSign, BarChart3, Download, Eye, Pencil, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AIContextViewer } from './AIContextViewer';
 
@@ -201,6 +201,75 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
     }
   };
 
+  const generateUser = async (message: Message) => {
+    try {
+      // Extract Telegram data from message metadata
+      const telegramUserId = message.metadata?.telegram_user_id || message.metadata?.from?.id;
+      const telegramUsername = message.metadata?.telegram_username || message.metadata?.from?.username;
+      const telegramFirstName = message.metadata?.telegram_first_name || message.metadata?.from?.first_name;
+      const telegramLastName = message.metadata?.telegram_last_name || message.metadata?.from?.last_name;
+      const telegramPhotoUrl = message.metadata?.telegram_photo_url;
+
+      if (!telegramUserId) {
+        toast({
+          title: "Missing Data",
+          description: "No Telegram user ID found in message metadata",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Check if user already exists
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('telegram_user_id', telegramUserId)
+        .maybeSingle();
+
+      if (existingUser) {
+        toast({
+          title: "User Exists",
+          description: "A user with this Telegram ID already exists",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Construct name from first and last name
+      const fullName = [telegramFirstName, telegramLastName].filter(Boolean).join(' ') || 'Telegram User';
+
+      // Create unclaimed user
+      const { data: newUser, error } = await supabase
+        .from('users')
+        .insert({
+          telegram_user_id: telegramUserId,
+          telegram_username: telegramUsername,
+          name: fullName,
+          telegram_photo_url: telegramPhotoUrl,
+          is_claimed: false
+        } as any)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "User Created",
+        description: `Created unclaimed account for ${fullName}. You can now add a bio!`,
+      });
+
+      // Refresh the conversation to show the new user
+      fetchConversation();
+    } catch (error) {
+      console.error('Error generating user:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate user account",
+        variant: "destructive"
+      });
+    }
+  };
+
   const currentThreadName = messages[0]?.topic_name || 'Unnamed Thread';
   const isPlaceholderName = currentThreadName.startsWith('Thread ');
 
@@ -381,6 +450,17 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
                         >
                           <Eye className="w-3 h-3" />
                           <span className="text-[10px] md:text-xs ml-1">Prompt</span>
+                        </Button>
+                      )}
+                      {!isAI && !message.sender_id && message.metadata?.telegram_user_id && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => generateUser(message)}
+                          className="h-5 md:h-6 px-1.5 md:px-2 flex items-center gap-1"
+                        >
+                          <UserPlus className="w-3 h-3" />
+                          <span className="text-[10px] md:text-xs">Generate User</span>
                         </Button>
                       )}
                     </div>

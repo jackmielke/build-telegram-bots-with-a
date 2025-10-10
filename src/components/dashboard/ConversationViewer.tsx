@@ -223,16 +223,7 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
     try {
       console.log('generateUser called with message:', message);
       
-      // Extract Telegram data from message metadata
-      const telegramUserId = message.metadata?.telegram_user_id || message.metadata?.from?.id;
-      const telegramUsername = message.metadata?.telegram_username || message.metadata?.from?.username;
-      const telegramFirstName = message.metadata?.telegram_first_name || message.metadata?.from?.first_name;
-      const telegramLastName = message.metadata?.telegram_last_name || message.metadata?.from?.last_name;
-      const telegramPhotoUrl = message.metadata?.telegram_photo_url;
-
-      console.log('Telegram data:', { telegramUserId, telegramUsername, telegramFirstName, telegramLastName });
-
-      if (!telegramUserId) {
+      if (!message.metadata?.telegram_user_id && !message.metadata?.from?.id) {
         toast({
           title: "Missing Data",
           description: "No Telegram user ID found in message metadata",
@@ -241,78 +232,29 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
         return;
       }
 
-      // Check if user already exists
-      console.log('Checking if user exists with telegram_user_id:', telegramUserId);
-      const { data: existingUser, error: existingUserError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('telegram_user_id', telegramUserId)
-        .maybeSingle();
+      // Call edge function to provision user
+      const { data, error } = await supabase.functions.invoke('provision-telegram-user', {
+        body: {
+          message,
+          communityId,
+        },
+      });
 
-      console.log('Existing user check result:', { existingUser, existingUserError });
-
-      let userId = existingUser?.id;
-
-      // If user doesn't exist, create them
-      if (!existingUser) {
-        const fullName = [telegramFirstName, telegramLastName].filter(Boolean).join(' ') || 'Telegram User';
-        console.log('Creating new user:', fullName);
-
-        const { data: newUser, error } = await supabase
-          .from('users')
-          .insert({
-            telegram_user_id: telegramUserId,
-            telegram_username: telegramUsername,
-            name: fullName,
-            telegram_photo_url: telegramPhotoUrl,
-            is_claimed: false
-          } as any)
-          .select()
-          .single();
-
-        console.log('User creation result:', { newUser, error });
-
-        if (error) {
-          console.error('Error creating user:', error);
-          throw error;
-        }
-        userId = newUser.id;
-
+      if (error) {
+        console.error('Error provisioning user:', error);
         toast({
-          title: "User Created",
-          description: `Created unclaimed account for ${fullName}`,
+          title: "Error",
+          description: "Failed to generate user account",
+          variant: "destructive",
         });
+        return;
       }
 
-      // Add user to community if not already a member
-      if (userId && !communityMemberIds.has(userId)) {
-        console.log('Adding user to community:', userId);
-        const { error: memberError } = await supabase
-          .from('community_members')
-          .insert({
-            community_id: communityId,
-            user_id: userId,
-            role: 'member'
-          });
-
-        console.log('Community member add result:', { memberError });
-
-        if (memberError) {
-          console.error('Error adding to community:', memberError);
-          throw memberError;
-        }
-
-        toast({
-          title: "Added to Community",
-          description: "User is now a community member!",
-        });
-      } else {
-        console.log('User already in community or no userId');
-        toast({
-          title: "Already a Member",
-          description: "This user is already a community member",
-        });
-      }
+      const name = data.user?.name || 'Telegram User';
+      toast({
+        title: "Success",
+        description: `Created account for ${name}`,
+      });
 
       // Refresh data
       fetchConversation();

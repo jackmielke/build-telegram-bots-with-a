@@ -407,13 +407,8 @@ const ChatHistoryDashboard = ({ communityId, isAdmin }: ChatHistoryDashboardProp
                         <div className="flex items-start justify-between gap-2 mb-1">
                           <div className="flex-1 min-w-0">
                             <h3 className="font-semibold text-sm md:text-base truncate">
-                              {conversation.telegram_chat_title || conversation.display_name || conversation.topic_name || 'Untitled Conversation'}
+                              {conversation.display_name || conversation.topic_name || 'Untitled Conversation'}
                             </h3>
-                            {conversation.thread_name && (
-                              <p className="text-xs text-muted-foreground truncate">
-                                {conversation.thread_name}
-                              </p>
-                            )}
                           </div>
                           <Badge variant="secondary" className="text-[10px] md:text-xs flex-shrink-0">
                             {getChatTypeLabel(conversation.chat_type)}

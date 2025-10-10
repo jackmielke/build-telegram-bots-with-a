@@ -257,21 +257,34 @@ const VoiceInterface: React.FC<VoiceInterfaceProps> = ({
       return;
     }
 
+    if (!voiceDescription.trim()) {
+      toast({
+        title: "Description Required",
+        description: "Please provide a voice description",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsCreatingAgent(true);
     try {
       const selectedVoicePreview = voicePreviews[selectedPreview];
+      console.log("Creating agent with:", { voiceDescription, previewId: selectedVoicePreview.generated_voice_id, communityId });
       
       const { data, error } = await supabase.functions.invoke("elevenlabs-create-agent", {
         body: {
-          voiceDescription,
+          voiceDescription: voiceDescription.trim(),
           previewId: selectedVoicePreview.generated_voice_id,
-          agentName,
-          agentInstructions,
+          agentName: agentName || "Community Assistant",
+          agentInstructions: agentInstructions || "You are a helpful community assistant.",
           communityId,
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Agent creation error:", error);
+        throw error;
+      }
 
       if (data?.agentId) {
         setSavedAgentId(data.agentId);

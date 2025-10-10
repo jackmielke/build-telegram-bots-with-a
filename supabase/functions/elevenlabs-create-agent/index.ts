@@ -20,8 +20,21 @@ serve(async (req) => {
       communityId 
     } = await req.json();
     
+    console.log("Received parameters:", { 
+      hasVoiceDescription: !!voiceDescription, 
+      hasPreviewId: !!previewId, 
+      hasCommunityId: !!communityId,
+      voiceDescription: voiceDescription?.substring(0, 50),
+      previewId,
+      communityId
+    });
+    
     if (!voiceDescription || !previewId || !communityId) {
-      throw new Error("Missing required parameters");
+      const missing = [];
+      if (!voiceDescription) missing.push("voiceDescription");
+      if (!previewId) missing.push("previewId");
+      if (!communityId) missing.push("communityId");
+      throw new Error(`Missing required parameters: ${missing.join(", ")}`);
     }
 
     const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');

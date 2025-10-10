@@ -358,8 +358,28 @@ serve(async (req) => {
           const toolName = toolCall.function.name;
           const args = JSON.parse(toolCall.function.arguments || '{}');
           
-          // Send tool usage notification to Telegram (without markdown to avoid parse errors)
-          const toolMessage = `🔧 Using tool: ${toolName}${args.query ? `\n🔍 Query: "${args.query}"` : ''}`;
+          // Create friendly user-facing messages for each tool
+          let toolMessage = '';
+          switch (toolName) {
+            case 'web_search':
+              toolMessage = args.query 
+                ? `🌐 Searching the web for "${args.query}"...`
+                : '🌐 Searching the web...';
+              break;
+            case 'search_memory':
+              toolMessage = '🧠 Let me check what I remember...';
+              break;
+            case 'search_chat_history':
+              const days = args.days_back || 7;
+              toolMessage = `💬 Looking through the last ${days} days of messages...`;
+              break;
+            case 'save_memory':
+              toolMessage = '💾 Saving this to my memory...';
+              break;
+            default:
+              toolMessage = `🔧 Using tool: ${toolName}`;
+          }
+          
           toolUsageMessages.push(toolMessage);
           
           if (botToken && telegramChatId) {

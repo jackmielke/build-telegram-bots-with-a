@@ -13,14 +13,14 @@ serve(async (req) => {
 
   try {
     const { 
-      voiceDescription, 
-      selectedPreviewAudio, 
+      voiceDescription,
+      previewId,
       agentName, 
       agentInstructions,
       communityId 
     } = await req.json();
     
-    if (!voiceDescription || !selectedPreviewAudio || !communityId) {
+    if (!voiceDescription || !previewId || !communityId) {
       throw new Error("Missing required parameters");
     }
 
@@ -31,17 +31,17 @@ serve(async (req) => {
 
     console.log("Creating voice from preview for community:", communityId);
 
-    // Step 1: Create the voice from the selected preview
-    const voiceResponse = await fetch('https://api.elevenlabs.io/v1/voices/add', {
+    // Step 1: Create voice from the preview ID
+    const voiceResponse = await fetch('https://api.elevenlabs.io/v1/text-to-voice/create-voice-from-preview', {
       method: 'POST',
       headers: {
         'xi-api-key': ELEVENLABS_API_KEY,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        name: `${agentName || 'Community'} Voice`,
-        description: voiceDescription,
-        files: [selectedPreviewAudio]
+        voice_name: `${agentName || 'Community'} Voice`,
+        voice_description: voiceDescription,
+        generated_voice_id: previewId,
       })
     });
 

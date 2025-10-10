@@ -259,10 +259,12 @@ const VoiceInterface: React.FC<VoiceInterfaceProps> = ({
 
     setIsCreatingAgent(true);
     try {
+      const selectedVoicePreview = voicePreviews[selectedPreview];
+      
       const { data, error } = await supabase.functions.invoke("elevenlabs-create-agent", {
         body: {
           voiceDescription,
-          selectedPreviewAudio: voicePreviews[selectedPreview].audio_base_64,
+          previewId: selectedVoicePreview.generated_voice_id,
           agentName,
           agentInstructions,
           communityId,

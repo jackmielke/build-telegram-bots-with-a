@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Bot, User, Calendar, DollarSign, BarChart3, Download, Eye } from 'lucide-react';
+import { ArrowLeft, Bot, User, Calendar, DollarSign, BarChart3, Download, Eye, Pencil } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AIContextViewer } from './AIContextViewer';
 
@@ -233,19 +233,17 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
                   <h2 className="text-base md:text-lg font-semibold truncate">
                     {currentThreadName}
                   </h2>
-                  {isPlaceholderName && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setNewThreadName(currentThreadName);
-                        setEditingThreadName(true);
-                      }}
-                      className="text-xs"
-                    >
-                      Add Name
-                    </Button>
-                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setNewThreadName(currentThreadName);
+                      setEditingThreadName(true);
+                    }}
+                    className="h-6 w-6 p-0"
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </Button>
                 </div>
                 <p className="text-xs md:text-sm text-muted-foreground">
                   {messages.length} messages

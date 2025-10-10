@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Phone, PhoneOff, Mic, Settings, Volume2 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Phone, PhoneOff, Mic, Settings, Volume2, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useConversation } from "@11labs/react";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,8 +24,28 @@ const VoiceInterface: React.FC<VoiceInterfaceProps> = ({
   isAdmin,
 }) => {
   const { toast } = useToast();
-  const [selectedVoice, setSelectedVoice] = useState("9BWtsMINqrJLrRacOk9x");
   const [agentId, setAgentId] = useState("");
+  const [savedAgentId, setSavedAgentId] = useState("");
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Fetch saved agent ID on mount
+  useEffect(() => {
+    const fetchAgentId = async () => {
+      const { data, error } = await supabase
+        .from("communities")
+        .select("elevenlabs_agent_id")
+        .eq("id", communityId)
+        .single();
+
+      if (data?.elevenlabs_agent_id) {
+        setSavedAgentId(data.elevenlabs_agent_id);
+        setAgentId(data.elevenlabs_agent_id);
+      }
+    };
+
+    fetchAgentId();
+  }, [communityId]);
 
   // Available ElevenLabs voices
   const availableVoices = [
@@ -68,14 +88,52 @@ const VoiceInterface: React.FC<VoiceInterfaceProps> = ({
     },
   });
 
+  const saveAgentId = async () => {
+    if (!agentId.trim()) {
+      toast({
+        title: "Agent ID Required",
+        description: "Please enter a valid ElevenLabs Agent ID",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from("communities")
+        .update({ elevenlabs_agent_id: agentId })
+        .eq("id", communityId);
+
+      if (error) throw error;
+
+      setSavedAgentId(agentId);
+      setIsEditDialogOpen(false);
+      toast({
+        title: "Saved",
+        description: "ElevenLabs Agent ID has been saved successfully",
+      });
+    } catch (error) {
+      console.error("Error saving agent ID:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save agent ID",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const startConversation = async () => {
     try {
-      if (!agentId) {
+      if (!savedAgentId) {
         toast({
-          title: "Agent ID Required",
-          description: "Please enter an ElevenLabs Agent ID in the settings below",
+          title: "Setup Required",
+          description: "Please configure your ElevenLabs Agent ID first",
           variant: "destructive",
         });
+        setIsEditDialogOpen(true);
         return;
       }
 
@@ -86,7 +144,7 @@ const VoiceInterface: React.FC<VoiceInterfaceProps> = ({
 
       // Get signed URL from edge function
       const { data, error } = await supabase.functions.invoke("elevenlabs-session", {
-        body: { agentId },
+        body: { agentId: savedAgentId },
       });
 
       if (error) {
@@ -140,59 +198,133 @@ const VoiceInterface: React.FC<VoiceInterfaceProps> = ({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Agent ID Input */}
+          {/* Agent ID Display/Setup */}
           <div className="space-y-2">
-            <Label htmlFor="agentId">ElevenLabs Agent ID</Label>
-            <Input
-              id="agentId"
-              type="text"
-              value={agentId}
-              onChange={(e) => setAgentId(e.target.value)}
-              placeholder="Enter your ElevenLabs Agent ID"
-              className="w-full"
-            />
-            <p className="text-xs text-muted-foreground">
-              Create an agent at{" "}
-              <a
-                href="https://elevenlabs.io/app/conversational-ai"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-              >
-                elevenlabs.io/app/conversational-ai
-              </a>
-            </p>
-          </div>
-
-          {/* Voice Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="voice">AI Voice (for reference)</Label>
-            <Select value={selectedVoice} onValueChange={setSelectedVoice}>
-              <SelectTrigger id="voice">
-                <SelectValue placeholder="Select a voice" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableVoices.map((voice) => (
-                  <SelectItem key={voice.id} value={voice.id}>
-                    {voice.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Note: Voice is configured in your ElevenLabs agent settings
-            </p>
+            <Label>ElevenLabs Agent ID</Label>
+            {savedAgentId ? (
+              <div className="flex items-center gap-2">
+                <div className="flex-1 px-3 py-2 bg-muted rounded-md font-mono text-sm">
+                  {savedAgentId}
+                </div>
+                {isAdmin && (
+                  <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="icon">
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Edit Agent ID</DialogTitle>
+                        <DialogDescription>
+                          Update your ElevenLabs Conversational AI agent ID
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-agentId">Agent ID</Label>
+                          <Input
+                            id="edit-agentId"
+                            value={agentId}
+                            onChange={(e) => setAgentId(e.target.value)}
+                            placeholder="agent_xxxxxxxxxxxxxxxx"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Create or find your agent at{" "}
+                            <a
+                              href="https://elevenlabs.io/app/conversational-ai"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline"
+                            >
+                              elevenlabs.io
+                            </a>
+                          </p>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setAgentId(savedAgentId);
+                            setIsEditDialogOpen(false);
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button onClick={saveAgentId} disabled={isSaving}>
+                          {isSaving ? "Saving..." : "Save"}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  No agent configured. {isAdmin ? "Set up your agent to enable voice conversations." : "Ask an admin to configure the agent."}
+                </p>
+                {isAdmin && (
+                  <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="w-full">
+                        <Settings className="w-4 h-4 mr-2" />
+                        Setup Agent ID
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Setup ElevenLabs Agent</DialogTitle>
+                        <DialogDescription>
+                          Configure your ElevenLabs Conversational AI agent
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="setup-agentId">Agent ID</Label>
+                          <Input
+                            id="setup-agentId"
+                            value={agentId}
+                            onChange={(e) => setAgentId(e.target.value)}
+                            placeholder="agent_xxxxxxxxxxxxxxxx"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Create an agent at{" "}
+                            <a
+                              href="https://elevenlabs.io/app/conversational-ai"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline"
+                            >
+                              elevenlabs.io/app/conversational-ai
+                            </a>
+                          </p>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button onClick={saveAgentId} disabled={isSaving}>
+                          {isSaving ? "Saving..." : "Save"}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Status Badges */}
-          <div className="flex gap-2 flex-wrap">
-            <Badge variant={conversation.status === "connected" ? "default" : "secondary"}>
-              {conversation.status === "connected" ? "Connected" : "Disconnected"}
-            </Badge>
-            <Badge variant={conversation.isSpeaking ? "default" : "secondary"}>
-              {conversation.isSpeaking ? "Speaking" : "Silent"}
-            </Badge>
-          </div>
+          {savedAgentId && (
+            <div className="flex gap-2 flex-wrap">
+              <Badge variant={conversation.status === "connected" ? "default" : "secondary"}>
+                {conversation.status === "connected" ? "Connected" : "Disconnected"}
+              </Badge>
+              <Badge variant={conversation.isSpeaking ? "default" : "secondary"}>
+                {conversation.isSpeaking ? "Speaking" : "Silent"}
+              </Badge>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -249,33 +381,13 @@ const VoiceInterface: React.FC<VoiceInterfaceProps> = ({
           </div>
 
           {/* Instructions */}
-          <div className="text-center text-sm text-muted-foreground space-y-2">
+          <div className="text-center text-sm text-muted-foreground">
             <p>
               {conversation.status === "connected"
                 ? "Speak naturally - the AI will respond to your voice."
-                : "Enter your ElevenLabs Agent ID above and click 'Start Voice Conversation' to begin."}
-            </p>
-            {isAdmin && agentInstructions && (
-              <p className="text-xs">
-                Agent instructions: {agentInstructions}
-              </p>
-            )}
-          </div>
-
-          {/* Setup Instructions */}
-          <div className="p-4 bg-muted/30 rounded-lg border border-border/50 space-y-2">
-            <h4 className="text-sm font-medium flex items-center gap-2">
-              <Volume2 className="w-4 h-4 text-primary" />
-              Setup Instructions
-            </h4>
-            <ol className="text-xs text-muted-foreground list-decimal list-inside space-y-1">
-              <li>Create an agent at ElevenLabs Conversational AI</li>
-              <li>Copy your Agent ID from the agent settings</li>
-              <li>Paste it in the field above</li>
-              <li>Click "Start Voice Conversation" to begin</li>
-            </ol>
-            <p className="text-xs text-muted-foreground mt-2">
-              You can customize voices, prompts, and knowledge base in your ElevenLabs agent settings.
+                : savedAgentId
+                ? "Click 'Start Voice Conversation' to begin talking with the AI."
+                : "Configure your agent above to enable voice conversations."}
             </p>
           </div>
         </CardContent>

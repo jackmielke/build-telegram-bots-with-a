@@ -237,6 +237,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          elevenlabs_agent_id: string | null
           experiences: string[] | null
           game_design_gravity_y: number | null
           game_design_sky_color: string | null
@@ -271,6 +272,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          elevenlabs_agent_id?: string | null
           experiences?: string[] | null
           game_design_gravity_y?: number | null
           game_design_sky_color?: string | null
@@ -305,6 +307,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          elevenlabs_agent_id?: string | null
           experiences?: string[] | null
           game_design_gravity_y?: number | null
           game_design_sky_color?: string | null

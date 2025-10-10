@@ -320,12 +320,13 @@ const VoiceInterface: React.FC<VoiceInterfaceProps> = ({
                   {savedAgentId}
                 </div>
                 {isAdmin && (
-                  <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="icon">
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                    </DialogTrigger>
+                  <>
+                    <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="icon">
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle>Edit Agent ID</DialogTitle>
@@ -371,6 +372,14 @@ const VoiceInterface: React.FC<VoiceInterfaceProps> = ({
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={() => setIsCreatingVoice(true)}
+                  >
+                    <Sparkles className="w-4 h-4" />
+                  </Button>
+                  </>
                 )}
               </div>
             ) : (

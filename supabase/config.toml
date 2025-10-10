@@ -15,3 +15,6 @@ project_id = "efdqqnubowgwsnwvlalp"
 
   [functions.webhook-handler]
   verify_jwt = false
+
+  [functions.elevenlabs-session]
+  verify_jwt = false

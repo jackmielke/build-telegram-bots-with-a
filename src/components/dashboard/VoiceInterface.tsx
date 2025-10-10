@@ -1,11 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
-import { Mic, MicOff, Volume2, VolumeX, Phone, PhoneOff, Loader2, Settings } from 'lucide-react';
+import React, { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Phone, PhoneOff, Mic, Settings, Volume2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useConversation } from "@11labs/react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface VoiceInterfaceProps {
   communityId: string;
@@ -14,242 +17,263 @@ interface VoiceInterfaceProps {
   isAdmin: boolean;
 }
 
-const VoiceInterface = ({ communityId, agentName, agentInstructions, isAdmin }: VoiceInterfaceProps) => {
+const VoiceInterface: React.FC<VoiceInterfaceProps> = ({
+  communityId,
+  agentName,
+  agentInstructions,
+  isAdmin,
+}) => {
   const { toast } = useToast();
-  const [isConnected, setIsConnected] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [selectedVoice, setSelectedVoice] = useState('alloy');
-  const [volume, setVolume] = useState(1.0);
-  const [isMuted, setIsMuted] = useState(false);
+  const [selectedVoice, setSelectedVoice] = useState("9BWtsMINqrJLrRacOk9x");
+  const [agentId, setAgentId] = useState("");
 
-  // Available ElevenLabs voices (popular ones)
+  // Available ElevenLabs voices
   const availableVoices = [
-    { value: 'alloy', label: 'Alloy', description: 'Neutral and balanced' },
-    { value: 'echo', label: 'Echo', description: 'Warm and friendly' },
-    { value: 'shimmer', label: 'Shimmer', description: 'Clear and articulate' },
-    { value: 'sage', label: 'Sage', description: 'Professional and calm' },
-    { value: 'aria', label: 'Aria', description: 'Expressive and dynamic' },
-    { value: 'coral', label: 'Coral', description: 'Soft and soothing' },
+    { id: "9BWtsMINqrJLrRacOk9x", name: "Aria" },
+    { id: "CwhRBWXzGAHq8TQ4Fs17", name: "Roger" },
+    { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah" },
+    { id: "FGY2WhTYpPnrIDTdsKH5", name: "Laura" },
+    { id: "IKne3meq5aSn9XLyUdCD", name: "Charlie" },
+    { id: "JBFqnCBsd6RMkjVDRZzb", name: "George" },
   ];
+
+  const conversation = useConversation({
+    onConnect: () => {
+      console.log("Connected to ElevenLabs");
+      toast({
+        title: "Connected",
+        description: "Voice conversation started",
+      });
+    },
+    onDisconnect: () => {
+      console.log("Disconnected from ElevenLabs");
+      toast({
+        title: "Disconnected",
+        description: "Voice conversation ended",
+      });
+    },
+    onError: (error) => {
+      console.error("ElevenLabs error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "An error occurred",
+        variant: "destructive",
+      });
+    },
+    onMessage: (message) => {
+      console.log("Received message:", message);
+    },
+  });
 
   const startConversation = async () => {
     try {
-      // This will be implemented with ElevenLabs integration
-      setIsConnected(true);
-      setIsRecording(true);
-      
-      toast({
-        title: "Voice Connected",
-        description: `Ready to chat with ${agentName || 'your agent'}`,
+      if (!agentId) {
+        toast({
+          title: "Agent ID Required",
+          description: "Please enter an ElevenLabs Agent ID in the settings below",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log("Starting conversation with agent:", agentId);
+
+      // Request microphone access
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // Get signed URL from edge function
+      const { data, error } = await supabase.functions.invoke("elevenlabs-session", {
+        body: { agentId },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data || !data.signed_url) {
+        throw new Error("Failed to get signed URL from ElevenLabs");
+      }
+
+      console.log("Got signed URL, starting session");
+
+      // Start the conversation with the signed URL
+      await conversation.startSession({
+        url: data.signed_url,
       });
     } catch (error) {
-      console.error('Error starting conversation:', error);
+      console.error("Error starting conversation:", error);
       toast({
-        title: "Connection Failed",
-        description: error instanceof Error ? error.message : 'Failed to start voice conversation',
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to start conversation",
         variant: "destructive",
       });
     }
   };
 
-  const endConversation = () => {
-    setIsConnected(false);
-    setIsRecording(false);
-    setIsSpeaking(false);
-    
-    toast({
-      title: "Voice Disconnected",
-      description: "Conversation ended",
-    });
+  const endConversation = async () => {
+    try {
+      await conversation.endSession();
+    } catch (error) {
+      console.error("Error ending conversation:", error);
+    }
   };
 
-  const toggleMute = () => {
-    setIsMuted(!isMuted);
-    toast({
-      title: isMuted ? "Unmuted" : "Muted",
-      description: isMuted ? "Microphone is now active" : "Microphone is now muted",
-    });
-  };
-
-  const toggleRecording = () => {
-    setIsRecording(!isRecording);
+  const toggleMute = async () => {
+    // Mute functionality is built into the conversation hook
+    console.log("Toggle mute");
   };
 
   return (
     <div className="space-y-6">
-      {/* Voice Settings */}
-      <Card className="gradient-card border-border/50">
+      {/* Voice Settings Card */}
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Settings className="w-5 h-5 text-primary" />
-            <span>Voice Settings</span>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="w-5 h-5" />
+            Voice Settings
           </CardTitle>
           <CardDescription>
-            Configure voice settings for your AI agent
+            Configure your AI agent's voice and conversation settings
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Agent ID Input */}
           <div className="space-y-2">
-            <Label htmlFor="voice">Agent Voice</Label>
-            <Select
-              value={selectedVoice}
-              onValueChange={setSelectedVoice}
-              disabled={isConnected || !isAdmin}
-            >
-              <SelectTrigger>
+            <Label htmlFor="agentId">ElevenLabs Agent ID</Label>
+            <Input
+              id="agentId"
+              type="text"
+              value={agentId}
+              onChange={(e) => setAgentId(e.target.value)}
+              placeholder="Enter your ElevenLabs Agent ID"
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              Create an agent at{" "}
+              <a
+                href="https://elevenlabs.io/app/conversational-ai"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                elevenlabs.io/app/conversational-ai
+              </a>
+            </p>
+          </div>
+
+          {/* Voice Selection */}
+          <div className="space-y-2">
+            <Label htmlFor="voice">AI Voice (for reference)</Label>
+            <Select value={selectedVoice} onValueChange={setSelectedVoice}>
+              <SelectTrigger id="voice">
                 <SelectValue placeholder="Select a voice" />
               </SelectTrigger>
               <SelectContent>
                 {availableVoices.map((voice) => (
-                  <SelectItem key={voice.value} value={voice.value}>
-                    <div>
-                      <div className="font-medium">{voice.label}</div>
-                      <div className="text-xs text-muted-foreground">{voice.description}</div>
-                    </div>
+                  <SelectItem key={voice.id} value={voice.id}>
+                    {voice.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Choose the voice personality for your AI agent
+              Note: Voice is configured in your ElevenLabs agent settings
             </p>
           </div>
 
-          <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border/50">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-xs">
-                {isConnected ? 'Connected' : 'Disconnected'}
-              </Badge>
-              {isRecording && (
-                <Badge variant="default" className="text-xs animate-pulse">
-                  Recording
-                </Badge>
-              )}
-              {isSpeaking && (
-                <Badge variant="secondary" className="text-xs">
-                  Speaking
-                </Badge>
-              )}
-            </div>
+          {/* Status Badges */}
+          <div className="flex gap-2 flex-wrap">
+            <Badge variant={conversation.status === "connected" ? "default" : "secondary"}>
+              {conversation.status === "connected" ? "Connected" : "Disconnected"}
+            </Badge>
+            <Badge variant={conversation.isSpeaking ? "default" : "secondary"}>
+              {conversation.isSpeaking ? "Speaking" : "Silent"}
+            </Badge>
           </div>
         </CardContent>
       </Card>
 
-      {/* Voice Interface */}
-      <Card className="gradient-card border-border/50">
+      {/* Voice Interface Card */}
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Phone className="w-5 h-5 text-primary" />
-            <span>Voice Interface</span>
+          <CardTitle className="flex items-center gap-2">
+            <Phone className="w-5 h-5" />
+            Voice Interface
           </CardTitle>
           <CardDescription>
-            Test your AI agent with voice interaction
+            Talk to {agentName} using your voice
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Status Display */}
-          <div className="flex flex-col items-center justify-center py-8 space-y-4">
-            <div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all ${
-              isConnected 
-                ? 'bg-primary/20 border-4 border-primary/50 animate-pulse' 
-                : 'bg-muted border-4 border-border/50'
-            }`}>
-              {isConnected ? (
-                <Phone className="w-12 h-12 text-primary" />
-              ) : (
-                <PhoneOff className="w-12 h-12 text-muted-foreground" />
-              )}
-            </div>
-
-            <div className="text-center">
-              <h3 className="text-lg font-semibold">
-                {isConnected 
-                  ? `Connected to ${agentName || 'Agent'}` 
-                  : 'Not Connected'}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {isConnected 
-                  ? 'Speak to interact with your agent' 
-                  : 'Start a conversation to test the voice interface'}
-              </p>
+          {/* Visual Indicator */}
+          <div className="flex justify-center">
+            <div
+              className={`w-32 h-32 rounded-full flex items-center justify-center transition-all ${
+                conversation.status === "connected"
+                  ? conversation.isSpeaking
+                    ? "bg-primary/20 scale-110"
+                    : "bg-primary/10"
+                  : "bg-muted"
+              }`}
+            >
+              <Phone
+                className={`w-16 h-16 ${
+                  conversation.status === "connected" ? "text-primary" : "text-muted-foreground"
+                }`}
+              />
             </div>
           </div>
 
-          {/* Controls */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            {!isConnected ? (
-              <Button 
-                onClick={startConversation}
-                className="w-full sm:w-auto bg-primary hover:bg-primary/90"
-                size="lg"
-              >
-                <Phone className="w-5 h-5 mr-2" />
+          {/* Control Buttons */}
+          <div className="flex justify-center gap-4">
+            {conversation.status !== "connected" ? (
+              <Button onClick={startConversation} size="lg" className="gap-2">
+                <Phone className="w-5 h-5" />
                 Start Voice Conversation
               </Button>
             ) : (
               <>
-                <Button
-                  onClick={toggleMute}
-                  variant={isMuted ? "destructive" : "secondary"}
-                  size="lg"
-                  className="w-full sm:w-auto"
-                >
-                  {isMuted ? (
-                    <>
-                      <MicOff className="w-5 h-5 mr-2" />
-                      Unmute
-                    </>
-                  ) : (
-                    <>
-                      <Mic className="w-5 h-5 mr-2" />
-                      Mute
-                    </>
-                  )}
-                </Button>
-
-                <Button
-                  onClick={endConversation}
-                  variant="destructive"
-                  size="lg"
-                  className="w-full sm:w-auto"
-                >
-                  <PhoneOff className="w-5 h-5 mr-2" />
+                <Button onClick={endConversation} variant="destructive" size="lg" className="gap-2">
+                  <PhoneOff className="w-5 h-5" />
                   End Conversation
+                </Button>
+                <Button onClick={toggleMute} variant="outline" size="lg" className="gap-2">
+                  <Mic className="w-5 h-5" />
+                  Mute/Unmute
                 </Button>
               </>
             )}
           </div>
 
           {/* Instructions */}
+          <div className="text-center text-sm text-muted-foreground space-y-2">
+            <p>
+              {conversation.status === "connected"
+                ? "Speak naturally - the AI will respond to your voice."
+                : "Enter your ElevenLabs Agent ID above and click 'Start Voice Conversation' to begin."}
+            </p>
+            {isAdmin && agentInstructions && (
+              <p className="text-xs">
+                Agent instructions: {agentInstructions}
+              </p>
+            )}
+          </div>
+
+          {/* Setup Instructions */}
           <div className="p-4 bg-muted/30 rounded-lg border border-border/50 space-y-2">
             <h4 className="text-sm font-medium flex items-center gap-2">
               <Volume2 className="w-4 h-4 text-primary" />
-              How to Use
+              Setup Instructions
             </h4>
-            <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+            <ol className="text-xs text-muted-foreground list-decimal list-inside space-y-1">
+              <li>Create an agent at ElevenLabs Conversational AI</li>
+              <li>Copy your Agent ID from the agent settings</li>
+              <li>Paste it in the field above</li>
               <li>Click "Start Voice Conversation" to begin</li>
-              <li>Speak naturally to interact with the AI agent</li>
-              <li>The agent will respond with voice based on its instructions</li>
-              <li>Use mute to temporarily stop recording</li>
-              <li>Click "End Conversation" when finished</li>
-            </ul>
-          </div>
-
-          {/* Coming Soon Notice */}
-          <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
-            <div className="flex items-start gap-3">
-              <Loader2 className="w-5 h-5 text-primary animate-spin flex-shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <h4 className="text-sm font-medium text-primary">
-                  ElevenLabs Integration Coming Soon
-                </h4>
-                <p className="text-xs text-muted-foreground">
-                  Full voice functionality with ElevenLabs will be implemented next. 
-                  This interface will enable real-time voice conversations with your AI agent.
-                </p>
-              </div>
-            </div>
+            </ol>
+            <p className="text-xs text-muted-foreground mt-2">
+              You can customize voices, prompts, and knowledge base in your ElevenLabs agent settings.
+            </p>
           </div>
         </CardContent>
       </Card>

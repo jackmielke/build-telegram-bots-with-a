@@ -33,7 +33,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         voice_description: voiceDescription,
-        text: "Hello! This is a preview of how I sound. I hope you like my voice!"
+        text: "Hello! This is a preview of how I sound. I'm excited to help you connect with your community and assist with anything you need. I hope you like my voice and find it engaging and helpful!"
       })
     });
 

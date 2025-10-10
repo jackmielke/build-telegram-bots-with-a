@@ -43,12 +43,14 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
   const [promptDialogOpen, setPromptDialogOpen] = useState(false);
   const [editingThreadName, setEditingThreadName] = useState(false);
   const [newThreadName, setNewThreadName] = useState('');
+  const [communityMemberIds, setCommunityMemberIds] = useState<Set<string>>(new Set());
   const MESSAGES_PER_PAGE = 50;
   const { toast } = useToast();
 
   useEffect(() => {
     fetchConversation();
     fetchConversationStats();
+    fetchCommunityMembers();
     
     // Set up real-time subscription for new messages in this conversation
     const channel = supabase
@@ -120,6 +122,22 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
       setConversationStats(data);
     } catch (error) {
       console.error('Error fetching conversation stats:', error);
+    }
+  };
+
+  const fetchCommunityMembers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('community_members')
+        .select('user_id')
+        .eq('community_id', communityId);
+
+      if (error) throw error;
+      
+      const memberIds = new Set(data?.map(m => m.user_id) || []);
+      setCommunityMemberIds(memberIds);
+    } catch (error) {
+      console.error('Error fetching community members:', error);
     }
   };
 
@@ -226,40 +244,54 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
         .eq('telegram_user_id', telegramUserId)
         .maybeSingle();
 
-      if (existingUser) {
+      let userId = existingUser?.id;
+
+      // If user doesn't exist, create them
+      if (!existingUser) {
+        const fullName = [telegramFirstName, telegramLastName].filter(Boolean).join(' ') || 'Telegram User';
+
+        const { data: newUser, error } = await supabase
+          .from('users')
+          .insert({
+            telegram_user_id: telegramUserId,
+            telegram_username: telegramUsername,
+            name: fullName,
+            telegram_photo_url: telegramPhotoUrl,
+            is_claimed: false
+          } as any)
+          .select()
+          .single();
+
+        if (error) throw error;
+        userId = newUser.id;
+
         toast({
-          title: "User Exists",
-          description: "A user with this Telegram ID already exists",
-          variant: "destructive"
+          title: "User Created",
+          description: `Created unclaimed account for ${fullName}`,
         });
-        return;
       }
 
-      // Construct name from first and last name
-      const fullName = [telegramFirstName, telegramLastName].filter(Boolean).join(' ') || 'Telegram User';
+      // Add user to community if not already a member
+      if (userId && !communityMemberIds.has(userId)) {
+        const { error: memberError } = await supabase
+          .from('community_members')
+          .insert({
+            community_id: communityId,
+            user_id: userId,
+            role: 'member'
+          });
 
-      // Create unclaimed user
-      const { data: newUser, error } = await supabase
-        .from('users')
-        .insert({
-          telegram_user_id: telegramUserId,
-          telegram_username: telegramUsername,
-          name: fullName,
-          telegram_photo_url: telegramPhotoUrl,
-          is_claimed: false
-        } as any)
-        .select()
-        .single();
+        if (memberError) throw memberError;
 
-      if (error) throw error;
+        toast({
+          title: "Added to Community",
+          description: "User is now a community member!",
+        });
+      }
 
-      toast({
-        title: "User Created",
-        description: `Created unclaimed account for ${fullName}. You can now add a bio!`,
-      });
-
-      // Refresh the conversation to show the new user
+      // Refresh data
       fetchConversation();
+      fetchCommunityMembers();
     } catch (error) {
       console.error('Error generating user:', error);
       toast({
@@ -452,7 +484,8 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
                           <span className="text-[10px] md:text-xs ml-1">Prompt</span>
                         </Button>
                       )}
-                      {!isAI && !message.sender_id && (message.metadata?.telegram_user_id || message.metadata?.from?.id) && (
+                      {!isAI && (message.metadata?.telegram_user_id || message.metadata?.from?.id) && 
+                       (!message.sender_id || (message.sender_id && !communityMemberIds.has(message.sender_id))) && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -460,7 +493,7 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
                           className="h-5 md:h-6 px-1.5 md:px-2 flex items-center gap-1"
                         >
                           <UserPlus className="w-3 h-3" />
-                          <span className="text-[10px] md:text-xs">Generate User</span>
+                          <span className="text-[10px] md:text-xs">{message.sender_id ? "Add to Community" : "Generate User"}</span>
                         </Button>
                       )}
                     </div>

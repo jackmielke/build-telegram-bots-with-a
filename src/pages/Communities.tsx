@@ -4,8 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Users, Crown, Shield, Plus, LogOut, Heart, Sparkles, Compass, Bot, Mic } from 'lucide-react';
+import { Loader2, Users, Crown, Shield, Plus, LogOut, Heart, Sparkles, Compass, Bot, Mic, Phone, PhoneOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useConversation } from '@11labs/react';
 import CreateCommunityDialog from '@/components/CreateCommunityDialog';
 import { CreateBotWorkflow } from '@/components/dashboard/CreateBotWorkflow';
 import vibeLogo from '@/assets/vibe-logo.png';
@@ -29,8 +30,37 @@ const Communities = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [showCreateBotWorkflow, setShowCreateBotWorkflow] = useState(false);
+  const [activeVoiceCall, setActiveVoiceCall] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const conversation = useConversation({
+    onConnect: () => {
+      toast({
+        title: "Connected",
+        description: "Voice conversation started",
+      });
+    },
+    onDisconnect: () => {
+      setActiveVoiceCall(null);
+      toast({
+        title: "Disconnected",
+        description: "Voice conversation ended",
+      });
+    },
+    onError: (error) => {
+      console.error("Voice error:", error);
+      setActiveVoiceCall(null);
+      const errorMessage = typeof error === 'string' 
+        ? error 
+        : (error as any)?.message || "An error occurred";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    },
+  });
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -206,6 +236,43 @@ const Communities = () => {
     }
   };
 
+  const startVoiceCall = async (e: React.MouseEvent, communityId: string, agentId: string) => {
+    e.stopPropagation();
+    
+    try {
+      // Request microphone access
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // Get signed URL from edge function
+      const { data, error } = await supabase.functions.invoke("elevenlabs-session", {
+        body: { agentId },
+      });
+
+      if (error) throw error;
+      if (!data?.signed_url) throw new Error("Failed to get signed URL");
+
+      setActiveVoiceCall(communityId);
+      await conversation.startSession({ signedUrl: data.signed_url } as any);
+    } catch (error) {
+      console.error("Error starting voice call:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to start voice call",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const endVoiceCall = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await conversation.endSession();
+      setActiveVoiceCall(null);
+    } catch (error) {
+      console.error("Error ending call:", error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -366,9 +433,30 @@ const Communities = () => {
                               <span>Admin</span>
                             </Badge>
                             {community.elevenlabs_agent_id && (
-                              <Badge variant="secondary" className="flex items-center space-x-1 text-xs bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20">
-                                <Mic className="w-3 h-3" />
-                                <span>Voice</span>
+                              <Badge 
+                                variant="secondary" 
+                                className={`flex items-center space-x-1 text-xs cursor-pointer transition-all ${
+                                  activeVoiceCall === community.id
+                                    ? 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30 hover:bg-red-500/30'
+                                    : 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20 hover:bg-green-500/20'
+                                }`}
+                                onClick={(e) => 
+                                  activeVoiceCall === community.id 
+                                    ? endVoiceCall(e)
+                                    : startVoiceCall(e, community.id, community.elevenlabs_agent_id!)
+                                }
+                              >
+                                {activeVoiceCall === community.id ? (
+                                  <>
+                                    <PhoneOff className="w-3 h-3" />
+                                    <span>End Call</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Phone className="w-3 h-3" />
+                                    <span>Call</span>
+                                  </>
+                                )}
                               </Badge>
                             )}
                           </div>
@@ -466,12 +554,33 @@ const Communities = () => {
                            {getRoleIcon(community.role)}
                            <span className="capitalize">{community.role}</span>
                          </Badge>
-                         {community.elevenlabs_agent_id && (
-                           <Badge variant="secondary" className="flex items-center space-x-1 text-xs bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20">
-                             <Mic className="w-3 h-3" />
-                             <span>Voice</span>
-                           </Badge>
-                         )}
+                            {community.elevenlabs_agent_id && (
+                              <Badge 
+                                variant="secondary" 
+                                className={`flex items-center space-x-1 text-xs cursor-pointer transition-all ${
+                                  activeVoiceCall === community.id
+                                    ? 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30 hover:bg-red-500/30'
+                                    : 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20 hover:bg-green-500/20'
+                                }`}
+                                onClick={(e) => 
+                                  activeVoiceCall === community.id 
+                                    ? endVoiceCall(e)
+                                    : startVoiceCall(e, community.id, community.elevenlabs_agent_id!)
+                                }
+                              >
+                                {activeVoiceCall === community.id ? (
+                                  <>
+                                    <PhoneOff className="w-3 h-3" />
+                                    <span>End Call</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Phone className="w-3 h-3" />
+                                    <span>Call</span>
+                                  </>
+                                )}
+                              </Badge>
+                            )}
                        </div>
                        <div className="text-xs text-muted-foreground">
                          Click to view →

@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Settings, Shield, Crown, Copy, RefreshCw, UserMinus } from 'lucide-react';
+import { Users, Settings, Shield, Crown, Copy, RefreshCw, UserMinus, Upload, X } from 'lucide-react';
 
 interface Community {
   id: string;
@@ -48,6 +48,8 @@ const CommunitySettings = ({ community, isAdmin, onUpdate }: CommunitySettingsPr
   const [members, setMembers] = useState<Member[]>([]);
   const [saving, setSaving] = useState(false);
   const [loadingMembers, setLoadingMembers] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -112,6 +114,90 @@ const CommunitySettings = ({ community, isAdmin, onUpdate }: CommunitySettingsPr
     } finally {
       setSaving(false);
     }
+  };
+
+  const uploadCoverImage = async (file: File) => {
+    if (!isAdmin) return;
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${community.id}-${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('community-covers')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('community-covers')
+        .getPublicUrl(filePath);
+
+      setFormData({ ...formData, cover_image_url: publicUrl });
+      
+      toast({
+        title: "Image Uploaded",
+        description: "Cover image uploaded successfully. Don't forget to save!",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Failed to upload image",
+        variant: "destructive"
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File Too Large",
+          description: "Please select an image under 5MB",
+          variant: "destructive"
+        });
+        return;
+      }
+      uploadCoverImage(file);
+    }
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File Too Large",
+          description: "Please select an image under 5MB",
+          variant: "destructive"
+        });
+        return;
+      }
+      uploadCoverImage(file);
+    }
+  };
+
+  const removeCoverImage = () => {
+    setFormData({ ...formData, cover_image_url: '' });
   };
 
   const generateInviteCode = async () => {
@@ -280,14 +366,62 @@ const CommunitySettings = ({ community, isAdmin, onUpdate }: CommunitySettingsPr
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cover_image_url">Cover Image URL</Label>
-            <Input
-              id="cover_image_url"
-              value={formData.cover_image_url}
-              onChange={(e) => setFormData({ ...formData, cover_image_url: e.target.value })}
-              placeholder="https://example.com/cover.png"
-              disabled={!isAdmin}
-            />
+            <Label>Cover Image</Label>
+            <div
+              className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                dragActive ? 'border-primary bg-primary/5' : 'border-border'
+              } ${!isAdmin ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+            >
+              {formData.cover_image_url ? (
+                <div className="relative">
+                  <img
+                    src={formData.cover_image_url}
+                    alt="Cover preview"
+                    className="max-h-48 mx-auto rounded-lg object-cover"
+                  />
+                  {isAdmin && (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2"
+                      onClick={removeCoverImage}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
+                  <div className="text-sm text-muted-foreground">
+                    {uploading ? (
+                      <p>Uploading...</p>
+                    ) : (
+                      <>
+                        <p>Drag and drop an image here, or</p>
+                        <label htmlFor="cover-upload" className="text-primary hover:underline cursor-pointer">
+                          browse files
+                        </label>
+                      </>
+                    )}
+                  </div>
+                  <Input
+                    id="cover-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleFileChange}
+                    disabled={!isAdmin || uploading}
+                  />
+                  <p className="text-xs text-muted-foreground">PNG, JPG up to 5MB</p>
+                </div>
+              )}
+            </div>
           </div>
 
           {isAdmin && (

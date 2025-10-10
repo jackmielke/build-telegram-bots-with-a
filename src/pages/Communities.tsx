@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Users, Crown, Shield, Plus, LogOut, Heart, Sparkles, Compass, Bot } from 'lucide-react';
+import { Loader2, Users, Crown, Shield, Plus, LogOut, Heart, Sparkles, Compass, Bot, Mic } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import CreateCommunityDialog from '@/components/CreateCommunityDialog';
 import { CreateBotWorkflow } from '@/components/dashboard/CreateBotWorkflow';
@@ -21,6 +21,7 @@ interface Community {
   role: string;
   member_count?: number;
   is_favorited: boolean;
+  elevenlabs_agent_id: string | null;
 }
 
 const Communities = () => {
@@ -79,7 +80,8 @@ const Communities = () => {
             cover_image_url,
             agent_name,
             agent_avatar_url,
-            privacy_level
+            privacy_level,
+            elevenlabs_agent_id
           )
         `)
         .eq('user_id', userData.id);
@@ -363,6 +365,12 @@ const Communities = () => {
                               <Crown className="w-3 h-3" />
                               <span>Admin</span>
                             </Badge>
+                            {community.elevenlabs_agent_id && (
+                              <Badge variant="secondary" className="flex items-center space-x-1 text-xs bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20">
+                                <Mic className="w-3 h-3" />
+                                <span>Voice</span>
+                              </Badge>
+                            )}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             Click to manage →
@@ -458,6 +466,12 @@ const Communities = () => {
                            {getRoleIcon(community.role)}
                            <span className="capitalize">{community.role}</span>
                          </Badge>
+                         {community.elevenlabs_agent_id && (
+                           <Badge variant="secondary" className="flex items-center space-x-1 text-xs bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20">
+                             <Mic className="w-3 h-3" />
+                             <span>Voice</span>
+                           </Badge>
+                         )}
                        </div>
                        <div className="text-xs text-muted-foreground">
                          Click to view →

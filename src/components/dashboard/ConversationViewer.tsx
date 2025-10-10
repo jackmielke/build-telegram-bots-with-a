@@ -221,12 +221,16 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
 
   const generateUser = async (message: Message) => {
     try {
+      console.log('generateUser called with message:', message);
+      
       // Extract Telegram data from message metadata
       const telegramUserId = message.metadata?.telegram_user_id || message.metadata?.from?.id;
       const telegramUsername = message.metadata?.telegram_username || message.metadata?.from?.username;
       const telegramFirstName = message.metadata?.telegram_first_name || message.metadata?.from?.first_name;
       const telegramLastName = message.metadata?.telegram_last_name || message.metadata?.from?.last_name;
       const telegramPhotoUrl = message.metadata?.telegram_photo_url;
+
+      console.log('Telegram data:', { telegramUserId, telegramUsername, telegramFirstName, telegramLastName });
 
       if (!telegramUserId) {
         toast({
@@ -238,17 +242,21 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
       }
 
       // Check if user already exists
-      const { data: existingUser } = await supabase
+      console.log('Checking if user exists with telegram_user_id:', telegramUserId);
+      const { data: existingUser, error: existingUserError } = await supabase
         .from('users')
         .select('id')
         .eq('telegram_user_id', telegramUserId)
         .maybeSingle();
+
+      console.log('Existing user check result:', { existingUser, existingUserError });
 
       let userId = existingUser?.id;
 
       // If user doesn't exist, create them
       if (!existingUser) {
         const fullName = [telegramFirstName, telegramLastName].filter(Boolean).join(' ') || 'Telegram User';
+        console.log('Creating new user:', fullName);
 
         const { data: newUser, error } = await supabase
           .from('users')
@@ -262,7 +270,12 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
           .select()
           .single();
 
-        if (error) throw error;
+        console.log('User creation result:', { newUser, error });
+
+        if (error) {
+          console.error('Error creating user:', error);
+          throw error;
+        }
         userId = newUser.id;
 
         toast({
@@ -273,6 +286,7 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
 
       // Add user to community if not already a member
       if (userId && !communityMemberIds.has(userId)) {
+        console.log('Adding user to community:', userId);
         const { error: memberError } = await supabase
           .from('community_members')
           .insert({
@@ -281,11 +295,22 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
             role: 'member'
           });
 
-        if (memberError) throw memberError;
+        console.log('Community member add result:', { memberError });
+
+        if (memberError) {
+          console.error('Error adding to community:', memberError);
+          throw memberError;
+        }
 
         toast({
           title: "Added to Community",
           description: "User is now a community member!",
+        });
+      } else {
+        console.log('User already in community or no userId');
+        toast({
+          title: "Already a Member",
+          description: "This user is already a community member",
         });
       }
 
@@ -293,10 +318,10 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
       fetchConversation();
       fetchCommunityMembers();
     } catch (error) {
-      console.error('Error generating user:', error);
+      console.error('Error in generateUser:', error);
       toast({
         title: "Error",
-        description: "Failed to generate user account",
+        description: error instanceof Error ? error.message : "Failed to generate user account",
         variant: "destructive"
       });
     }

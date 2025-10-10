@@ -54,9 +54,12 @@ const VoiceInterface: React.FC<VoiceInterfaceProps> = ({
     },
     onError: (error) => {
       console.error("ElevenLabs error:", error);
+      const errorMessage = typeof error === 'string' 
+        ? error 
+        : (error as any)?.message || "An error occurred";
       toast({
         title: "Error",
-        description: error.message || "An error occurred",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -98,8 +101,8 @@ const VoiceInterface: React.FC<VoiceInterfaceProps> = ({
 
       // Start the conversation with the signed URL
       await conversation.startSession({
-        url: data.signed_url,
-      });
+        signedUrl: data.signed_url,
+      } as any);
     } catch (error) {
       console.error("Error starting conversation:", error);
       toast({

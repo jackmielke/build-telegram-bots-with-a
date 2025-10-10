@@ -18,3 +18,9 @@ project_id = "efdqqnubowgwsnwvlalp"
 
   [functions.elevenlabs-session]
   verify_jwt = false
+
+  [functions.elevenlabs-create-previews]
+  verify_jwt = true
+
+  [functions.elevenlabs-create-agent]
+  verify_jwt = true

@@ -452,7 +452,7 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
                           <span className="text-[10px] md:text-xs ml-1">Prompt</span>
                         </Button>
                       )}
-                      {!isAI && !message.sender_id && message.metadata?.telegram_user_id && (
+                      {!isAI && !message.sender_id && (message.metadata?.telegram_user_id || message.metadata?.from?.id) && (
                         <Button
                           variant="outline"
                           size="sm"

@@ -412,6 +412,11 @@ const VoiceInterface: React.FC<VoiceInterfaceProps> = ({
                               id="voice-description"
                               value={voiceDescription}
                               onChange={(e) => setVoiceDescription(e.target.value)}
+                              onPaste={(e) => {
+                                e.preventDefault();
+                                const pastedText = e.clipboardData.getData('text');
+                                setVoiceDescription(voiceDescription + pastedText);
+                              }}
                               placeholder="e.g., A warm, friendly female voice with a slight British accent..."
                               className="min-h-[100px]"
                             />

@@ -19,6 +19,7 @@ interface WorkflowCheck {
       search_memory?: boolean;
       search_chat_history?: boolean;
       save_memory?: boolean;
+      search_profiles?: boolean;
     };
     auto_intro_generation?: {
       enabled?: boolean;
@@ -766,7 +767,8 @@ serve(async (req) => {
             hasAgentTools.web_search ||
             hasAgentTools.search_memory ||
             hasAgentTools.search_chat_history ||
-            hasAgentTools.save_memory
+            hasAgentTools.save_memory ||
+            hasAgentTools.search_profiles
           );
 
           if (agentToolsEnabled) {
@@ -796,6 +798,7 @@ When asked about your capabilities or tools, describe them in simple, friendly t
 - I can remember and recall community knowledge
 - I can look through recent conversations to find information
 - I can save important information to remember for later
+- I can search community member profiles to find people with specific skills or interests
 
 ${communityData?.agent_instructions || 'Be helpful, friendly, and concise.'}`;
 
@@ -987,6 +990,7 @@ When asked about your capabilities or tools, describe them in simple, friendly t
 - I can remember and recall community knowledge
 - I can look through recent conversations to find information
 - I can save important information to remember for later
+- I can search community member profiles to find people with specific skills or interests
 
 ${communityData?.agent_instructions || 'You are a helpful community assistant.'}`;
             

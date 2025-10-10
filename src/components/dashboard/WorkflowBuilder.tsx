@@ -494,7 +494,7 @@ Please create this chatbot interface now!`;
   // Helper function to check if agent mode is active (any tool enabled)
   const isAgentModeActive = (workflow: any): boolean => {
     const tools = workflow.configuration?.agent_tools || {};
-    return tools.web_search || tools.search_memory || tools.search_chat_history || tools.save_memory;
+    return tools.web_search || tools.search_memory || tools.search_chat_history || tools.save_memory || tools.search_profiles;
   };
 
   const toggleAutoIntroGeneration = async (workflowType: string, currentEnabled: boolean) => {
@@ -1158,6 +1158,18 @@ Please create this chatbot interface now!`;
                                 <Switch 
                                   checked={telegramWorkflow.configuration?.agent_tools?.save_memory || false}
                                   onCheckedChange={() => toggleAgentTool(telegramWorkflow.type, 'save_memory', telegramWorkflow.configuration?.agent_tools?.save_memory || false)}
+                                  disabled={!isAdmin}
+                                />
+                              </div>
+                              
+                              <div className="flex items-center justify-between p-2 rounded bg-background/50">
+                                <div>
+                                  <p className="text-sm font-medium">👥 Search Profiles</p>
+                                  <p className="text-xs text-muted-foreground">Search member profiles and skills</p>
+                                </div>
+                                <Switch 
+                                  checked={telegramWorkflow.configuration?.agent_tools?.search_profiles || false}
+                                  onCheckedChange={() => toggleAgentTool(telegramWorkflow.type, 'search_profiles', telegramWorkflow.configuration?.agent_tools?.search_profiles || false)}
                                   disabled={!isAdmin}
                                 />
                               </div>

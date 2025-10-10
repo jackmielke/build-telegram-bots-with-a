@@ -75,6 +75,23 @@ const AGENT_TOOLS = [
         required: ["content"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_profiles",
+      description: "Search user profiles in the community by name, bio, interests, or other profile information. Use this to find people, discover who has specific skills, or match users with common interests.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "The search query to find users (e.g., 'developer', 'design', 'yoga', or a person's name)"
+          }
+        },
+        required: ["query"]
+      }
+    }
   }
 ];
 
@@ -245,6 +262,92 @@ async function executeTool(
         }
         
         return `✅ Memory saved successfully!`;
+      }
+
+      case "search_profiles": {
+        console.log(`👥 Searching profiles: "${args.query}"`);
+        
+        const searchQuery = args.query.toLowerCase();
+        
+        // Get community members with their profile data
+        const { data: members } = await supabase
+          .from('community_members')
+          .select(`
+            user:user_id (
+              name,
+              bio,
+              interests_skills,
+              headline,
+              username
+            )
+          `)
+          .eq('community_id', communityId);
+        
+        if (!members || members.length === 0) {
+          return "No community members found.";
+        }
+        
+        // Filter and rank results
+        const matches = members
+          .filter((m: any) => m.user)
+          .map((m: any) => {
+            const user = m.user;
+            let score = 0;
+            let matchReason = '';
+            
+            // Check name
+            if (user.name && user.name.toLowerCase().includes(searchQuery)) {
+              score += 10;
+              matchReason = 'name match';
+            }
+            
+            // Check bio
+            if (user.bio && user.bio.toLowerCase().includes(searchQuery)) {
+              score += 5;
+              matchReason = matchReason ? `${matchReason}, bio` : 'bio match';
+            }
+            
+            // Check interests/skills
+            if (user.interests_skills && Array.isArray(user.interests_skills)) {
+              const skillMatch = user.interests_skills.some((skill: string) => 
+                skill.toLowerCase().includes(searchQuery)
+              );
+              if (skillMatch) {
+                score += 8;
+                matchReason = matchReason ? `${matchReason}, skills` : 'skills match';
+              }
+            }
+            
+            // Check headline
+            if (user.headline && user.headline.toLowerCase().includes(searchQuery)) {
+              score += 3;
+              matchReason = matchReason ? `${matchReason}, headline` : 'headline match';
+            }
+            
+            return { user, score, matchReason };
+          })
+          .filter((m: any) => m.score > 0)
+          .sort((a: any, b: any) => b.score - a.score)
+          .slice(0, 10);
+        
+        if (matches.length === 0) {
+          return `No profiles found matching "${args.query}". Try a different search term.`;
+        }
+        
+        const formatted = matches
+          .map((m: any, idx: number) => {
+            const user = m.user;
+            const parts = [
+              `${idx + 1}. ${user.name || 'Unknown'}`,
+              user.headline ? `   ${user.headline}` : '',
+              user.bio ? `   ${user.bio.substring(0, 100)}${user.bio.length > 100 ? '...' : ''}` : '',
+              user.interests_skills?.length > 0 ? `   Skills: ${user.interests_skills.slice(0, 3).join(', ')}` : ''
+            ].filter(p => p);
+            return parts.join('\n');
+          })
+          .join('\n\n');
+        
+        return `Found ${matches.length} profile(s) matching "${args.query}":\n\n${formatted}`;
       }
 
       default:

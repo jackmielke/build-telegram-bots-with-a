@@ -14,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import BotHealthIndicator from './BotHealthIndicator';
+import VoiceInterface from './VoiceInterface';
 import { TelegramBotDialog } from '../TelegramBotDialog';
 import botfatherGroupSettings from '@/assets/botfather-group-settings.png';
 import {
@@ -39,12 +40,15 @@ import {
   Key,
   Copy,
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  Phone
 } from 'lucide-react';
 
 interface Community {
   id: string;
   name: string;
+  agent_name: string | null;
+  agent_instructions: string | null;
   telegram_bot_token: string | null;
   telegram_bot_url: string | null;
 }
@@ -102,10 +106,10 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
       icon: 'memory'
     },
     {
-      type: 'discord_integration',
-      name: 'Discord Integration',
-      description: 'Enable AI interactions in Discord',
-      icon: 'search'
+      type: 'voice_interface',
+      name: 'Voice Interface',
+      description: 'Test your agent with voice interaction',
+      icon: 'phone'
     },
     {
       type: 'webhook_integration',
@@ -625,11 +629,11 @@ Please create this chatbot interface now!`;
     };
   };
 
-  const testDiscordWorkflow = async (input: string) => {
+  const testVoiceWorkflow = async (input: string) => {
     return {
       success: true,
-      message: 'Discord workflow simulation completed',
-      data: { message_sent: true, channel: 'general', content: input }
+      message: 'Voice workflow test completed',
+      data: { text_received: true, content: input, voice_ready: true }
     };
   };
 
@@ -833,8 +837,8 @@ Please create this chatbot interface now!`;
         case 'slack_integration':
           result = await testSlackWorkflow(input);
           break;
-        case 'discord_integration':
-          result = await testDiscordWorkflow(input);
+        case 'voice_interface':
+          result = await testVoiceWorkflow(input);
           break;
         case 'webhook_integration':
           result = await testWebhookWorkflow(input);
@@ -880,6 +884,8 @@ Please create this chatbot interface now!`;
         return <MessageSquare className="w-5 h-5" />;
       case 'search':
         return <Search className="w-5 h-5" />;
+      case 'phone':
+        return <Phone className="w-5 h-5" />;
       default:
         return <Workflow className="w-5 h-5" />;
     }
@@ -893,8 +899,8 @@ Please create this chatbot interface now!`;
         return 'Enter email subject or content to test...';
       case 'slack_integration':
         return 'Enter a test Slack message...';
-      case 'discord_integration':
-        return 'Enter a test Discord message...';
+      case 'voice_interface':
+        return 'Enter test text (voice functionality coming soon)...';
       case 'webhook_integration':
         return 'Enter JSON payload to send to webhook...';
       default:
@@ -937,9 +943,9 @@ Please create this chatbot interface now!`;
               <Hash className="w-4 h-4" />
               <span className="hidden sm:inline">Slack</span>
             </TabsTrigger>
-            <TabsTrigger value="discord" className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4" />
-              <span className="hidden sm:inline">Discord</span>
+            <TabsTrigger value="voice" className="flex items-center gap-2">
+              <Phone className="w-4 h-4" />
+              <span className="hidden sm:inline">Voice</span>
             </TabsTrigger>
             <TabsTrigger value="webhook" className="flex items-center gap-2">
               <Globe className="w-4 h-4" />
@@ -1587,61 +1593,70 @@ Please create this chatbot interface now!`;
 
           {/* OTHER WORKFLOW TABS */}
           {otherWorkflows.filter(w => w.type !== 'webhook_integration').map((workflow) => (
-            <TabsContent key={workflow.type} value={workflow.type.replace('_integration', '')} className="space-y-4 mt-6">
-              <Card className="border-border/30">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-3 rounded-lg bg-primary/10">
-                        {getWorkflowIcon(workflow.icon)}
+            <TabsContent key={workflow.type} value={workflow.type.replace('_integration', '').replace('_interface', '')} className="space-y-4 mt-6">
+              {workflow.type === 'voice_interface' ? (
+                <VoiceInterface 
+                  communityId={community.id}
+                  agentName={community.agent_name || community.name}
+                  agentInstructions={community.agent_instructions || ''}
+                  isAdmin={isAdmin}
+                />
+              ) : (
+                <Card className="border-border/30">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-3 rounded-lg bg-primary/10">
+                          {getWorkflowIcon(workflow.icon)}
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-lg">{workflow.name}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            {workflow.description}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-medium text-lg">{workflow.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {workflow.description}
-                        </p>
-                      </div>
+                      <Switch 
+                        checked={workflow.enabled}
+                        onCheckedChange={() => toggleWorkflow(workflow.type, workflow.enabled)}
+                        disabled={!isAdmin}
+                      />
                     </div>
-                    <Switch 
-                      checked={workflow.enabled}
-                      onCheckedChange={() => toggleWorkflow(workflow.type, workflow.enabled)}
-                      disabled={!isAdmin}
-                    />
-                  </div>
-                  
-                  <div className="flex items-center gap-2 mb-4">
-                    <Badge variant={workflow.enabled ? 'default' : 'outline'}>
-                      {workflow.enabled ? 'Active' : 'Inactive'}
-                    </Badge>
                     
-                    {workflow.enabled && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedWorkflow(workflow);
-                          setShowTestDialog(true);
-                          setTestInput('');
-                          setTestResult(null);
-                        }}
-                      >
-                        <TestTube className="w-4 h-4 mr-1" />
-                        Test
-                      </Button>
-                    )}
-                  </div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <Badge variant={workflow.enabled ? 'default' : 'outline'}>
+                        {workflow.enabled ? 'Active' : 'Inactive'}
+                      </Badge>
+                      
+                      {workflow.enabled && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedWorkflow(workflow);
+                            setShowTestDialog(true);
+                            setTestInput('');
+                            setTestResult(null);
+                          }}
+                        >
+                          <TestTube className="w-4 h-4 mr-1" />
+                          Test
+                        </Button>
+                      )}
+                    </div>
 
-                  {!workflow.enabled && (
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Coming Soon</AlertTitle>
-                      <AlertDescription>
-                        This workflow integration is currently in development. Enable it to get notified when it's ready.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </CardContent>
-              </Card>
+                    {!workflow.enabled && (
+                      <Alert>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Coming Soon</AlertTitle>
+                        <AlertDescription>
+                          This workflow integration is currently in development. Enable it to get notified when it's ready.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
           ))}
         </Tabs>

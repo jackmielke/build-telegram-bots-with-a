@@ -30,6 +30,7 @@ interface Member {
     name: string | null;
     email: string | null;
     avatar_url: string | null;
+    is_claimed: boolean | null;
   };
 }
 
@@ -73,7 +74,8 @@ const CommunitySettings = ({ community, isAdmin, onUpdate }: CommunitySettingsPr
             id,
             name,
             email,
-            avatar_url
+            avatar_url,
+            is_claimed
           )
         `)
         .eq('community_id', community.id)
@@ -673,10 +675,17 @@ const CommunitySettings = ({ community, isAdmin, onUpdate }: CommunitySettingsPr
                   
                   <div className="flex items-center space-x-3">
                     <div className="text-right">
-                      <Badge variant={getRoleBadgeVariant(member.role)} className="flex items-center space-x-1">
-                        {getRoleIcon(member.role)}
-                        <span className="capitalize">{member.role}</span>
-                      </Badge>
+                      <div className="flex items-center gap-2 justify-end">
+                        <Badge variant={getRoleBadgeVariant(member.role)} className="flex items-center space-x-1">
+                          {getRoleIcon(member.role)}
+                          <span className="capitalize">{member.role}</span>
+                        </Badge>
+                        {member.users.is_claimed === false && (
+                          <Badge variant="outline" className="text-xs bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20">
+                            Unclaimed
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground mt-1">
                         Joined {new Date(member.joined_at).toLocaleDateString()}
                       </p>

@@ -401,7 +401,7 @@ const VoiceInterface: React.FC<VoiceInterfaceProps> = ({
                   No agent configured. {isAdmin ? "Create a custom voice agent below!" : "Ask an admin to configure the agent."}
                 </p>
                 {isAdmin && (
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <Dialog open={isCreatingVoice} onOpenChange={setIsCreatingVoice}>
                       <DialogTrigger asChild>
                         <Button variant="default" className="flex-1">

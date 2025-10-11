@@ -791,8 +791,16 @@ Current time: ${new Date().toISOString()}
 User: ${userName}${telegramUsername ? ` (@${telegramUsername})` : ''}
 Chat type: ${chatType === 'private' ? 'private DM' : `${chatType} chat`}
 
+CRITICAL FORMATTING RULES - YOU MUST FOLLOW THESE EXACTLY:
+- DO NOT use asterisks (*) for bold or italic text
+- DO NOT use underscores (_) for italic text  
+- DO NOT use markdown formatting of any kind
+- DO NOT use special characters for emphasis
+- Write in plain text only with line breaks for readability
+- If you need emphasis, rewrite the sentence to make it naturally stand out
+- These are Telegram messages - formatting will break and look bad to users
+
 IMPORTANT: Keep responses under 4000 characters due to Telegram's message limit.
-FORMATTING: Use simple, clean text. Use line breaks for readability. Avoid using bold, italics, or special formatting unless absolutely necessary.
 
 When asked about your capabilities or tools, describe them in simple, friendly terms:
 - I can search the web for current information and news
@@ -966,8 +974,16 @@ Chat type: ${chatTypeLabel}
 User: ${userName}${telegramUsername ? ` (@${telegramUsername})` : ''}
 Community: ${agentName}
 
+CRITICAL FORMATTING RULES - YOU MUST FOLLOW THESE EXACTLY:
+- DO NOT use asterisks (*) for bold or italic text
+- DO NOT use underscores (_) for italic text
+- DO NOT use markdown formatting of any kind
+- DO NOT use special characters for emphasis
+- Write in plain text only with line breaks for readability
+- If you need emphasis, rewrite the sentence to make it naturally stand out
+- These are Telegram messages - formatting will break and look bad to users
+
 IMPORTANT: Keep responses under 4000 characters due to Telegram's message limit. Be concise and direct.
-FORMATTING: Use simple, clean text with line breaks for readability. Avoid using bold, italics, or special formatting unless absolutely necessary.
 
 When asked about your capabilities or tools, describe them in simple, friendly terms:
 - I can search the web for current information and news

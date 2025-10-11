@@ -240,7 +240,7 @@ const MemoryManagement = ({ communityId, isAdmin }: MemoryManagementProps) => {
       const { profileData } = data;
       setProfileFormData({
         name: profileData.name || "",
-        username: profileData.username || "",
+        username: typeof profileData.username === 'string' ? profileData.username.replace(/^@+/, '') : "",
         bio: profileData.bio || "",
         interests_skills: profileData.interests_skills || [],
         headline: profileData.headline || ""
@@ -275,34 +275,49 @@ const MemoryManagement = ({ communityId, isAdmin }: MemoryManagementProps) => {
     setIsCreatingProfile(true);
 
     try {
+      const normalizedUsername = profileFormData.username?.trim().replace(/^@+/, '') || null;
+
       const { data: newUser, error } = await supabase
         .from('users')
-        .insert([{
-          name: profileFormData.name,
-          username: profileFormData.username || null,
-          bio: profileFormData.bio || null,
-          interests_skills: profileFormData.interests_skills.length > 0 ? profileFormData.interests_skills : null,
-          headline: profileFormData.headline || null,
-          is_claimed: false
-        }] as any)
+        .insert([
+          {
+            name: profileFormData.name,
+            username: normalizedUsername,
+            bio: profileFormData.bio || null,
+            interests_skills:
+              profileFormData.interests_skills.length > 0
+                ? profileFormData.interests_skills
+                : null,
+            headline: profileFormData.headline || null,
+            is_claimed: false,
+          },
+        ] as any)
         .select()
         .single();
 
       if (error) throw error;
 
+      // If we are converting a specific memory, attach it to the new profile
+      if (convertingMemory?.id && newUser?.id) {
+        await supabase
+          .from('memories')
+          .update({ created_by: newUser.id })
+          .eq('id', convertingMemory.id);
+      }
+
       toast({
-        title: "Success",
-        description: `Profile created for ${profileFormData.name}`
+        title: 'Success',
+        description: `Profile created for ${profileFormData.name}`,
       });
 
       setIsConvertDialogOpen(false);
       setConvertingMemory(null);
       setProfileFormData({
-        name: "",
-        username: "",
-        bio: "",
+        name: '',
+        username: '',
+        bio: '',
         interests_skills: [],
-        headline: ""
+        headline: '',
       });
     } catch (error) {
       console.error('Error creating profile:', error);

@@ -27,3 +27,6 @@ project_id = "efdqqnubowgwsnwvlalp"
 
   [functions.parse-memory-to-profile]
   verify_jwt = true
+
+  [functions.telegram-proactive-outreach]
+  verify_jwt = true

@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Bot, User, Calendar, DollarSign, BarChart3, Download, Eye, Pencil, UserPlus } from 'lucide-react';
+import { ArrowLeft, Bot, User, Calendar, DollarSign, BarChart3, Download, Eye, Pencil, UserPlus, Bell, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AIContextViewer } from './AIContextViewer';
 
@@ -44,6 +44,8 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
   const [editingThreadName, setEditingThreadName] = useState(false);
   const [newThreadName, setNewThreadName] = useState('');
   const [communityMemberIds, setCommunityMemberIds] = useState<Set<string>>(new Set());
+  const [chatSession, setChatSession] = useState<any>(null);
+  const [sendingOutreach, setSendingOutreach] = useState(false);
   const MESSAGES_PER_PAGE = 50;
   const { toast } = useToast();
 
@@ -51,6 +53,7 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
     fetchConversation();
     fetchConversationStats();
     fetchCommunityMembers();
+    fetchChatSession();
     
     // Set up real-time subscription for new messages in this conversation
     const channel = supabase
@@ -138,6 +141,99 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
       setCommunityMemberIds(memberIds);
     } catch (error) {
       console.error('Error fetching community members:', error);
+    }
+  };
+
+  const fetchChatSession = async () => {
+    try {
+      // Extract telegram_chat_id from first message metadata
+      const { data: firstMessage } = await supabase
+        .from('messages')
+        .select('metadata')
+        .eq('conversation_id', conversationId)
+        .eq('community_id', communityId)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .single();
+
+      const metadata = firstMessage?.metadata as any;
+      if (!metadata?.telegram_chat_id) {
+        return; // Not a Telegram conversation
+      }
+
+      const telegramChatId = metadata.telegram_chat_id;
+
+      const { data, error } = await supabase
+        .from('telegram_chat_sessions')
+        .select('*')
+        .eq('telegram_chat_id', telegramChatId)
+        .eq('community_id', communityId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      setChatSession(data);
+    } catch (error) {
+      console.error('Error fetching chat session:', error);
+    }
+  };
+
+  const toggleProactiveOutreach = async () => {
+    if (!chatSession) return;
+
+    try {
+      const newValue = !chatSession.proactive_outreach_enabled;
+      const { error } = await supabase
+        .from('telegram_chat_sessions')
+        .update({ proactive_outreach_enabled: newValue })
+        .eq('id', chatSession.id);
+
+      if (error) throw error;
+
+      setChatSession({ ...chatSession, proactive_outreach_enabled: newValue });
+      toast({
+        title: "Success",
+        description: `Proactive outreach ${newValue ? 'enabled' : 'disabled'}`
+      });
+    } catch (error) {
+      console.error('Error toggling proactive outreach:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update setting",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const sendTestOutreach = async () => {
+    if (!chatSession) return;
+
+    setSendingOutreach(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('telegram-proactive-outreach', {
+        body: {
+          chatSessionId: chatSession.id,
+          triggerType: 'manual'
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Test outreach message sent!"
+      });
+
+      // Refresh chat session to update last_outreach_at
+      fetchChatSession();
+    } catch (error) {
+      console.error('Error sending test outreach:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send test outreach",
+        variant: "destructive"
+      });
+    } finally {
+      setSendingOutreach(false);
     }
   };
 
@@ -321,6 +417,35 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
           </div>
         </div>
         <div className="flex gap-2 flex-shrink-0">
+          {chatSession && (
+            <>
+              <Button
+                variant={chatSession.proactive_outreach_enabled ? "default" : "outline"}
+                size="sm"
+                onClick={toggleProactiveOutreach}
+                className="flex items-center gap-1"
+                title={chatSession.proactive_outreach_enabled ? "Disable proactive outreach" : "Enable proactive outreach"}
+              >
+                <Bell className="w-4 h-4" />
+                <span className="text-xs hidden md:inline">
+                  {chatSession.proactive_outreach_enabled ? 'Enabled' : 'Disabled'}
+                </span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={sendTestOutreach}
+                disabled={sendingOutreach}
+                className="flex items-center gap-1"
+                title="Send test outreach message now"
+              >
+                <Send className="w-4 h-4" />
+                <span className="text-xs hidden md:inline">
+                  {sendingOutreach ? 'Sending...' : 'Test'}
+                </span>
+              </Button>
+            </>
+          )}
           <Button 
             variant="outline" 
             size="sm" 
@@ -328,10 +453,29 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
             className="flex items-center gap-1"
           >
             <Download className="w-4 h-4" />
-            <span className="text-xs">Export</span>
+            <span className="text-xs hidden md:inline">Export</span>
           </Button>
         </div>
       </div>
+
+      {/* Proactive Outreach Info */}
+      {chatSession?.proactive_outreach_enabled && (
+        <Card className="gradient-card border-primary/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Bell className="w-4 h-4 text-primary" />
+              Proactive Outreach Active
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-muted-foreground">
+              {chatSession.last_outreach_at 
+                ? `Last message sent ${new Date(chatSession.last_outreach_at).toLocaleDateString()} at ${new Date(chatSession.last_outreach_at).toLocaleTimeString()}`
+                : 'No messages sent yet'}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats */}
       {conversationStats && (

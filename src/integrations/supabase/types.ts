@@ -826,6 +826,63 @@ export type Database = {
         }
         Relationships: []
       }
+      outreach_logs: {
+        Row: {
+          ai_prompt: string | null
+          chat_session_id: string
+          community_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          message_sent: string
+          metadata: Json | null
+          success: boolean | null
+          telegram_chat_id: number
+          trigger_type: string
+        }
+        Insert: {
+          ai_prompt?: string | null
+          chat_session_id: string
+          community_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_sent: string
+          metadata?: Json | null
+          success?: boolean | null
+          telegram_chat_id: number
+          trigger_type: string
+        }
+        Update: {
+          ai_prompt?: string | null
+          chat_session_id?: string
+          community_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_sent?: string
+          metadata?: Json | null
+          success?: boolean | null
+          telegram_chat_id?: number
+          trigger_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_logs_chat_session_id_fkey"
+            columns: ["chat_session_id"]
+            isOneToOne: false
+            referencedRelation: "telegram_chat_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outreach_logs_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_positions: {
         Row: {
           character_glb_url: string | null
@@ -1053,8 +1110,10 @@ export type Database = {
           id: string
           is_active: boolean | null
           last_message_at: string | null
+          last_outreach_at: string | null
           message_count: number | null
           metadata: Json | null
+          proactive_outreach_enabled: boolean | null
           telegram_chat_id: number
           telegram_first_name: string | null
           telegram_last_name: string | null
@@ -1069,8 +1128,10 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           last_message_at?: string | null
+          last_outreach_at?: string | null
           message_count?: number | null
           metadata?: Json | null
+          proactive_outreach_enabled?: boolean | null
           telegram_chat_id: number
           telegram_first_name?: string | null
           telegram_last_name?: string | null
@@ -1085,8 +1146,10 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           last_message_at?: string | null
+          last_outreach_at?: string | null
           message_count?: number | null
           metadata?: Json | null
+          proactive_outreach_enabled?: boolean | null
           telegram_chat_id?: number
           telegram_first_name?: string | null
           telegram_last_name?: string | null

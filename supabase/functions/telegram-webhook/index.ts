@@ -792,6 +792,7 @@ User: ${userName}${telegramUsername ? ` (@${telegramUsername})` : ''}
 Chat type: ${chatType === 'private' ? 'private DM' : `${chatType} chat`}
 
 IMPORTANT: Keep responses under 4000 characters due to Telegram's message limit.
+FORMATTING: Use simple, clean text. Use line breaks for readability. Avoid using bold, italics, or special formatting unless absolutely necessary. If you must emphasize something, use CAPS sparingly.
 
 When asked about your capabilities or tools, describe them in simple, friendly terms:
 - I can search the web for current information and news
@@ -848,36 +849,18 @@ ${communityData?.agent_instructions || 'Be helpful, friendly, and concise.'}`;
             let truncatedReply = aiReplyText.length > 4096 ? aiReplyText.substring(0, 4093) + '...' : aiReplyText;
             
             try {
+              // Send as plain text to avoid markdown parsing issues
               const sendMessageResp = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   chat_id: chatId,
                   text: truncatedReply,
-                  parse_mode: 'Markdown',
                   ...(messageThreadId && { message_thread_id: messageThreadId })
                 })
               });
 
               sendMessageData = await sendMessageResp.json();
-              
-              // If Telegram rejected due to parse error, retry without markdown
-              if (!sendMessageData.ok && sendMessageData.description?.includes('parse')) {
-                console.log('⚠️ Markdown parse error, retrying with plain text');
-                
-                const plainTextResp = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    chat_id: chatId,
-                    text: truncatedReply,
-                    ...(messageThreadId && { message_thread_id: messageThreadId })
-                  })
-                });
-                
-                sendMessageData = await plainTextResp.json();
-              }
-              
               console.log('✅ Agent response sent to Telegram:', sendMessageData);
             } catch (sendError) {
               console.error('❌ Error sending message to Telegram:', sendError);
@@ -984,6 +967,7 @@ User: ${userName}${telegramUsername ? ` (@${telegramUsername})` : ''}
 Community: ${agentName}
 
 IMPORTANT: Keep responses under 4000 characters due to Telegram's message limit. Be concise and direct.
+FORMATTING: Use simple, clean text with line breaks for readability. Avoid using bold, italics, or special formatting unless absolutely necessary. If you must emphasize something, use CAPS sparingly.
 
 When asked about your capabilities or tools, describe them in simple, friendly terms:
 - I can search the web for current information and news
@@ -1268,7 +1252,6 @@ ${communityData?.agent_instructions || 'You are a helpful community assistant.'}
               body: JSON.stringify({
                 chat_id: chatId,
                 text: truncatedReply,
-                parse_mode: 'HTML',
                 disable_web_page_preview: true,
               }),
             });

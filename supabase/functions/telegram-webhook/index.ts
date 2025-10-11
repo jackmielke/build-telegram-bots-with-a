@@ -973,9 +973,7 @@ ${communityData?.agent_instructions || 'Be helpful, friendly, and concise.'}`;
                 body: JSON.stringify({
                   chat_id: chatId,
                   text: truncatedReply,
-                  ...(shouldIncludeThreadId && { message_thread_id: messageThreadId }),
-                  // Reply to the message if it's a reply to bot
-                  ...(isReplyToBotMessage && body.message?.message_id && { reply_to_message_id: body.message.message_id })
+                  ...(shouldIncludeThreadId && { message_thread_id: messageThreadId })
                 })
               });
 

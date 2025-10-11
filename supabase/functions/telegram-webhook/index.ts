@@ -868,6 +868,11 @@ ${communityData?.agent_instructions || 'Be helpful, friendly, and concise.'}`;
             let truncatedReply = aiReplyText.length > 4096 ? aiReplyText.substring(0, 4093) + '...' : aiReplyText;
             
             try {
+              // For forum chats, only include message_thread_id if it's from the current message
+              // For replies to bot messages in non-forum groups, don't include thread_id
+              const shouldIncludeThreadId = messageThreadId && 
+                (body.message?.is_topic_message || body.message?.message_thread_id);
+              
               // Send as plain text to avoid markdown parsing issues
               const sendMessageResp = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                 method: 'POST',
@@ -875,7 +880,9 @@ ${communityData?.agent_instructions || 'Be helpful, friendly, and concise.'}`;
                 body: JSON.stringify({
                   chat_id: chatId,
                   text: truncatedReply,
-                  ...(messageThreadId && { message_thread_id: messageThreadId })
+                  ...(shouldIncludeThreadId && { message_thread_id: messageThreadId }),
+                  // Reply to the message if it's a reply to bot
+                  ...(isReplyToBotMessage && body.message?.message_id && { reply_to_message_id: body.message.message_id })
                 })
               });
 

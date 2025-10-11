@@ -240,7 +240,7 @@ const MemoryManagement = ({ communityId, isAdmin }: MemoryManagementProps) => {
       const { profileData } = data;
       setProfileFormData({
         name: profileData.name || "",
-        username: (profileData.username || "").replace(/^@+/, ""),
+        username: profileData.username || "",
         bio: profileData.bio || "",
         interests_skills: profileData.interests_skills || [],
         headline: profileData.headline || ""
@@ -275,16 +275,18 @@ const MemoryManagement = ({ communityId, isAdmin }: MemoryManagementProps) => {
     setIsCreatingProfile(true);
 
     try {
-      const sanitizedUsername = profileFormData.username?.replace(/^@+/, '').trim() || '';
-      const { data: created, error } = await supabase.functions.invoke('create-profile', {
-        body: {
-          name: profileFormData.name.trim(),
-          username: sanitizedUsername || null,
+      const { data: newUser, error } = await supabase
+        .from('users')
+        .insert([{
+          name: profileFormData.name,
+          username: profileFormData.username || null,
           bio: profileFormData.bio || null,
           interests_skills: profileFormData.interests_skills.length > 0 ? profileFormData.interests_skills : null,
           headline: profileFormData.headline || null,
-        },
-      });
+          is_claimed: false
+        }] as any)
+        .select()
+        .single();
 
       if (error) throw error;
 

@@ -27,6 +27,3 @@ project_id = "efdqqnubowgwsnwvlalp"
 
   [functions.parse-memory-to-profile]
   verify_jwt = true
-
-  [functions.create-profile]
-  verify_jwt = true

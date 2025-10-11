@@ -728,19 +728,26 @@ serve(async (req) => {
 
           // Get bot info to check for mentions in groups
           let botUsername: string | undefined;
+          let botUserId: number | undefined;
           if (chatType === 'group' || chatType === 'supergroup') {
             try {
               const botInfoResp = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
               const botInfoData = await botInfoResp.json();
               botUsername = botInfoData.result?.username;
+              botUserId = botInfoData.result?.id;
             } catch (err) {
               console.error('Error fetching bot info:', err);
             }
           }
 
-          // FOR GROUPS/SUPERGROUPS: Only respond if bot is mentioned or it's a command
-          if ((chatType === 'group' || chatType === 'supergroup') && !isBotMentioned(body.message, botUsername)) {
-            console.log(`Bot not mentioned in ${chatType}, skipping AI response`);
+          // Check if this message is a reply to a bot message
+          const isReplyToBotMessage = body.message?.reply_to_message?.from?.id === botUserId;
+
+          // FOR GROUPS/SUPERGROUPS: Only respond if bot is mentioned, it's a command, or replying to bot
+          if ((chatType === 'group' || chatType === 'supergroup') && 
+              !isBotMentioned(body.message, botUsername) && 
+              !isReplyToBotMessage) {
+            console.log(`Bot not mentioned and not replying to bot in ${chatType}, skipping AI response`);
             return new Response(JSON.stringify({ 
               ok: true, 
               message: 'Bot not mentioned in group',
@@ -749,6 +756,10 @@ serve(async (req) => {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
               status: 200
             });
+          }
+          
+          if (isReplyToBotMessage) {
+            console.log('✅ Message is a reply to bot message, responding in group');
           }
           
           // Send typing indicator immediately

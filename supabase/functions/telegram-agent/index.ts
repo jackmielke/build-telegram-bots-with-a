@@ -479,6 +479,11 @@ serve(async (req) => {
             case 'save_memory':
               toolMessage = '💾 Saving this to my memory...';
               break;
+            case 'search_profiles':
+              toolMessage = args.query
+                ? `👥 Searching member profiles for "${args.query}"...`
+                : '👥 Searching community member profiles...';
+              break;
             default:
               toolMessage = `🔧 Using tool: ${toolName}`;
           }

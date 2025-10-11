@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Brain, Plus, Search, Trash2, Edit, User, Calendar, Sparkles, Loader2 } from 'lucide-react';
+import { Brain, Plus, Search, Trash2, Edit, User, Calendar, Sparkles, Loader2, UserPlus } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 interface Memory {
@@ -38,6 +38,17 @@ const MemoryManagement = ({ communityId, isAdmin }: MemoryManagementProps) => {
     content: '',
     tags: ''
   });
+  const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
+  const [convertingMemory, setConvertingMemory] = useState<Memory | null>(null);
+  const [profileFormData, setProfileFormData] = useState({
+    name: "",
+    username: "",
+    bio: "",
+    interests_skills: [] as string[],
+    headline: ""
+  });
+  const [isParsingProfile, setIsParsingProfile] = useState(false);
+  const [isCreatingProfile, setIsCreatingProfile] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -214,6 +225,97 @@ const MemoryManagement = ({ communityId, isAdmin }: MemoryManagementProps) => {
     setIsEditing(true);
   };
 
+  const handleConvertToProfile = async (memory: Memory) => {
+    setConvertingMemory(memory);
+    setIsConvertDialogOpen(true);
+    setIsParsingProfile(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('parse-memory-to-profile', {
+        body: { content: memory.content }
+      });
+
+      if (error) throw error;
+
+      const { profileData } = data;
+      setProfileFormData({
+        name: profileData.name || "",
+        username: profileData.username || "",
+        bio: profileData.bio || "",
+        interests_skills: profileData.interests_skills || [],
+        headline: profileData.headline || ""
+      });
+
+      toast({
+        title: "Profile data extracted",
+        description: "Review and edit the data before creating the profile"
+      });
+    } catch (error) {
+      console.error('Error parsing profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to parse profile data",
+        variant: "destructive"
+      });
+    } finally {
+      setIsParsingProfile(false);
+    }
+  };
+
+  const handleCreateProfile = async () => {
+    if (!profileFormData.name.trim()) {
+      toast({
+        title: "Error",
+        description: "Name is required",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsCreatingProfile(true);
+
+    try {
+      const { data: newUser, error } = await supabase
+        .from('users')
+        .insert([{
+          name: profileFormData.name,
+          username: profileFormData.username || null,
+          bio: profileFormData.bio || null,
+          interests_skills: profileFormData.interests_skills.length > 0 ? profileFormData.interests_skills : null,
+          headline: profileFormData.headline || null,
+          is_claimed: false
+        }] as any)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Profile created for ${profileFormData.name}`
+      });
+
+      setIsConvertDialogOpen(false);
+      setConvertingMemory(null);
+      setProfileFormData({
+        name: "",
+        username: "",
+        bio: "",
+        interests_skills: [],
+        headline: ""
+      });
+    } catch (error) {
+      console.error('Error creating profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create profile",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCreatingProfile(false);
+    }
+  };
+
   const filteredMemories = memories.filter(memory =>
     memory.content?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     memory.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -373,6 +475,14 @@ const MemoryManagement = ({ communityId, isAdmin }: MemoryManagementProps) => {
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => handleConvertToProfile(memory)}
+                        title="Convert to Profile"
+                      >
+                        <UserPlus className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => openEditDialog(memory)}
                       >
                         <Edit className="w-4 h-4" />
@@ -398,6 +508,106 @@ const MemoryManagement = ({ communityId, isAdmin }: MemoryManagementProps) => {
           ))
         )}
       </div>
+
+      {/* Convert to Profile Dialog */}
+      <Dialog open={isConvertDialogOpen} onOpenChange={setIsConvertDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Convert Memory to Profile</DialogTitle>
+          </DialogHeader>
+          
+          {isParsingProfile ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin mr-2" />
+              <span>Parsing profile data...</span>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="profile-name">Name *</Label>
+                <Input
+                  id="profile-name"
+                  value={profileFormData.name}
+                  onChange={(e) => setProfileFormData({ ...profileFormData, name: e.target.value })}
+                  placeholder="Full name"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="profile-username">Username</Label>
+                <Input
+                  id="profile-username"
+                  value={profileFormData.username}
+                  onChange={(e) => setProfileFormData({ ...profileFormData, username: e.target.value })}
+                  placeholder="username or handle"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="profile-headline">Headline</Label>
+                <Input
+                  id="profile-headline"
+                  value={profileFormData.headline}
+                  onChange={(e) => setProfileFormData({ ...profileFormData, headline: e.target.value })}
+                  placeholder="One-line headline"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="profile-bio">Bio</Label>
+                <Textarea
+                  id="profile-bio"
+                  value={profileFormData.bio}
+                  onChange={(e) => setProfileFormData({ ...profileFormData, bio: e.target.value })}
+                  placeholder="Short bio"
+                  rows={4}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="profile-interests">Interests & Skills</Label>
+                <Input
+                  id="profile-interests"
+                  value={profileFormData.interests_skills.join(", ")}
+                  onChange={(e) => setProfileFormData({ 
+                    ...profileFormData, 
+                    interests_skills: e.target.value.split(",").map(s => s.trim()).filter(Boolean)
+                  })}
+                  placeholder="comma, separated, values"
+                />
+              </div>
+
+              {convertingMemory && (
+                <div className="mt-4 p-4 bg-muted rounded-lg">
+                  <p className="text-sm font-medium mb-2">Original Memory:</p>
+                  <p className="text-sm text-muted-foreground line-clamp-4">
+                    {convertingMemory.content}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-2 justify-end pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsConvertDialogOpen(false);
+                    setConvertingMemory(null);
+                  }}
+                  disabled={isCreatingProfile}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCreateProfile}
+                  disabled={isCreatingProfile || !profileFormData.name.trim()}
+                >
+                  {isCreatingProfile ? "Creating..." : "Create Profile"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

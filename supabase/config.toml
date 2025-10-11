@@ -24,3 +24,6 @@ project_id = "efdqqnubowgwsnwvlalp"
 
   [functions.elevenlabs-create-agent]
   verify_jwt = true
+
+  [functions.parse-memory-to-profile]
+  verify_jwt = true

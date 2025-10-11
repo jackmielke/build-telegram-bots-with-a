@@ -928,6 +928,47 @@ export type Database = {
         }
         Relationships: []
       }
+      profile_claim_requests: {
+        Row: {
+          auth_user_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          is_verified: boolean
+          user_profile_id: string
+          verification_code: string
+          verified_at: string | null
+        }
+        Insert: {
+          auth_user_id: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          is_verified?: boolean
+          user_profile_id: string
+          verification_code: string
+          verified_at?: string | null
+        }
+        Update: {
+          auth_user_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          is_verified?: boolean
+          user_profile_id?: string
+          verification_code?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_claim_requests_user_profile_id_fkey"
+            columns: ["user_profile_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           community_id: string

@@ -589,6 +589,99 @@ serve(async (req) => {
           lastName
         );
           
+          // Check if this is a profile claim verification code
+          if (userMessage.startsWith('CLAIM-') || userMessage.startsWith('/start CLAIM-')) {
+            const verificationCode = userMessage.replace('/start ', '').trim();
+            
+            console.log('🔐 Profile claim verification attempt:', { verificationCode, userId });
+            
+            // Look up the claim request
+            const { data: claimRequest, error: claimError } = await supabase
+              .from('profile_claim_requests')
+              .select('*')
+              .eq('verification_code', verificationCode)
+              .eq('is_verified', false)
+              .gt('expires_at', new Date().toISOString())
+              .single();
+            
+            if (claimError || !claimRequest) {
+              console.log('❌ Invalid or expired verification code');
+              await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: chatId,
+                  text: '❌ Invalid or expired verification code. Please request a new one from the profile page.'
+                })
+              });
+              return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+            }
+            
+            // Verify that the Telegram user matches the profile
+            const { data: profileToVerify } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', claimRequest.user_profile_id)
+              .single();
+            
+            if (profileToVerify?.telegram_user_id && profileToVerify.telegram_user_id !== telegramUserId) {
+              console.log('❌ Telegram user ID mismatch');
+              await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: chatId,
+                  text: '❌ This profile is linked to a different Telegram account.'
+                })
+              });
+              return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+            }
+            
+            // Update the user profile to claim it
+            const { error: updateError } = await supabase
+              .from('users')
+              .update({
+                auth_user_id: claimRequest.auth_user_id,
+                is_claimed: true,
+                telegram_user_id: telegramUserId
+              })
+              .eq('id', claimRequest.user_profile_id);
+            
+            if (updateError) {
+              console.error('❌ Error claiming profile:', updateError);
+              await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: chatId,
+                  text: '❌ Error claiming profile. Please try again later.'
+                })
+              });
+              return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+            }
+            
+            // Mark the claim request as verified
+            await supabase
+              .from('profile_claim_requests')
+              .update({
+                is_verified: true,
+                verified_at: new Date().toISOString()
+              })
+              .eq('id', claimRequest.id);
+            
+            console.log('✅ Profile claimed successfully');
+            await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: chatId,
+                text: `✅ Success! Your profile has been claimed and verified. You can now manage your profile from the web dashboard.`
+              })
+            });
+            
+            return new Response(JSON.stringify({ ok: true }), { headers: corsHeaders });
+          }
+          
           // Fetch conversation history BEFORE storing new message (sliding window: last 7 messages)
           const { data: conversationHistory } = await supabase
             .from('messages')

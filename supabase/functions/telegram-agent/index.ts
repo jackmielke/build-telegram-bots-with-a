@@ -390,7 +390,8 @@ serve(async (req) => {
       userId,
       systemPrompt,
       telegramChatId,
-      botToken 
+      botToken,
+      enabledTools
     } = await req.json();
 
     console.log('🤖 Agent request:', {
@@ -398,6 +399,16 @@ serve(async (req) => {
       historyLength: conversationHistory?.length || 0,
       communityId
     });
+
+    // Filter tools based on enabled configuration
+    const availableTools = AGENT_TOOLS.filter(tool => {
+      const toolName = tool.function.name;
+      // Map tool names to configuration keys
+      const configKey = toolName; // web_search, search_memory, etc.
+      return enabledTools && enabledTools[configKey] === true;
+    });
+
+    console.log('🛠️ Available tools:', availableTools.map(t => t.function.name));
 
     // Build messages for AI
     const messages = [
@@ -434,8 +445,11 @@ serve(async (req) => {
         body: JSON.stringify({
           model: 'google/gemini-2.5-flash',
           messages: currentMessages,
-          tools: AGENT_TOOLS,
-          tool_choice: 'auto'
+          // Only send tools that are enabled in configuration
+          ...(availableTools.length > 0 ? { 
+            tools: availableTools,
+            tool_choice: 'auto'
+          } : {}),
         }),
       });
 
@@ -460,6 +474,17 @@ serve(async (req) => {
         for (const toolCall of message.tool_calls) {
           const toolName = toolCall.function.name;
           const args = JSON.parse(toolCall.function.arguments || '{}');
+          
+          // SECURITY CHECK: Verify tool is actually enabled
+          if (!enabledTools || !enabledTools[toolName]) {
+            console.error(`⚠️ Tool ${toolName} was called but is not enabled in configuration`);
+            currentMessages.push({
+              role: 'tool',
+              tool_call_id: toolCall.id,
+              content: `Error: Tool ${toolName} is not enabled. Available tools: ${Object.keys(enabledTools || {}).filter(k => enabledTools[k]).join(', ')}`
+            });
+            continue; // Skip this tool
+          }
           
           // Create friendly user-facing messages for each tool
           let toolMessage = '';

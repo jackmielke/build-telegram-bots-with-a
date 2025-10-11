@@ -786,13 +786,13 @@ serve(async (req) => {
               : telegramUsername || 'User';
             const agentName = communityData?.agent_name || 'Assistant';
             
-            const systemPrompt = `You are ${agentName}, a helpful AI assistant for this community.
+            const systemPrompt = `You are an AI Agent named ${agentName}.
 Current time: ${new Date().toISOString()}
 User: ${userName}${telegramUsername ? ` (@${telegramUsername})` : ''}
 Chat type: ${chatType === 'private' ? 'private DM' : `${chatType} chat`}
 
 IMPORTANT: Keep responses under 4000 characters due to Telegram's message limit.
-FORMATTING: Use simple, clean text. Use line breaks for readability. Avoid using bold, italics, or special formatting unless absolutely necessary. If you must emphasize something, use CAPS sparingly.
+FORMATTING: Use simple, clean text. Use line breaks for readability. Avoid using bold, italics, or special formatting unless absolutely necessary.
 
 When asked about your capabilities or tools, describe them in simple, friendly terms:
 - I can search the web for current information and news
@@ -967,7 +967,7 @@ User: ${userName}${telegramUsername ? ` (@${telegramUsername})` : ''}
 Community: ${agentName}
 
 IMPORTANT: Keep responses under 4000 characters due to Telegram's message limit. Be concise and direct.
-FORMATTING: Use simple, clean text with line breaks for readability. Avoid using bold, italics, or special formatting unless absolutely necessary. If you must emphasize something, use CAPS sparingly.
+FORMATTING: Use simple, clean text with line breaks for readability. Avoid using bold, italics, or special formatting unless absolutely necessary.
 
 When asked about your capabilities or tools, describe them in simple, friendly terms:
 - I can search the web for current information and news

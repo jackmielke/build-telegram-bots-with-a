@@ -160,7 +160,8 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
       const { data, error } = await supabase
         .from('community_workflows')
         .select('*')
-        .eq('community_id', community.id);
+        .eq('community_id', community.id)
+        .in('workflow_type', ['telegram_agent_tools', 'webhook_handler']);
 
       if (error) throw error;
       setWorkflows(data || []);
@@ -198,15 +199,60 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
     }
   };
 
+  const toggleAgentTool = async (workflowId: string, toolName: string, currentConfig: any) => {
+    const currentTools = currentConfig?.enabled_tools || [];
+    const updatedTools = currentTools.includes(toolName)
+      ? currentTools.filter((t: string) => t !== toolName)
+      : [...currentTools, toolName];
+
+    try {
+      const { error } = await supabase
+        .from('community_workflows')
+        .update({ 
+          configuration: { 
+            ...currentConfig, 
+            enabled_tools: updatedTools 
+          } 
+        })
+        .eq('id', workflowId);
+
+      if (error) throw error;
+
+      setWorkflows(prev => 
+        prev.map(w => w.id === workflowId 
+          ? { ...w, configuration: { ...w.configuration, enabled_tools: updatedTools } } 
+          : w
+        )
+      );
+
+      toast({
+        title: "Success",
+        description: `Tool ${updatedTools.includes(toolName) ? 'enabled' : 'disabled'}`,
+      });
+    } catch (error) {
+      console.error('Error toggling tool:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update tool configuration",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getWorkflowLabel = (type: string) => {
     const labels: Record<string, string> = {
-      'proactive_outreach': 'Proactive Outreach',
-      'auto_response': 'Auto Response',
-      'welcome_message': 'Welcome Message',
-      'moderation': 'Content Moderation',
+      'telegram_agent_tools': 'Telegram Agent',
+      'webhook_handler': 'Webhook Integration',
     };
     return labels[type] || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
+
+  const availableAgentTools = [
+    { name: 'web_search', label: 'Web Search' },
+    { name: 'knowledge_base', label: 'Knowledge Base' },
+    { name: 'image_generation', label: 'Image Generation' },
+    { name: 'data_analysis', label: 'Data Analysis' },
+  ];
 
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
@@ -396,20 +442,40 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
           ) : (
             <div className="space-y-3">
               {workflows.map((workflow) => (
-                <div
-                  key={workflow.id}
-                  className="flex items-center justify-between p-3 rounded-lg border border-border/30 hover:bg-primary/5 transition-colors"
-                >
-                  <div className="flex-1">
-                    <div className="font-medium">{getWorkflowLabel(workflow.workflow_type)}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      {workflow.is_enabled ? 'Active' : 'Inactive'}
+                <div key={workflow.id}>
+                  <div className="flex items-center justify-between p-3 rounded-lg border border-border/30 hover:bg-primary/5 transition-colors">
+                    <div className="flex-1">
+                      <div className="font-medium">{getWorkflowLabel(workflow.workflow_type)}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {workflow.is_enabled ? 'Active' : 'Inactive'}
+                      </div>
                     </div>
+                    <Switch
+                      checked={workflow.is_enabled}
+                      onCheckedChange={() => toggleWorkflow(workflow.id, workflow.is_enabled)}
+                    />
                   </div>
-                  <Switch
-                    checked={workflow.is_enabled}
-                    onCheckedChange={() => toggleWorkflow(workflow.id, workflow.is_enabled)}
-                  />
+                  
+                  {/* Agent Tools for Telegram */}
+                  {workflow.workflow_type === 'telegram_agent_tools' && workflow.is_enabled && (
+                    <div className="ml-6 mt-2 p-3 rounded-lg bg-muted/30 border border-border/20">
+                      <div className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                        <Brain className="w-3 h-3" />
+                        Agent Tools
+                      </div>
+                      <div className="space-y-2">
+                        {availableAgentTools.map((tool) => (
+                          <div key={tool.name} className="flex items-center justify-between">
+                            <span className="text-sm">{tool.label}</span>
+                            <Switch
+                              checked={(workflow.configuration?.enabled_tools || []).includes(tool.name)}
+                              onCheckedChange={() => toggleAgentTool(workflow.id, tool.name, workflow.configuration)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

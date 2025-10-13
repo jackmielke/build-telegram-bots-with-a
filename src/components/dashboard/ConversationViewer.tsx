@@ -408,48 +408,74 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
   };
 
   const handleSaveBio = async () => {
-    if (!selectedMessage) return;
+    if (!selectedMessage) {
+      console.error('No selected message');
+      return;
+    }
 
     try {
+      console.log('Starting bio save process for message:', selectedMessage);
+      
       const telegramUserId = selectedMessage.metadata?.telegram_user_id || selectedMessage.metadata?.from?.id;
+      console.log('Extracted telegram_user_id:', telegramUserId);
+      
       if (!telegramUserId) {
         throw new Error('No Telegram user ID found in message metadata');
       }
 
       // Check if user already exists
+      console.log('Checking for existing user...');
       const { data: existingUser, error: existingUserError } = await supabase
         .from('users')
         .select('id')
         .eq('telegram_user_id', telegramUserId)
         .maybeSingle();
+      
       if (existingUserError) {
-        console.warn('Error checking for existing user:', existingUserError);
+        console.error('Error checking for existing user:', existingUserError);
       }
+      console.log('Existing user check result:', existingUser);
 
       let userId: string | undefined = existingUser?.id;
 
       // If user doesn't exist, provision via edge function (handles membership + RLS)
       if (!userId) {
+        console.log('User does not exist, provisioning new user...');
         const { data: provisionData, error: provisionError } = await supabase.functions.invoke('provision-telegram-user', {
           body: { message: selectedMessage, communityId },
         });
+        
+        console.log('Provision response:', { data: provisionData, error: provisionError });
+        
         if (provisionError) {
           console.error('Error provisioning user:', provisionError);
-          throw new Error(`Failed to provision user: ${provisionError.message ?? provisionError}`);
+          throw new Error(`Failed to provision user: ${provisionError.message ?? JSON.stringify(provisionError)}`);
         }
+        
         userId = provisionData?.user?.id;
-        if (!userId) throw new Error('Provisioning did not return a user id');
+        console.log('Provisioned user ID:', userId);
+        
+        if (!userId) {
+          throw new Error('Provisioning did not return a user id');
+        }
+      } else {
+        console.log('User already exists with ID:', userId);
       }
 
       // Save bio via service role edge function with proper authorization checks
-      const { error: bioError } = await supabase.functions.invoke('set-user-bio', {
+      console.log('Saving bio for user:', userId);
+      const { data: bioData, error: bioError } = await supabase.functions.invoke('set-user-bio', {
         body: { userId, communityId, bio: editingBio },
       });
+      
+      console.log('Bio save response:', { data: bioData, error: bioError });
+      
       if (bioError) {
         console.error('Error setting bio:', bioError);
-        throw new Error(`Failed to save bio: ${bioError.message ?? bioError}`);
+        throw new Error(`Failed to save bio: ${bioError.message ?? JSON.stringify(bioError)}`);
       }
 
+      console.log('Bio saved successfully!');
       toast({
         title: 'Success',
         description: 'Bio saved and profile created successfully',
@@ -464,7 +490,7 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
       fetchConversation();
       fetchCommunityMembers();
     } catch (error) {
-      console.error('Error saving bio:', error);
+      console.error('Error saving bio - full error:', error);
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to save bio',

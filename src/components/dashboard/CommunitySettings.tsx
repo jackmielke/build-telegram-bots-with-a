@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Users, Settings, Shield, Crown, Copy, RefreshCw, UserMinus, Upload, X } from 'lucide-react';
 
@@ -362,7 +363,8 @@ const CommunitySettings = ({ community, isAdmin, onUpdate }: CommunitySettingsPr
       const { error } = await supabase
         .from('community_members')
         .delete()
-        .eq('id', memberId);
+        .eq('id', memberId)
+        .eq('community_id', community.id);
 
       if (error) throw error;
       
@@ -375,7 +377,7 @@ const CommunitySettings = ({ community, isAdmin, onUpdate }: CommunitySettingsPr
     } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to remove member",
+        description: error.message || "Failed to remove member",
         variant: "destructive"
       });
     }
@@ -711,14 +713,31 @@ const CommunitySettings = ({ community, isAdmin, onUpdate }: CommunitySettingsPr
                             <SelectItem value="admin">Admin</SelectItem>
                           </SelectContent>
                         </Select>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeMember(member.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <UserMinus className="w-4 h-4" />
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <UserMinus className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Remove Member</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to do this? This can't be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => removeMember(member.id)}>
+                                Remove
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     )}
                   </div>

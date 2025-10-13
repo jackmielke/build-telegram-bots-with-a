@@ -4,8 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, Home, MessageSquare, Bot, Brain, Settings, Check } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Loader2, ArrowLeft, Home, MessageSquare, Bot, Brain, Settings, Check, Menu } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Import dashboard sections
 import HomePage from '@/components/dashboard/HomePage';
@@ -44,6 +46,8 @@ const CommunityDashboard = () => {
   const [community, setCommunity] = useState<Community | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('home');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const checkAuthAndFetchCommunity = async () => {
@@ -137,6 +141,14 @@ const CommunityDashboard = () => {
 
   const isAdmin = community.user_role === 'admin';
 
+  const navItems = [
+    { value: 'home', icon: Home, label: 'Home' },
+    { value: 'conversations', icon: MessageSquare, label: 'Conversations' },
+    { value: 'agent', icon: Bot, label: 'Agent' },
+    { value: 'memory', icon: Brain, label: 'Memory' },
+    { value: 'settings', icon: Settings, label: 'Settings' },
+  ];
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -175,6 +187,37 @@ const CommunityDashboard = () => {
                 </div>
               </div>
             </div>
+            {/* Mobile Menu Button */}
+            {isMobile && (
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="sm" className="p-2">
+                    <Menu className="w-5 h-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-64">
+                  <nav className="flex flex-col space-y-1 mt-8">
+                    {navItems.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <Button
+                          key={item.value}
+                          variant={activeTab === item.value ? "secondary" : "ghost"}
+                          className="justify-start"
+                          onClick={() => {
+                            setActiveTab(item.value);
+                            setMobileMenuOpen(false);
+                          }}
+                        >
+                          <Icon className="w-5 h-5 mr-3" />
+                          {item.label}
+                        </Button>
+                      );
+                    })}
+                  </nav>
+                </SheetContent>
+              </Sheet>
+            )}
           </div>
         </div>
       </div>
@@ -207,27 +250,21 @@ const CommunityDashboard = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 gap-2 bg-card/50 p-2 h-auto">
-            <TabsTrigger value="home" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
-              <Home className="w-6 h-6 text-primary" />
-              <span className="text-xs">Home</span>
-            </TabsTrigger>
-            <TabsTrigger value="conversations" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
-              <MessageSquare className="w-6 h-6 text-primary" />
-              <span className="text-xs">Conversations</span>
-            </TabsTrigger>
-            <TabsTrigger value="agent" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
-              <Bot className="w-6 h-6 text-primary" />
-              <span className="text-xs">Agent</span>
-            </TabsTrigger>
-            <TabsTrigger value="memory" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
-              <Brain className="w-6 h-6 text-primary" />
-              <span className="text-xs">Memory</span>
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm">
-              <Settings className="w-6 h-6 text-primary" />
-              <span className="text-xs">Settings</span>
-            </TabsTrigger>
+          {/* Desktop Tabs - Hidden on Mobile */}
+          <TabsList className="hidden sm:grid w-full grid-cols-5 gap-2 bg-card/50 p-2 h-auto">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <TabsTrigger 
+                  key={item.value}
+                  value={item.value} 
+                  className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm"
+                >
+                  <Icon className="w-6 h-6 text-primary" />
+                  <span className="text-xs">{item.label}</span>
+                </TabsTrigger>
+              );
+            })}
           </TabsList>
 
           <TabsContent value="home" className="space-y-6">

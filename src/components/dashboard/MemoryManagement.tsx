@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Brain, Plus, Search, Trash2, Edit, User, Calendar, Sparkles, Loader2, UserPlus } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -49,6 +50,7 @@ const MemoryManagement = ({ communityId, isAdmin }: MemoryManagementProps) => {
   });
   const [isParsingProfile, setIsParsingProfile] = useState(false);
   const [isCreatingProfile, setIsCreatingProfile] = useState(false);
+  const [memoryToDelete, setMemoryToDelete] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -167,6 +169,7 @@ const MemoryManagement = ({ communityId, isAdmin }: MemoryManagementProps) => {
         description: "Memory has been removed successfully.",
       });
       
+      setMemoryToDelete(null);
       fetchMemories();
     } catch (error: any) {
       toast({
@@ -505,7 +508,7 @@ const MemoryManagement = ({ communityId, isAdmin }: MemoryManagementProps) => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDeleteMemory(memory.id)}
+                        onClick={() => setMemoryToDelete(memory.id)}
                         className="text-destructive hover:text-destructive"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -623,6 +626,27 @@ const MemoryManagement = ({ communityId, isAdmin }: MemoryManagementProps) => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!memoryToDelete} onOpenChange={(open) => !open && setMemoryToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this memory from the knowledge base.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => memoryToDelete && handleDeleteMemory(memoryToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

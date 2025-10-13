@@ -621,10 +621,13 @@ serve(async (req) => {
             case 'save_memory':
               toolMessage = '💾 Saving this to my memory...';
               break;
-            case 'search_profiles':
+            case 'get_member_profiles':
+              toolMessage = "👥 Looking at everyone's profiles...";
+              break;
+            case 'semantic_profile_search':
               toolMessage = args.query
-                ? `👥 Searching member profiles for "${args.query}"...`
-                : '👥 Searching community member profiles...';
+                ? `🔍 Searching for people like "${args.query}"...`
+                : '🔍 Searching member profiles...';
               break;
             case 'scrape_webpage':
               toolMessage = args.url

@@ -561,7 +561,42 @@ ${community.agent_instructions || 'Be helpful, friendly, and concise.'}`;
           const toolName = toolCall.function.name;
           const toolArgs = JSON.parse(toolCall.function.arguments);
           
-          console.log(`Executing: ${toolName}`);
+          // Create friendly user-facing message
+          let toolMessage = '';
+          switch (toolName) {
+            case 'web_search':
+              toolMessage = toolArgs.query 
+                ? `🌐 Searching the web for "${toolArgs.query}"...`
+                : '🌐 Searching the web...';
+              break;
+            case 'search_memory':
+              toolMessage = '🧠 Let me check what I remember...';
+              break;
+            case 'search_chat_history':
+              const days = toolArgs.days_back || 7;
+              toolMessage = `💬 Looking through the last ${days} days of messages...`;
+              break;
+            case 'save_memory':
+              toolMessage = '💾 Saving this to my memory...';
+              break;
+            case 'get_member_profiles':
+              toolMessage = "👥 Looking at everyone's profiles...";
+              break;
+            case 'semantic_profile_search':
+              toolMessage = toolArgs.query
+                ? `🔍 Searching for people like "${toolArgs.query}"...`
+                : '🔍 Searching member profiles...';
+              break;
+            case 'scrape_webpage':
+              toolMessage = toolArgs.url
+                ? `📄 Reading webpage: ${toolArgs.url}...`
+                : '📄 Reading webpage...';
+              break;
+            default:
+              toolMessage = `🔧 Using tool: ${toolName}`;
+          }
+          
+          console.log(`Executing: ${toolName} - ${toolMessage}`);
           const toolResult = await executeTool(toolName, toolArgs, supabase, community.id, null);
           
           currentMessages.push({
@@ -572,6 +607,7 @@ ${community.agent_instructions || 'Be helpful, friendly, and concise.'}`;
 
           toolCalls.push({
             tool: toolName,
+            message: toolMessage,
             arguments: toolArgs,
             result: toolResult.substring(0, 200) + (toolResult.length > 200 ? '...' : '')
           });

@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Users, MessageSquare, DollarSign, Bot, Zap, TrendingUp, Activity, Calendar, ArrowRight, Sparkles, Plus, ExternalLink, ChevronDown, ChevronUp, Brain, Code } from 'lucide-react';
+import { Users, MessageSquare, DollarSign, Bot, Zap, TrendingUp, Activity, Calendar, ArrowRight, Sparkles, Plus, ExternalLink, ChevronDown, ChevronUp, Brain, Code, Copy } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { TelegramBotDialog } from '@/components/TelegramBotDialog';
 import BotOnboarding from '@/components/dashboard/BotOnboarding';
@@ -301,6 +301,14 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
     }
   };
 
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied!",
+      description: `${label} copied to clipboard`,
+    });
+  };
+
   const getWorkflowLabel = (type: string) => {
     const labels: Record<string, string> = {
       'telegram_integration': 'Telegram Agent',
@@ -542,42 +550,69 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
                       </div>
                     </div>
                   )}
-                </div>
-              ))}
-            </div>
-          )}
 
-          {/* Webhook Agent API Info */}
-          {workflows.some(w => w.workflow_type === 'webhook_agent') && (
-            <div className="mt-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
-              <div className="flex items-start gap-2">
-                <Code className="w-4 h-4 text-primary mt-0.5" />
-                <div className="flex-1 text-sm space-y-2">
-                  <p className="font-medium">Webhook Agent API</p>
-                  <p className="text-xs text-muted-foreground">
-                    Use the webhook agent to build AI-powered interfaces with tool calls:
-                  </p>
-                  <div className="bg-background/50 p-2 rounded border border-border/30 font-mono text-xs">
-                    POST https://efdqqnubowgwsnwvlalp.supabase.co/functions/v1/webhook-agent
-                  </div>
-                  <details className="text-xs">
-                    <summary className="cursor-pointer hover:text-primary">View API Example</summary>
-                    <pre className="mt-2 bg-background/50 p-2 rounded border border-border/30 overflow-x-auto">
-{`{
-  "api_key": "your_api_key",
-  "message": "Find users interested in AI",
+                  {/* Webhook Agent - Copy Prompt Button */}
+                  {workflow.workflow_type === 'webhook_agent' && workflow.is_enabled && (
+                    <div className="ml-6 mt-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                      <div className="flex items-start gap-2">
+                        <Code className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 text-sm space-y-2">
+                          <p className="font-medium">Webhook Agent Integration</p>
+                          <p className="text-xs text-muted-foreground">
+                            Build AI-powered interfaces with tool-calling capabilities
+                          </p>
+                          <Button
+                            onClick={() => {
+                              const prompt = `The webhook agent is available at:
+POST https://efdqqnubowgwsnwvlalp.supabase.co/functions/v1/webhook-agent
+
+Request body format:
+{
+  "api_key": "your_webhook_api_key",
+  "message": "User's message here",
   "conversation_history": [
     {"role": "user", "content": "Previous message"},
     {"role": "assistant", "content": "Previous response"}
   ]
-}`}
-                    </pre>
-                    <p className="mt-2 text-muted-foreground">
-                      Response includes tool_calls array showing which tools were executed
-                    </p>
-                  </details>
+}
+
+The agent has access to these tools:
+- web_search: Search the web for current information
+- search_memory: Query community memories
+- save_memory: Store new information
+- search_chat_history: Look up past conversations
+- get_member_profiles: Fetch all member profiles with context
+- semantic_profile_search: AI-powered member search
+- scrape_webpage: Extract content from URLs
+
+Response includes:
+{
+  "response": "AI's text response",
+  "tool_calls": [
+    {
+      "tool": "tool_name",
+      "input": {...},
+      "output": {...}
+    }
+  ]
+}
+
+Use this to build chat interfaces, chatbots, or AI-powered workflows. The tool_calls array shows which tools were executed and their results.`;
+                              copyToClipboard(prompt, 'Webhook agent integration guide');
+                            }}
+                            variant="outline"
+                            size="sm"
+                            className="mt-1"
+                          >
+                            <Copy className="w-3 h-3 mr-2" />
+                            Copy Integration Guide
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
+              ))}
             </div>
           )}
         </CardContent>

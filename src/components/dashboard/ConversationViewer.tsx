@@ -691,7 +691,7 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
             size="sm" 
             onClick={handleBulkImport}
             disabled={bulkImporting}
-            className="flex items-center gap-1"
+            className="hidden flex items-center gap-1"
             title="Import all profiles from this conversation (skips duplicates)"
           >
             <UserPlus className="w-4 h-4" />

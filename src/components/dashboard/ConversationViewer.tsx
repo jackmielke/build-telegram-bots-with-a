@@ -47,6 +47,11 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
   const [communityMemberIds, setCommunityMemberIds] = useState<Set<string>>(new Set());
   const [chatSession, setChatSession] = useState<any>(null);
   const [sendingOutreach, setSendingOutreach] = useState(false);
+  const [bioDialogOpen, setBioDialogOpen] = useState(false);
+  const [generatedBio, setGeneratedBio] = useState('');
+  const [editingBio, setEditingBio] = useState('');
+  const [generatingBio, setGeneratingBio] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const MESSAGES_PER_PAGE = 50;
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -367,6 +372,142 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
     }
   };
 
+  const handleGenerateBio = async (message: Message) => {
+    try {
+      setGeneratingBio(true);
+      setSelectedMessage(message);
+      
+      const userName = message.users?.name || message.metadata?.telegram_first_name || message.metadata?.telegram_username || 'User';
+      
+      const { data, error } = await supabase.functions.invoke('generate-bio', {
+        body: { 
+          messageContent: message.content,
+          userName: userName
+        }
+      });
+
+      if (error) throw error;
+
+      if (!data?.bio) {
+        throw new Error('No bio generated');
+      }
+
+      setGeneratedBio(data.bio);
+      setEditingBio(data.bio);
+      setBioDialogOpen(true);
+    } catch (error) {
+      console.error('Error generating bio:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to generate bio",
+        variant: "destructive"
+      });
+    } finally {
+      setGeneratingBio(false);
+    }
+  };
+
+  const handleSaveBio = async () => {
+    if (!selectedMessage) return;
+
+    try {
+      const telegramUserId = selectedMessage.metadata?.telegram_user_id;
+      const telegramUsername = selectedMessage.metadata?.telegram_username;
+      const telegramFirstName = selectedMessage.metadata?.telegram_first_name;
+      const telegramLastName = selectedMessage.metadata?.telegram_last_name;
+      const telegramPhotoUrl = selectedMessage.metadata?.telegram_photo_url;
+
+      if (!telegramUserId) {
+        throw new Error('No Telegram user ID found in message metadata');
+      }
+
+      // Check if user already exists
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('telegram_user_id', telegramUserId)
+        .single();
+
+      let userId: string;
+
+      if (existingUser) {
+        // Update existing user
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ bio: editingBio })
+          .eq('id', existingUser.id);
+
+        if (updateError) throw updateError;
+        userId = existingUser.id;
+      } else {
+        // Create new user with bio
+        const name = [telegramFirstName, telegramLastName].filter(Boolean).join(' ') || telegramUsername || 'Telegram User';
+        
+        // Generate a unique universal_id
+        const universalId = `tg_${telegramUserId}_${Date.now()}`;
+        
+        const { data: newUser, error: insertError } = await supabase
+          .from('users')
+          .insert([{
+            telegram_user_id: Number(telegramUserId),
+            telegram_username: telegramUsername,
+            telegram_photo_url: telegramPhotoUrl,
+            name: name,
+            username: telegramUsername,
+            bio: editingBio,
+            is_claimed: false,
+            universal_id: universalId,
+          }])
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        userId = newUser.id;
+      }
+
+      // Add to community if not already a member
+      const { data: existingMember } = await supabase
+        .from('community_members')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('community_id', communityId)
+        .single();
+
+      if (!existingMember) {
+        const { error: memberError } = await supabase
+          .from('community_members')
+          .insert({
+            user_id: userId,
+            community_id: communityId,
+            role: 'member',
+          });
+
+        if (memberError) throw memberError;
+      }
+
+      toast({
+        title: "Success",
+        description: "Bio saved and profile created successfully",
+      });
+
+      setBioDialogOpen(false);
+      setGeneratedBio('');
+      setEditingBio('');
+      setSelectedMessage(null);
+      
+      // Refresh data
+      fetchConversation();
+      fetchCommunityMembers();
+    } catch (error) {
+      console.error('Error saving bio:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save bio",
+        variant: "destructive"
+      });
+    }
+  };
+
   const currentThreadName = messages[0]?.topic_name || 'Unnamed Thread';
   const isPlaceholderName = currentThreadName.startsWith('Thread ');
 
@@ -604,17 +745,32 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
                           <span className="text-[10px] md:text-xs ml-1">Prompt</span>
                         </Button>
                       )}
-                      {!isAI && (message.metadata?.telegram_user_id || message.metadata?.from?.id) && 
-                       (!message.sender_id || (message.sender_id && !communityMemberIds.has(message.sender_id))) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => generateUser(message)}
-                          className="h-5 md:h-6 px-1.5 md:px-2 flex items-center gap-1"
-                        >
-                          <UserPlus className="w-3 h-3" />
-                          <span className="text-[10px] md:text-xs">{message.sender_id ? "Add to Community" : "Generate User"}</span>
-                        </Button>
+                      {!isAI && (message.metadata?.telegram_user_id || message.metadata?.from?.id) && (
+                        <div className="flex gap-1">
+                          {(!message.sender_id || (message.sender_id && !communityMemberIds.has(message.sender_id))) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => generateUser(message)}
+                              className="h-5 md:h-6 px-1.5 md:px-2 flex items-center gap-1"
+                            >
+                              <UserPlus className="w-3 h-3" />
+                              <span className="text-[10px] md:text-xs">{message.sender_id ? "Add to Community" : "Generate User"}</span>
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleGenerateBio(message)}
+                            disabled={generatingBio}
+                            className="h-5 md:h-6 px-1.5 md:px-2 flex items-center gap-1"
+                          >
+                            <Pencil className="w-3 h-3" />
+                            <span className="text-[10px] md:text-xs">
+                              {generatingBio ? "Generating..." : "Add Bio"}
+                            </span>
+                          </Button>
+                        </div>
                       )}
                     </div>
                     <div
@@ -669,6 +825,40 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
               />
             )}
           </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bio Generator Dialog */}
+      <Dialog open={bioDialogOpen} onOpenChange={setBioDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Review Generated Bio</DialogTitle>
+            <DialogDescription>
+              Review and edit the generated bio before saving
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Generated Bio</label>
+              <Textarea
+                value={editingBio}
+                onChange={(e) => setEditingBio(e.target.value)}
+                rows={6}
+                placeholder="Bio will appear here..."
+                className="w-full"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBioDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveBio}>
+              Save Bio & Create Profile
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -486,6 +486,80 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
         </CardContent>
       </Card>
 
+      {/* Recent Memories */}
+      <Card className="gradient-card border-border/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Brain className="w-5 h-5 text-primary" />
+            Recent Memories
+          </CardTitle>
+          <CardDescription>
+            Latest knowledge learned by your bot
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {memories.length === 0 ? (
+            <div className="text-center py-4 text-muted-foreground">
+              <Brain className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No memories yet</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {memories.slice(0, 3).map((memory) => (
+                <div key={memory.id} className="p-3 rounded-lg border border-border/30 hover:bg-primary/5 transition-colors">
+                  <p className="text-sm line-clamp-2">{memory.content}</p>
+                  {memory.tags && memory.tags.length > 0 && (
+                    <div className="flex gap-1 mt-2">
+                      {memory.tags.slice(0, 3).map((tag: string) => (
+                        <Badge key={tag} variant="secondary" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="mt-3 w-full"
+            onClick={() => onNavigate('memory')}
+          >
+            View All Memories
+            <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* System Instructions */}
+      <Card className="gradient-card border-border/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bot className="w-5 h-5 text-primary" />
+            System Instructions
+          </CardTitle>
+          <CardDescription>
+            Your AI agent's core behavior and personality
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-muted/50 rounded-lg p-4 text-sm whitespace-pre-wrap max-h-[200px] overflow-y-auto">
+            {agentInstructions}
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="mt-3"
+            onClick={() => onNavigate('agent')}
+          >
+            Edit Instructions
+            <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Telegram Connection CTA - Show if not connected */}
       {!hasTelegram && (
         <Card className="gradient-card border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
@@ -510,35 +584,6 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
             >
               <Zap className="w-4 h-4 mr-2" />
               Connect Telegram Bot
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Onboarding CTA - Hidden for now */}
-      {false && hasTelegram && !onboardingCompleted && (
-        <Card className="gradient-card border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
-                <Sparkles className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-xl">Complete Your Bot Setup</CardTitle>
-                <CardDescription className="text-base mt-1">
-                  Configure your AI agent's behavior, knowledge, and permissions
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              onClick={() => setShowOnboarding(true)} 
-              className="gradient-primary hover:shadow-glow"
-              size="lg"
-            >
-              <Sparkles className="w-4 h-4 mr-2" />
-              Start Setup
             </Button>
           </CardContent>
         </Card>
@@ -628,153 +673,6 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
           </CardContent>
         </Card>
       )}
-
-      {/* Agent Instructions & Memories */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* System Instructions */}
-        <Card className="gradient-card border-border/50">
-          <Collapsible open={showInstructions} onOpenChange={setShowInstructions}>
-            <CardHeader>
-              <CollapsibleTrigger asChild>
-                <div className="flex items-center justify-between cursor-pointer">
-                  <div className="flex items-center gap-2">
-                    <Bot className="w-5 h-5 text-primary" />
-                    <CardTitle>System Instructions</CardTitle>
-                  </div>
-                  {showInstructions ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                </div>
-              </CollapsibleTrigger>
-              <CardDescription>
-                Your AI agent's core behavior and personality
-              </CardDescription>
-            </CardHeader>
-            <CollapsibleContent>
-              <CardContent>
-                <div className="bg-muted/50 rounded-lg p-4 text-sm whitespace-pre-wrap max-h-[300px] overflow-y-auto">
-                  {agentInstructions}
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="mt-3"
-                  onClick={() => onNavigate('agent')}
-                >
-                  Edit Instructions
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </CardContent>
-            </CollapsibleContent>
-          </Collapsible>
-        </Card>
-
-        {/* Memories */}
-        <Card className="gradient-card border-border/50">
-          <Collapsible open={showMemories} onOpenChange={setShowMemories}>
-            <CardHeader>
-              <CollapsibleTrigger asChild>
-                <div className="flex items-center justify-between cursor-pointer">
-                  <div className="flex items-center gap-2">
-                    <Brain className="w-5 h-5 text-primary" />
-                    <CardTitle>Bot Memory</CardTitle>
-                  </div>
-                  {showMemories ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                </div>
-              </CollapsibleTrigger>
-              <CardDescription>
-                Knowledge your bot has learned ({memories.length} items)
-              </CardDescription>
-            </CardHeader>
-            <CollapsibleContent>
-              <CardContent>
-                {memories.length === 0 ? (
-                  <div className="text-center py-4 text-muted-foreground">
-                    <Brain className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No memories yet</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                    {memories.slice(0, 5).map((memory) => (
-                      <div key={memory.id} className="bg-muted/50 rounded-lg p-3 text-sm">
-                        <p className="line-clamp-2">{memory.content}</p>
-                        {memory.tags && memory.tags.length > 0 && (
-                          <div className="flex gap-1 mt-2">
-                            {memory.tags.slice(0, 3).map((tag: string) => (
-                              <Badge key={tag} variant="secondary" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="mt-3"
-                  onClick={() => onNavigate('memory')}
-                >
-                  View All Memories
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </CardContent>
-            </CollapsibleContent>
-          </Collapsible>
-        </Card>
-      </div>
-
-      {/* Quick Actions */}
-      <Card className="gradient-card border-border/50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Zap className="w-5 h-5 text-primary" />
-            Quick Actions
-          </CardTitle>
-          <CardDescription>
-            Jump to the most used sections
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Button 
-              variant="outline" 
-              className="flex flex-col items-center gap-2 h-auto py-4"
-              onClick={() => onNavigate('conversations')}
-            >
-              <MessageSquare className="w-5 h-5 text-primary" />
-              <span className="text-xs">Conversations</span>
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              className="flex flex-col items-center gap-2 h-auto py-4"
-              onClick={() => onNavigate('agent')}
-            >
-              <Bot className="w-5 h-5 text-primary" />
-              <span className="text-xs">Agent Setup</span>
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              className="flex flex-col items-center gap-2 h-auto py-4"
-              onClick={() => onNavigate('memory')}
-            >
-              <Users className="w-5 h-5 text-primary" />
-              <span className="text-xs">Memory</span>
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              className="flex flex-col items-center gap-2 h-auto py-4"
-              onClick={() => onNavigate('settings')}
-            >
-              <TrendingUp className="w-5 h-5 text-primary" />
-              <span className="text-xs">Settings</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

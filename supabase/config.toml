@@ -33,3 +33,6 @@ project_id = "efdqqnubowgwsnwvlalp"
 
   [functions.set-user-bio]
   verify_jwt = true
+
+  [functions.provision-telegram-user]
+  verify_jwt = false

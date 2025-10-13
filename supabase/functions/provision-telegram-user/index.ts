@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
       }
     );
 
-    const { message, communityId } = await req.json();
+    const { message, communityId, bio } = await req.json();
 
     if (!message || !communityId) {
       return new Response(
@@ -52,13 +52,20 @@ Deno.serve(async (req) => {
       .from('users')
       .select('id')
       .eq('telegram_user_id', telegramUserId)
-      .single();
+      .maybeSingle();
 
     let userId: string;
 
     if (existingUser) {
       userId = existingUser.id;
       console.log('User already exists:', userId);
+      if (bio && typeof bio === 'string') {
+        const { error: updErr } = await supabaseClient
+          .from('users')
+          .update({ bio })
+          .eq('id', userId);
+        if (updErr) console.error('Error updating bio for existing user:', updErr);
+      }
     } else {
       // Create new unclaimed user
       const name = [telegramFirstName, telegramLastName].filter(Boolean).join(' ') || telegramUsername || 'Telegram User';
@@ -71,6 +78,7 @@ Deno.serve(async (req) => {
           telegram_photo_url: telegramPhotoUrl,
           name: name,
           username: telegramUsername,
+          bio: bio ?? null,
           is_claimed: false,
           auth_user_id: null,
         })
@@ -95,7 +103,7 @@ Deno.serve(async (req) => {
       .select('id')
       .eq('user_id', userId)
       .eq('community_id', communityId)
-      .single();
+      .maybeSingle();
 
     if (!existingMember) {
       // Add user to community

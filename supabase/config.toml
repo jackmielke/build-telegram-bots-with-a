@@ -30,3 +30,6 @@ project_id = "efdqqnubowgwsnwvlalp"
 
   [functions.telegram-proactive-outreach]
   verify_jwt = true
+
+  [functions.set-user-bio]
+  verify_jwt = true

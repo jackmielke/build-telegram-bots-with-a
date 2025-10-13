@@ -411,102 +411,64 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
     if (!selectedMessage) return;
 
     try {
-      const telegramUserId = selectedMessage.metadata?.telegram_user_id;
-      const telegramUsername = selectedMessage.metadata?.telegram_username;
-      const telegramFirstName = selectedMessage.metadata?.telegram_first_name;
-      const telegramLastName = selectedMessage.metadata?.telegram_last_name;
-      const telegramPhotoUrl = selectedMessage.metadata?.telegram_photo_url;
-
+      const telegramUserId = selectedMessage.metadata?.telegram_user_id || selectedMessage.metadata?.from?.id;
       if (!telegramUserId) {
         throw new Error('No Telegram user ID found in message metadata');
       }
 
       // Check if user already exists
-      const { data: existingUser } = await supabase
+      const { data: existingUser, error: existingUserError } = await supabase
         .from('users')
         .select('id')
         .eq('telegram_user_id', telegramUserId)
         .maybeSingle();
-
-      let userId: string;
-
-      if (existingUser) {
-        // Update existing user
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({ bio: editingBio })
-          .eq('id', existingUser.id);
-
-        if (updateError) throw updateError;
-        userId = existingUser.id;
-      } else {
-        // Create new user with bio
-        const name = [telegramFirstName, telegramLastName].filter(Boolean).join(' ') || telegramUsername || 'Telegram User';
-        
-        // Generate a unique universal_id
-        const universalId = `tg_${telegramUserId}_${Date.now()}`;
-        
-        const { data: newUser, error: insertError } = await supabase
-          .from('users')
-          .insert([{
-            telegram_user_id: Number(telegramUserId),
-            telegram_username: telegramUsername,
-            telegram_photo_url: telegramPhotoUrl,
-            name: name,
-            username: telegramUsername,
-            bio: editingBio,
-            is_claimed: false,
-            universal_id: universalId,
-          }])
-          .select()
-          .single();
-
-        if (insertError) throw insertError;
-        userId = newUser.id;
+      if (existingUserError) {
+        console.warn('Error checking for existing user:', existingUserError);
       }
 
-      // Add to community if not already a member
-      const { data: existingMember } = await supabase
-        .from('community_members')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('community_id', communityId)
-        .maybeSingle();
+      let userId: string | undefined = existingUser?.id;
 
-      if (!existingMember) {
-        const { error: memberError } = await supabase
-          .from('community_members')
-          .insert({
-            user_id: userId,
-            community_id: communityId,
-            role: 'member',
-          });
-
-        if (memberError) {
-          console.error('Error adding user to community:', memberError);
-          throw new Error(`Failed to add user to community: ${memberError.message}`);
+      // If user doesn't exist, provision via edge function (handles membership + RLS)
+      if (!userId) {
+        const { data: provisionData, error: provisionError } = await supabase.functions.invoke('provision-telegram-user', {
+          body: { message: selectedMessage, communityId },
+        });
+        if (provisionError) {
+          console.error('Error provisioning user:', provisionError);
+          throw new Error(`Failed to provision user: ${provisionError.message ?? provisionError}`);
         }
+        userId = provisionData?.user?.id;
+        if (!userId) throw new Error('Provisioning did not return a user id');
+      }
+
+      // Save bio via service role edge function with proper authorization checks
+      const { error: bioError } = await supabase.functions.invoke('set-user-bio', {
+        body: { userId, communityId, bio: editingBio },
+      });
+      if (bioError) {
+        console.error('Error setting bio:', bioError);
+        throw new Error(`Failed to save bio: ${bioError.message ?? bioError}`);
       }
 
       toast({
-        title: "Success",
-        description: "Bio saved and profile created successfully",
+        title: 'Success',
+        description: 'Bio saved and profile created successfully',
       });
 
       setBioDialogOpen(false);
       setGeneratedBio('');
       setEditingBio('');
       setSelectedMessage(null);
-      
+
       // Refresh data
       fetchConversation();
       fetchCommunityMembers();
     } catch (error) {
       console.error('Error saving bio:', error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save bio",
-        variant: "destructive"
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to save bio',
+        variant: 'destructive',
       });
     }
   };

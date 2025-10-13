@@ -161,7 +161,7 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
         .from('community_workflows')
         .select('*')
         .eq('community_id', community.id)
-        .in('workflow_type', ['telegram_agent_tools', 'webhook_handler']);
+        .in('workflow_type', ['telegram_integration', 'webhook_integration']);
 
       if (error) throw error;
       setWorkflows(data || []);
@@ -200,10 +200,11 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
   };
 
   const toggleAgentTool = async (workflowId: string, toolName: string, currentConfig: any) => {
-    const currentTools = currentConfig?.enabled_tools || [];
-    const updatedTools = currentTools.includes(toolName)
-      ? currentTools.filter((t: string) => t !== toolName)
-      : [...currentTools, toolName];
+    const agentTools = currentConfig?.agent_tools || {};
+    const updatedTools = {
+      ...agentTools,
+      [toolName]: !agentTools[toolName]
+    };
 
     try {
       const { error } = await supabase
@@ -211,7 +212,7 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
         .update({ 
           configuration: { 
             ...currentConfig, 
-            enabled_tools: updatedTools 
+            agent_tools: updatedTools 
           } 
         })
         .eq('id', workflowId);
@@ -220,14 +221,14 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
 
       setWorkflows(prev => 
         prev.map(w => w.id === workflowId 
-          ? { ...w, configuration: { ...w.configuration, enabled_tools: updatedTools } } 
+          ? { ...w, configuration: { ...w.configuration, agent_tools: updatedTools } } 
           : w
         )
       );
 
       toast({
         title: "Success",
-        description: `Tool ${updatedTools.includes(toolName) ? 'enabled' : 'disabled'}`,
+        description: `${toolName.replace(/_/g, ' ')} ${updatedTools[toolName] ? 'enabled' : 'disabled'}`,
       });
     } catch (error) {
       console.error('Error toggling tool:', error);
@@ -241,17 +242,19 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
 
   const getWorkflowLabel = (type: string) => {
     const labels: Record<string, string> = {
-      'telegram_agent_tools': 'Telegram Agent',
-      'webhook_handler': 'Webhook Integration',
+      'telegram_integration': 'Telegram Agent',
+      'webhook_integration': 'Webhook Integration',
     };
     return labels[type] || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const availableAgentTools = [
     { name: 'web_search', label: 'Web Search' },
-    { name: 'knowledge_base', label: 'Knowledge Base' },
-    { name: 'image_generation', label: 'Image Generation' },
-    { name: 'data_analysis', label: 'Data Analysis' },
+    { name: 'search_memory', label: 'Search Memory' },
+    { name: 'save_memory', label: 'Save Memory' },
+    { name: 'search_chat_history', label: 'Search Chat History' },
+    { name: 'search_profiles', label: 'Search Profiles' },
+    { name: 'scrape_webpage', label: 'Scrape Webpage' },
   ];
 
   const formatTimeAgo = (dateString: string) => {
@@ -457,7 +460,7 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
                   </div>
                   
                   {/* Agent Tools for Telegram */}
-                  {workflow.workflow_type === 'telegram_agent_tools' && workflow.is_enabled && (
+                  {workflow.workflow_type === 'telegram_integration' && workflow.is_enabled && (
                     <div className="ml-6 mt-2 p-3 rounded-lg bg-muted/30 border border-border/20">
                       <div className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
                         <Brain className="w-3 h-3" />
@@ -468,7 +471,7 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
                           <div key={tool.name} className="flex items-center justify-between">
                             <span className="text-sm">{tool.label}</span>
                             <Switch
-                              checked={(workflow.configuration?.enabled_tools || []).includes(tool.name)}
+                              checked={workflow.configuration?.agent_tools?.[tool.name] === true}
                               onCheckedChange={() => toggleAgentTool(workflow.id, tool.name, workflow.configuration)}
                             />
                           </div>

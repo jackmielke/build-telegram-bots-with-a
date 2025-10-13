@@ -834,11 +834,57 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
           <DialogHeader>
             <DialogTitle>Review Generated Bio</DialogTitle>
             <DialogDescription>
-              Review and edit the generated bio before saving
+              Review the user information and edit the bio before saving
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
+            {/* User Profile Preview */}
+            {selectedMessage && (
+              <Card className="border-border/50">
+                <CardContent className="pt-6">
+                  <div className="flex items-start gap-4">
+                    <Avatar className="w-16 h-16">
+                      <AvatarImage 
+                        src={selectedMessage.metadata?.telegram_photo_url} 
+                        alt={selectedMessage.metadata?.telegram_first_name || 'User'} 
+                      />
+                      <AvatarFallback className="bg-muted">
+                        <User className="w-8 h-8" />
+                      </AvatarFallback>
+                    </Avatar>
+                    
+                    <div className="flex-1 space-y-2">
+                      <div>
+                        <h3 className="font-semibold text-lg">
+                          {[selectedMessage.metadata?.telegram_first_name, selectedMessage.metadata?.telegram_last_name]
+                            .filter(Boolean)
+                            .join(' ') || 'Telegram User'}
+                        </h3>
+                        {selectedMessage.metadata?.telegram_username && (
+                          <p className="text-sm text-muted-foreground">
+                            @{selectedMessage.metadata.telegram_username}
+                          </p>
+                        )}
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-muted-foreground">Telegram ID:</span>
+                          <p className="font-mono">{selectedMessage.metadata?.telegram_user_id}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Status:</span>
+                          <p>Unclaimed Profile</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Bio Editor */}
             <div>
               <label className="text-sm font-medium mb-2 block">Generated Bio</label>
               <Textarea
@@ -848,6 +894,9 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
                 placeholder="Bio will appear here..."
                 className="w-full"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Edit the bio to make it more accurate before saving
+              </p>
             </div>
           </div>
 

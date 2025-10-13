@@ -19,6 +19,7 @@ interface Community {
   total_cost_usd: number | null;
   telegram_bot_token: string | null;
   telegram_bot_url: string | null;
+  webhook_api_key: string | null;
 }
 
 interface HomePageProps {
@@ -55,6 +56,7 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
   const [showMemories, setShowMemories] = useState(false);
   const [workflows, setWorkflows] = useState<AgentWorkflow[]>([]);
   const [loadingWorkflows, setLoadingWorkflows] = useState(true);
+  const [webhookApiKey, setWebhookApiKey] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -62,6 +64,7 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
     fetchMemories();
     fetchAgentInstructions();
     fetchWorkflows();
+    fetchWebhookApiKey();
     
     // Check if onboarding was completed
     const completed = localStorage.getItem(`onboarding_completed_${community.id}`);
@@ -152,6 +155,21 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
       setAgentInstructions(data?.agent_instructions || 'No instructions set yet.');
     } catch (error) {
       console.error('Error fetching agent instructions:', error);
+    }
+  };
+
+  const fetchWebhookApiKey = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('communities')
+        .select('webhook_api_key')
+        .eq('id', community.id)
+        .single();
+
+      if (error) throw error;
+      setWebhookApiKey(data.webhook_api_key || community.webhook_api_key);
+    } catch (error) {
+      console.error('Error fetching webhook API key:', error);
     }
   };
 
@@ -563,28 +581,42 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
                           </p>
                           <Button
                             onClick={() => {
+                              const agentTools = workflow.configuration?.agent_tools || {};
+                              const enabledTools = Object.entries(agentTools)
+                                .filter(([_, enabled]) => enabled)
+                                .map(([toolName]) => {
+                                  const toolLabels: Record<string, string> = {
+                                    web_search: 'Web Search - Search the web for current information',
+                                    search_memory: 'Search Memory - Query community memories',
+                                    save_memory: 'Save Memory - Store new information',
+                                    search_chat_history: 'Search Chat History - Look up past conversations',
+                                    get_member_profiles: 'Get Member Profiles - Fetch all member profiles with context',
+                                    semantic_profile_search: 'Semantic Profile Search - AI-powered member search',
+                                    scrape_webpage: 'Scrape Webpage - Extract content from URLs'
+                                  };
+                                  return `- ${toolLabels[toolName] || toolName}`;
+                                })
+                                .join('\n');
+
+                              const toolsSection = enabledTools 
+                                ? `\nThe agent has access to these tools:\n${enabledTools}\n`
+                                : '\nNo agent tools are currently enabled.\n';
+
                               const prompt = `The webhook agent is available at:
 POST https://efdqqnubowgwsnwvlalp.supabase.co/functions/v1/webhook-agent
 
+**API Key:** ${webhookApiKey || 'Please generate an API key first in the Workflow Builder'}
+
 Request body format:
 {
-  "api_key": "your_webhook_api_key",
+  "api_key": "${webhookApiKey || 'your_webhook_api_key'}",
   "message": "User's message here",
   "conversation_history": [
     {"role": "user", "content": "Previous message"},
     {"role": "assistant", "content": "Previous response"}
   ]
 }
-
-The agent has access to these tools:
-- web_search: Search the web for current information
-- search_memory: Query community memories
-- save_memory: Store new information
-- search_chat_history: Look up past conversations
-- get_member_profiles: Fetch all member profiles with context
-- semantic_profile_search: AI-powered member search
-- scrape_webpage: Extract content from URLs
-
+${toolsSection}
 Response includes:
 {
   "response": "AI's text response",

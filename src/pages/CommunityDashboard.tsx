@@ -33,6 +33,7 @@ interface Community {
   cover_image_url: string | null;
   telegram_bot_token: string | null;
   telegram_bot_url: string | null;
+  webhook_api_key: string | null;
   total_tokens_used: number | null;
   total_cost_usd: number | null;
   member_count?: number;

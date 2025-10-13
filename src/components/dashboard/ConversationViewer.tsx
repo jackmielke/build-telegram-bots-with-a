@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Bot, User, Calendar, DollarSign, BarChart3, Download, Eye, Pencil, UserPlus, Bell, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AIContextViewer } from './AIContextViewer';
+import { useNavigate } from 'react-router-dom';
 
 interface Message {
   id: string;
@@ -48,6 +49,7 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
   const [sendingOutreach, setSendingOutreach] = useState(false);
   const MESSAGES_PER_PAGE = 50;
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchConversation();
@@ -556,7 +558,14 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
                   key={message.id}
                   className={`flex gap-2 md:gap-3 ${isAI ? 'flex-row' : 'flex-row-reverse'}`}
                 >
-                  <Avatar className="w-7 h-7 md:w-8 md:h-8 flex-shrink-0">
+                  <Avatar 
+                    className={`w-7 h-7 md:w-8 md:h-8 flex-shrink-0 ${!isAI && message.sender_id ? 'cursor-pointer hover:ring-2 hover:ring-primary transition-all' : ''}`}
+                    onClick={() => {
+                      if (!isAI && message.sender_id) {
+                        navigate(`/user/${message.sender_id}`);
+                      }
+                    }}
+                  >
                     {isAI ? (
                       <>
                         <AvatarFallback className="bg-primary/10">

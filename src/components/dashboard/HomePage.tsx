@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Users, MessageSquare, DollarSign, Bot, Zap, TrendingUp, Activity, Calendar, ArrowRight, Sparkles, Plus, ExternalLink, ChevronDown, ChevronUp, Brain } from 'lucide-react';
+import { Users, MessageSquare, DollarSign, Bot, Zap, TrendingUp, Activity, Calendar, ArrowRight, Sparkles, Plus, ExternalLink, ChevronDown, ChevronUp, Brain, Code } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { TelegramBotDialog } from '@/components/TelegramBotDialog';
 import BotOnboarding from '@/components/dashboard/BotOnboarding';
@@ -161,7 +161,7 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
         .from('community_workflows')
         .select('*')
         .eq('community_id', community.id)
-        .in('workflow_type', ['telegram_integration', 'webhook_integration']);
+        .in('workflow_type', ['telegram_integration', 'webhook_integration', 'webhook_agent']);
 
       if (error) throw error;
       setWorkflows(data || []);
@@ -244,6 +244,7 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
     const labels: Record<string, string> = {
       'telegram_integration': 'Telegram Agent',
       'webhook_integration': 'Webhook Integration',
+      'webhook_agent': 'Webhook Agent (with Tools)',
     };
     return labels[type] || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
@@ -460,8 +461,8 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
                     />
                   </div>
                   
-                  {/* Agent Tools for Telegram */}
-                  {workflow.workflow_type === 'telegram_integration' && workflow.is_enabled && (
+                  {/* Agent Tools for Telegram and Webhook Agent */}
+                  {(workflow.workflow_type === 'telegram_integration' || workflow.workflow_type === 'webhook_agent') && workflow.is_enabled && (
                     <div className="ml-6 mt-2 p-3 rounded-lg bg-muted/30 border border-border/20">
                       <div className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
                         <Brain className="w-3 h-3" />
@@ -482,6 +483,40 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
                   )}
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Webhook Agent API Info */}
+          {workflows.some(w => w.workflow_type === 'webhook_agent') && (
+            <div className="mt-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
+              <div className="flex items-start gap-2">
+                <Code className="w-4 h-4 text-primary mt-0.5" />
+                <div className="flex-1 text-sm space-y-2">
+                  <p className="font-medium">Webhook Agent API</p>
+                  <p className="text-xs text-muted-foreground">
+                    Use the webhook agent to build AI-powered interfaces with tool calls:
+                  </p>
+                  <div className="bg-background/50 p-2 rounded border border-border/30 font-mono text-xs">
+                    POST https://efdqqnubowgwsnwvlalp.supabase.co/functions/v1/webhook-agent
+                  </div>
+                  <details className="text-xs">
+                    <summary className="cursor-pointer hover:text-primary">View API Example</summary>
+                    <pre className="mt-2 bg-background/50 p-2 rounded border border-border/30 overflow-x-auto">
+{`{
+  "api_key": "your_api_key",
+  "message": "Find users interested in AI",
+  "conversation_history": [
+    {"role": "user", "content": "Previous message"},
+    {"role": "assistant", "content": "Previous response"}
+  ]
+}`}
+                    </pre>
+                    <p className="mt-2 text-muted-foreground">
+                      Response includes tool_calls array showing which tools were executed
+                    </p>
+                  </details>
+                </div>
+              </div>
             </div>
           )}
         </CardContent>

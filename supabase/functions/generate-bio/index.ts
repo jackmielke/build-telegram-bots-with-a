@@ -25,19 +25,20 @@ Deno.serve(async (req) => {
 
     console.log('Generating bio for user:', userName);
 
-    const systemPrompt = `You are a professional bio writer. Generate a concise, third-person bio based on the user's message. 
+    const systemPrompt = `You are a professional bio writer. Generate a concise bio based on the user's message. 
 
 Guidelines:
-- Write in third person (avoid "I", "my", etc.)
-- DO NOT repeatedly use the person's name - mention it once at most
-- Focus on listing interests, skills, background, and passions
-- Keep it conversational but professional
+- DO NOT use first person ("I", "my", "me") or third person ("he", "she", "they")
+- DO NOT mention the person's name
+- Simply list interests, passions, skills, and background directly
+- Start with action words or descriptors (e.g., "Passionate about", "Big fan of", "Loves", "Into")
+- Keep it conversational and authentic
 - Maximum 3-4 sentences
 - Extract key details like interests, occupation, hobbies, goals
-- Make it engaging and authentic
+- Make it engaging and natural
 
 Example format:
-"A passionate developer with a love for open source and community building. Enjoys hiking, photography, and exploring new technologies. Currently working on AI-powered tools and always eager to learn and collaborate with others."`;
+"Passionate about open source and community building. Big fan of hiking, photography, and exploring new technologies. Currently working on AI-powered tools. Always eager to learn and collaborate."`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',

@@ -164,11 +164,72 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
         .in('workflow_type', ['telegram_integration', 'webhook_integration', 'webhook_agent']);
 
       if (error) throw error;
-      setWorkflows(data || []);
+      
+      const workflows = data || [];
+      
+      // Ensure webhook_agent workflow exists
+      const hasWebhookAgent = workflows.some(w => w.workflow_type === 'webhook_agent');
+      if (!hasWebhookAgent) {
+        const { data: newWorkflow, error: insertError } = await supabase
+          .from('community_workflows')
+          .insert({
+            community_id: community.id,
+            workflow_type: 'webhook_agent',
+            is_enabled: false,
+            configuration: { agent_tools: {} }
+          })
+          .select()
+          .single();
+        
+        if (!insertError && newWorkflow) {
+          workflows.push(newWorkflow);
+        }
+      }
+      
+      setWorkflows(workflows);
     } catch (error) {
       console.error('Error fetching workflows:', error);
     } finally {
       setLoadingWorkflows(false);
+    }
+  };
+
+  const handleWorkflowToggle = async (workflowType: string, enabled: boolean) => {
+    const workflow = workflows.find(w => w.workflow_type === workflowType);
+    
+    if (workflow) {
+      await toggleWorkflow(workflow.id, workflow.is_enabled);
+    } else {
+      // Create the workflow if it doesn't exist
+      try {
+        const { data: newWorkflow, error } = await supabase
+          .from('community_workflows')
+          .insert({
+            community_id: community.id,
+            workflow_type: workflowType,
+            is_enabled: enabled,
+            configuration: { agent_tools: {} }
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        if (newWorkflow) {
+          setWorkflows(prev => [...prev, newWorkflow]);
+          toast({
+            title: "Success",
+            description: `Workflow ${enabled ? 'enabled' : 'disabled'}`,
+          });
+        }
+      } catch (error) {
+        console.error('Error creating workflow:', error);
+        toast({
+          title: "Error",
+          description: "Failed to create workflow",
+          variant: "destructive",
+        });
+      }
     }
   };
 

@@ -426,7 +426,7 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
         .from('users')
         .select('id')
         .eq('telegram_user_id', telegramUserId)
-        .single();
+        .maybeSingle();
 
       let userId: string;
 
@@ -471,7 +471,7 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
         .select('id')
         .eq('user_id', userId)
         .eq('community_id', communityId)
-        .single();
+        .maybeSingle();
 
       if (!existingMember) {
         const { error: memberError } = await supabase
@@ -482,7 +482,10 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
             role: 'member',
           });
 
-        if (memberError) throw memberError;
+        if (memberError) {
+          console.error('Error adding user to community:', memberError);
+          throw new Error(`Failed to add user to community: ${memberError.message}`);
+        }
       }
 
       toast({

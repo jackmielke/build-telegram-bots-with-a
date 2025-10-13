@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Communities from "./pages/Communities";
 import ExploreCommunities from "./pages/ExploreCommunities";
 import CommunityDashboard from "./pages/CommunityDashboard";
@@ -22,6 +24,8 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Navigate to="/communities" replace />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/communities" element={<Communities />} />
           <Route path="/explore" element={<ExploreCommunities />} />
           <Route path="/community/:communityId" element={<CommunityDashboard />} />

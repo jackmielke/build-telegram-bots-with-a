@@ -528,9 +528,8 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
         return;
       }
 
-      // Process first 10 messages as test batch
-      const batchSize = 10;
-      const batch = introMessages.slice(0, batchSize);
+      // Process all intro messages
+      const batch = introMessages;
       
       setBulkImportProgress({ current: 0, total: batch.length, errors: [] });
 
@@ -693,11 +692,11 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
             onClick={handleBulkImport}
             disabled={bulkImporting}
             className="flex items-center gap-1"
-            title="Import first 10 profiles from this conversation"
+            title="Import all profiles from this conversation (skips duplicates)"
           >
             <UserPlus className="w-4 h-4" />
             <span className="text-xs hidden md:inline">
-              {bulkImporting ? `${bulkImportProgress.current}/${bulkImportProgress.total}` : 'Import (10)'}
+              {bulkImporting ? `${bulkImportProgress.current}/${bulkImportProgress.total}` : 'Bulk Import'}
             </span>
           </Button>
           <Button 

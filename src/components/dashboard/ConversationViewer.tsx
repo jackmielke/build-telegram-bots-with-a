@@ -52,6 +52,8 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
   const [editingBio, setEditingBio] = useState('');
   const [generatingBio, setGeneratingBio] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [bulkImporting, setBulkImporting] = useState(false);
+  const [bulkImportProgress, setBulkImportProgress] = useState<{ current: number; total: number; errors: string[] }>({ current: 0, total: 0, errors: [] });
   const MESSAGES_PER_PAGE = 50;
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -503,6 +505,107 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
     }
   };
 
+  const handleBulkImport = async () => {
+    setBulkImporting(true);
+    setBulkImportProgress({ current: 0, total: 0, errors: [] });
+
+    try {
+      // Get all messages from intro-like users (with telegram metadata)
+      const introMessages = messages.filter(msg => 
+        msg.metadata?.telegram_user_id && 
+        msg.sent_by !== 'ai' &&
+        msg.content && 
+        msg.content.length > 20
+      );
+
+      if (introMessages.length === 0) {
+        toast({
+          title: "No Messages Found",
+          description: "No intro messages found to import",
+          variant: "destructive"
+        });
+        setBulkImporting(false);
+        return;
+      }
+
+      // Process first 10 messages as test batch
+      const batchSize = 10;
+      const batch = introMessages.slice(0, batchSize);
+      
+      setBulkImportProgress({ current: 0, total: batch.length, errors: [] });
+
+      const errors: string[] = [];
+      
+      for (let i = 0; i < batch.length; i++) {
+        const msg = batch[i];
+        
+        try {
+          // Check if user already exists
+          const telegramUserId = msg.metadata?.telegram_user_id;
+          const { data: existingUser } = await supabase
+            .from('users')
+            .select('id, bio')
+            .eq('telegram_user_id', telegramUserId)
+            .maybeSingle();
+
+          // Skip if user already has a bio
+          if (existingUser?.bio) {
+            console.log(`Skipping user ${telegramUserId} - already has bio`);
+            setBulkImportProgress(prev => ({ ...prev, current: i + 1 }));
+            continue;
+          }
+
+          // Use message content directly as bio (no AI generation)
+          const bio = msg.content;
+
+          const { error } = await supabase.functions.invoke('provision-telegram-user', {
+            body: { 
+              message: msg, 
+              communityId,
+              bio 
+            }
+          });
+
+          if (error) {
+            console.error(`Error importing user ${i + 1}:`, error);
+            errors.push(`Message ${i + 1}: ${error.message}`);
+          }
+
+          setBulkImportProgress(prev => ({ 
+            ...prev, 
+            current: i + 1,
+            errors 
+          }));
+
+          // Small delay to avoid rate limits
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (error) {
+          console.error(`Error processing message ${i + 1}:`, error);
+          errors.push(`Message ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+
+      toast({
+        title: "Bulk Import Complete",
+        description: `Processed ${batch.length} profiles. ${errors.length} errors.`,
+        variant: errors.length > 0 ? "destructive" : "default"
+      });
+
+      // Refresh data
+      fetchConversation();
+      fetchCommunityMembers();
+    } catch (error) {
+      console.error('Bulk import error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to complete bulk import",
+        variant: "destructive"
+      });
+    } finally {
+      setBulkImporting(false);
+    }
+  };
+
   const currentThreadName = messages[0]?.topic_name || 'Unnamed Thread';
   const isPlaceholderName = currentThreadName.startsWith('Thread ');
 
@@ -584,6 +687,19 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
               </Button>
             </>
           )}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleBulkImport}
+            disabled={bulkImporting}
+            className="flex items-center gap-1"
+            title="Import first 10 profiles from this conversation"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span className="text-xs hidden md:inline">
+              {bulkImporting ? `${bulkImportProgress.current}/${bulkImportProgress.total}` : 'Import (10)'}
+            </span>
+          </Button>
           <Button 
             variant="outline" 
             size="sm" 

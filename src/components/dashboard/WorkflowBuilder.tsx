@@ -454,7 +454,9 @@ Please create this chatbot interface now!`;
         web_search: enable,
         search_memory: enable,
         search_chat_history: enable,
-        save_memory: enable
+        save_memory: enable,
+        search_profiles: enable,
+        scrape_webpage: enable
       };
 
       const { error } = await supabase
@@ -494,7 +496,7 @@ Please create this chatbot interface now!`;
   // Helper function to check if agent mode is active (any tool enabled)
   const isAgentModeActive = (workflow: any): boolean => {
     const tools = workflow.configuration?.agent_tools || {};
-    return tools.web_search || tools.search_memory || tools.search_chat_history || tools.save_memory || tools.search_profiles;
+    return tools.web_search || tools.search_memory || tools.search_chat_history || tools.save_memory || tools.search_profiles || tools.scrape_webpage;
   };
 
   const toggleAutoIntroGeneration = async (workflowType: string, currentEnabled: boolean) => {
@@ -1170,6 +1172,18 @@ Please create this chatbot interface now!`;
                                 <Switch 
                                   checked={telegramWorkflow.configuration?.agent_tools?.search_profiles || false}
                                   onCheckedChange={() => toggleAgentTool(telegramWorkflow.type, 'search_profiles', telegramWorkflow.configuration?.agent_tools?.search_profiles || false)}
+                                  disabled={!isAdmin}
+                                />
+                              </div>
+                              
+                              <div className="flex items-center justify-between p-2 rounded bg-background/50">
+                                <div>
+                                  <p className="text-sm font-medium">📄 Scrape Webpage</p>
+                                  <p className="text-xs text-muted-foreground">Read and extract full webpage content</p>
+                                </div>
+                                <Switch 
+                                  checked={telegramWorkflow.configuration?.agent_tools?.scrape_webpage || false}
+                                  onCheckedChange={() => toggleAgentTool(telegramWorkflow.type, 'scrape_webpage', telegramWorkflow.configuration?.agent_tools?.scrape_webpage || false)}
                                   disabled={!isAdmin}
                                 />
                               </div>

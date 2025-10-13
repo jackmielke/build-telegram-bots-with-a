@@ -92,6 +92,23 @@ const AGENT_TOOLS = [
         required: ["query"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "scrape_webpage",
+      description: "Scrape and read the entire content of a specific webpage. Use this to extract detailed information from articles, documentation, blog posts, or any web page when you need the full content rather than just search results.",
+      parameters: {
+        type: "object",
+        properties: {
+          url: {
+            type: "string",
+            description: "The full URL of the webpage to scrape (must start with http:// or https://)"
+          }
+        },
+        required: ["url"]
+      }
+    }
   }
 ];
 
@@ -350,6 +367,82 @@ async function executeTool(
         return `Found ${matches.length} profile(s) matching "${args.query}":\n\n${formatted}`;
       }
 
+      case "scrape_webpage": {
+        console.log(`📄 Scraping webpage: "${args.url}"`);
+        
+        // Validate URL
+        if (!args.url || (!args.url.startsWith('http://') && !args.url.startsWith('https://'))) {
+          return `Invalid URL: "${args.url}". URL must start with http:// or https://`;
+        }
+        
+        try {
+          // Fetch the webpage
+          const response = await fetch(args.url, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (compatible; TelegramBot/1.0)'
+            }
+          });
+          
+          if (!response.ok) {
+            return `Failed to fetch ${args.url}: ${response.status} ${response.statusText}`;
+          }
+          
+          const html = await response.text();
+          
+          // Extract title
+          const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/i);
+          const title = titleMatch ? titleMatch[1].trim() : 'No title';
+          
+          // Remove script and style tags
+          let cleanHtml = html
+            .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+            .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+          
+          // Remove HTML tags but keep spacing
+          cleanHtml = cleanHtml
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<\/p>/gi, '\n\n')
+            .replace(/<\/div>/gi, '\n')
+            .replace(/<\/h[1-6]>/gi, '\n\n')
+            .replace(/<li>/gi, '• ')
+            .replace(/<\/li>/gi, '\n')
+            .replace(/<[^>]+>/g, ' ');
+          
+          // Decode HTML entities
+          cleanHtml = cleanHtml
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&mdash;/g, '—')
+            .replace(/&ndash;/g, '–');
+          
+          // Clean up whitespace
+          const lines = cleanHtml
+            .split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 0);
+          
+          // Remove duplicates and join
+          const uniqueLines = [...new Set(lines)];
+          const content = uniqueLines.join('\n');
+          
+          // Limit content length (important for API token limits)
+          const maxLength = 6000;
+          const truncatedContent = content.length > maxLength 
+            ? content.substring(0, maxLength) + '\n\n[Content truncated...]'
+            : content;
+          
+          return `📄 **${title}**\n\nURL: ${args.url}\n\n${truncatedContent}`;
+          
+        } catch (error) {
+          console.error('Error scraping webpage:', error);
+          return `Failed to scrape ${args.url}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        }
+      }
+
       default:
         return `Unknown tool: ${toolName}`;
     }
@@ -508,6 +601,11 @@ serve(async (req) => {
               toolMessage = args.query
                 ? `👥 Searching member profiles for "${args.query}"...`
                 : '👥 Searching community member profiles...';
+              break;
+            case 'scrape_webpage':
+              toolMessage = args.url
+                ? `📄 Reading webpage: ${args.url}...`
+                : '📄 Reading webpage...';
               break;
             default:
               toolMessage = `🔧 Using tool: ${toolName}`;

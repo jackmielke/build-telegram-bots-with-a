@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { Users, MessageSquare, DollarSign, Bot, Zap, TrendingUp, Activity, Calendar, ArrowRight, Sparkles, Plus, ExternalLink, ChevronDown, ChevronUp, Brain } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { TelegramBotDialog } from '@/components/TelegramBotDialog';
 import BotOnboarding from '@/components/dashboard/BotOnboarding';
 import { CreateBotWorkflow } from '@/components/dashboard/CreateBotWorkflow';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useToast } from '@/hooks/use-toast';
 
 interface Community {
   id: string;
@@ -32,6 +34,13 @@ interface RecentConversation {
   display_name: string;
 }
 
+interface AgentWorkflow {
+  id: string;
+  workflow_type: string;
+  is_enabled: boolean;
+  configuration: any;
+}
+
 const HomePage = ({ community, onNavigate }: HomePageProps) => {
   const hasTelegram = !!community.telegram_bot_token;
   const [recentConversations, setRecentConversations] = useState<RecentConversation[]>([]);
@@ -44,11 +53,15 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
   const [agentInstructions, setAgentInstructions] = useState<string>('');
   const [showInstructions, setShowInstructions] = useState(false);
   const [showMemories, setShowMemories] = useState(false);
+  const [workflows, setWorkflows] = useState<AgentWorkflow[]>([]);
+  const [loadingWorkflows, setLoadingWorkflows] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchRecentConversations();
     fetchMemories();
     fetchAgentInstructions();
+    fetchWorkflows();
     
     // Check if onboarding was completed
     const completed = localStorage.getItem(`onboarding_completed_${community.id}`);
@@ -140,6 +153,59 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
     } catch (error) {
       console.error('Error fetching agent instructions:', error);
     }
+  };
+
+  const fetchWorkflows = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('community_workflows')
+        .select('*')
+        .eq('community_id', community.id);
+
+      if (error) throw error;
+      setWorkflows(data || []);
+    } catch (error) {
+      console.error('Error fetching workflows:', error);
+    } finally {
+      setLoadingWorkflows(false);
+    }
+  };
+
+  const toggleWorkflow = async (workflowId: string, currentState: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('community_workflows')
+        .update({ is_enabled: !currentState })
+        .eq('id', workflowId);
+
+      if (error) throw error;
+
+      setWorkflows(prev => 
+        prev.map(w => w.id === workflowId ? { ...w, is_enabled: !currentState } : w)
+      );
+
+      toast({
+        title: "Success",
+        description: `Workflow ${!currentState ? 'enabled' : 'disabled'}`,
+      });
+    } catch (error) {
+      console.error('Error toggling workflow:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update workflow status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getWorkflowLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      'proactive_outreach': 'Proactive Outreach',
+      'auto_response': 'Auto Response',
+      'welcome_message': 'Welcome Message',
+      'moderation': 'Content Moderation',
+    };
+    return labels[type] || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const formatTimeAgo = (dateString: string) => {
@@ -300,6 +366,51 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
                     <ArrowRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   </div>
                 </Button>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Agent Workflows */}
+      <Card className="gradient-card border-border/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Zap className="w-5 h-5 text-primary" />
+            Agent Workflows
+          </CardTitle>
+          <CardDescription>
+            Configure automated agent behaviors
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loadingWorkflows ? (
+            <div className="text-center py-4 text-muted-foreground">
+              <Activity className="w-6 h-6 mx-auto mb-2 opacity-50 animate-pulse" />
+              <p className="text-sm">Loading workflows...</p>
+            </div>
+          ) : workflows.length === 0 ? (
+            <div className="text-center py-4 text-muted-foreground">
+              <p className="text-sm">No workflows configured yet</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {workflows.map((workflow) => (
+                <div
+                  key={workflow.id}
+                  className="flex items-center justify-between p-3 rounded-lg border border-border/30 hover:bg-primary/5 transition-colors"
+                >
+                  <div className="flex-1">
+                    <div className="font-medium">{getWorkflowLabel(workflow.workflow_type)}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {workflow.is_enabled ? 'Active' : 'Inactive'}
+                    </div>
+                  </div>
+                  <Switch
+                    checked={workflow.is_enabled}
+                    onCheckedChange={() => toggleWorkflow(workflow.id, workflow.is_enabled)}
+                  />
+                </div>
               ))}
             </div>
           )}

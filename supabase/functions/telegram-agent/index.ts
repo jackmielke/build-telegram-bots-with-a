@@ -79,14 +79,32 @@ const AGENT_TOOLS = [
   {
     type: "function",
     function: {
-      name: "search_profiles",
-      description: "Search user profiles in the community by name, bio, interests, or other profile information. Use this to find people, discover who has specific skills, or match users with common interests.",
+      name: "get_member_profiles",
+      description: "Fetch all community member profiles into context. Use this to get a comprehensive list of community members with their names, bios, interests, and skills. Best for general awareness of who's in the community.",
+      parameters: {
+        type: "object",
+        properties: {
+          limit: {
+            type: "integer",
+            description: "Maximum number of profiles to return (default 20, max 50)",
+            minimum: 1,
+            maximum: 50
+          }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "semantic_profile_search",
+      description: "Advanced semantic search of user profiles using AI embeddings. Use this to find people based on conceptual similarity (e.g., 'looking for someone interested in AI' or 'find people who might collaborate on a design project'). Better for matching based on meaning rather than exact keywords.",
       parameters: {
         type: "object",
         properties: {
           query: {
             type: "string",
-            description: "The search query to find users (e.g., 'developer', 'design', 'yoga', or a person's name)"
+            description: "The semantic search query to find users based on meaning and context"
           }
         },
         required: ["query"]
@@ -281,10 +299,10 @@ async function executeTool(
         return `✅ Memory saved successfully!`;
       }
 
-      case "search_profiles": {
-        console.log(`👥 Searching profiles: "${args.query}"`);
+      case "get_member_profiles": {
+        console.log(`👥 Fetching community member profiles`);
         
-        const searchQuery = args.query.toLowerCase();
+        const limit = Math.min(args.limit || 20, 50);
         
         // Get community members with their profile data
         const { data: members } = await supabase
@@ -295,76 +313,82 @@ async function executeTool(
               bio,
               interests_skills,
               headline,
-              username
+              username,
+              avatar_url
             )
           `)
-          .eq('community_id', communityId);
+          .eq('community_id', communityId)
+          .limit(limit);
         
         if (!members || members.length === 0) {
           return "No community members found.";
         }
         
-        // Filter and rank results
-        const matches = members
+        const profiles = members
           .filter((m: any) => m.user)
-          .map((m: any) => {
-            const user = m.user;
-            let score = 0;
-            let matchReason = '';
-            
-            // Check name
-            if (user.name && user.name.toLowerCase().includes(searchQuery)) {
-              score += 10;
-              matchReason = 'name match';
-            }
-            
-            // Check bio
-            if (user.bio && user.bio.toLowerCase().includes(searchQuery)) {
-              score += 5;
-              matchReason = matchReason ? `${matchReason}, bio` : 'bio match';
-            }
-            
-            // Check interests/skills
-            if (user.interests_skills && Array.isArray(user.interests_skills)) {
-              const skillMatch = user.interests_skills.some((skill: string) => 
-                skill.toLowerCase().includes(searchQuery)
-              );
-              if (skillMatch) {
-                score += 8;
-                matchReason = matchReason ? `${matchReason}, skills` : 'skills match';
-              }
-            }
-            
-            // Check headline
-            if (user.headline && user.headline.toLowerCase().includes(searchQuery)) {
-              score += 3;
-              matchReason = matchReason ? `${matchReason}, headline` : 'headline match';
-            }
-            
-            return { user, score, matchReason };
-          })
-          .filter((m: any) => m.score > 0)
-          .sort((a: any, b: any) => b.score - a.score)
-          .slice(0, 10);
-        
-        if (matches.length === 0) {
-          return `No profiles found matching "${args.query}". Try a different search term.`;
-        }
-        
-        const formatted = matches
           .map((m: any, idx: number) => {
             const user = m.user;
             const parts = [
               `${idx + 1}. ${user.name || 'Unknown'}`,
-              user.headline ? `   ${user.headline}` : '',
-              user.bio ? `   ${user.bio.substring(0, 100)}${user.bio.length > 100 ? '...' : ''}` : '',
-              user.interests_skills?.length > 0 ? `   Skills: ${user.interests_skills.slice(0, 3).join(', ')}` : ''
+              user.headline ? `   Headline: ${user.headline}` : '',
+              user.bio ? `   Bio: ${user.bio}` : '',
+              user.interests_skills && user.interests_skills.length > 0 
+                ? `   Interests/Skills: ${user.interests_skills.join(', ')}` 
+                : ''
+            ].filter(Boolean);
+            return parts.join('\n');
+          });
+        
+        return `Community Members (${profiles.length}):\n\n${profiles.join('\n\n')}`;
+      }
+
+      case "semantic_profile_search": {
+        console.log(`🔍 Semantic profile search: "${args.query}"`);
+        
+        // Call the generate-embedding edge function to get the query embedding
+        const { data: embeddingData, error: embeddingError } = await supabase.functions.invoke(
+          'generate-embedding',
+          {
+            body: { text: args.query }
+          }
+        );
+        
+        if (embeddingError || !embeddingData?.embedding) {
+          console.error('Error generating embedding:', embeddingError);
+          return `Failed to generate search embedding. Please try again.`;
+        }
+        
+        // Use the semantic_search_users database function
+        const { data: results, error: searchError } = await supabase.rpc(
+          'semantic_search_users',
+          {
+            query_embedding: embeddingData.embedding,
+            match_threshold: 0.7,
+            match_count: 10
+          }
+        );
+        
+        if (searchError) {
+          console.error('Error searching profiles:', searchError);
+          return `Failed to search profiles: ${searchError.message}`;
+        }
+        
+        if (!results || results.length === 0) {
+          return `No profiles found matching "${args.query}" with sufficient similarity. Try a different search term or use get_member_profiles to see all members.`;
+        }
+        
+        const formatted = results
+          .map((r: any, idx: number) => {
+            const parts = [
+              `${idx + 1}. ${r.name || 'Unknown'} (similarity: ${(r.similarity * 100).toFixed(0)}%)`,
+              r.bio ? `   Bio: ${r.bio.substring(0, 100)}${r.bio.length > 100 ? '...' : ''}` : '',
+              r.interests_skills?.length > 0 ? `   Skills: ${r.interests_skills.slice(0, 3).join(', ')}` : ''
             ].filter(p => p);
             return parts.join('\n');
           })
           .join('\n\n');
         
-        return `Found ${matches.length} profile(s) matching "${args.query}":\n\n${formatted}`;
+        return `Found ${results.length} profile(s) matching "${args.query}":\n\n${formatted}`;
       }
 
       case "scrape_webpage": {

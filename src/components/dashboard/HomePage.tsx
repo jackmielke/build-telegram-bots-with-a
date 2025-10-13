@@ -253,7 +253,8 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
     { name: 'search_memory', label: 'Search Memory' },
     { name: 'save_memory', label: 'Save Memory' },
     { name: 'search_chat_history', label: 'Search Chat History' },
-    { name: 'search_profiles', label: 'Search Profiles' },
+    { name: 'get_member_profiles', label: 'Member Profiles' },
+    { name: 'semantic_profile_search', label: 'Semantic Search' },
     { name: 'scrape_webpage', label: 'Scrape Webpage' },
   ];
 

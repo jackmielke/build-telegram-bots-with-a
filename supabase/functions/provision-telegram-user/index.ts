@@ -143,8 +143,10 @@ Deno.serve(async (req) => {
       );
     }
 
+    const bioApplied = typeof bio === 'string' ? userData?.bio === bio : false;
+
     return new Response(
-      JSON.stringify({ success: true, user: userData }),
+      JSON.stringify({ success: true, user: userData, bioApplied }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

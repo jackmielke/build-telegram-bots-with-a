@@ -462,8 +462,22 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
         console.log('User already exists with ID:', userId);
       }
 
-      // Bio already set via provisioning when needed. Proceed to success.
-      console.log('Bio handled via provisioning or existing user.');
+      // Ensure bio is persisted for existing users via provisioning function
+      if (userId) {
+        console.log('Persisting bio for existing user via provisioning function...');
+        const { data: bioProvisionData, error: bioProvisionError } = await supabase.functions.invoke('provision-telegram-user', {
+          body: { message: selectedMessage, communityId, bio: editingBio },
+        });
+        console.log('Bio provision response:', { data: bioProvisionData, error: bioProvisionError });
+        if (bioProvisionError) {
+          console.error('Error saving bio via provisioning:', bioProvisionError);
+          throw new Error(`Failed to save bio: ${bioProvisionError.message ?? JSON.stringify(bioProvisionError)}`);
+        }
+        const persistedBio = bioProvisionData?.user?.bio;
+        if (typeof editingBio === 'string' && persistedBio !== editingBio) {
+          throw new Error('Bio update did not persist to Supabase');
+        }
+      }
 
       console.log('Bio saved successfully!');
       toast({

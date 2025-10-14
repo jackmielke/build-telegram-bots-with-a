@@ -178,7 +178,7 @@ const Auth = () => {
                     <Button
                       type="button"
                       variant="link"
-                      onClick={() => navigate('/forgot-password')}
+                      onClick={() => navigate('/forgot-password', { state: { email } })}
                       className="text-sm text-primary hover:text-primary-glow p-0 h-auto"
                     >
                       Forgot password?

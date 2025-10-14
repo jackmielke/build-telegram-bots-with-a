@@ -91,7 +91,7 @@ const Communities = () => {
         .from('users')
         .select('id')
         .eq('auth_user_id', authUserId)
-        .single();
+        .maybeSingle();
 
       if (!userData) {
         setLoading(false);
@@ -165,7 +165,7 @@ const Communities = () => {
         .from('users')
         .select('id')
         .eq('auth_user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (!userData) return;
 

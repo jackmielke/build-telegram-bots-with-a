@@ -17,6 +17,9 @@ const ForgotPassword = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const isPreview = typeof window !== 'undefined' && window.location.host.startsWith('preview--');
+  const siteUrl = (isPreview ? import.meta.env.VITE_PUBLIC_SITE_URL_PREVIEW : import.meta.env.VITE_PUBLIC_SITE_URL) || window.location.origin;
+
   const handleResetRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -24,7 +27,7 @@ const ForgotPassword = () => {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: `${siteUrl}/reset-password`,
       });
 
       if (error) throw error;

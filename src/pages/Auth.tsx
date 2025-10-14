@@ -176,6 +176,7 @@ const Auth = () => {
                 {isLogin && (
                   <div className="text-right">
                     <Button
+                      type="button"
                       variant="link"
                       onClick={() => navigate('/forgot-password')}
                       className="text-sm text-primary hover:text-primary-glow p-0 h-auto"

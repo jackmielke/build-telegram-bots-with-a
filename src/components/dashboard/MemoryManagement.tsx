@@ -519,7 +519,20 @@ const MemoryManagement = ({ communityId, isAdmin }: MemoryManagementProps) => {
               </CardHeader>
               <CardContent>
                 <div className="text-sm text-foreground/90 prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
-                  <ReactMarkdown>{memory.content}</ReactMarkdown>
+                  <ReactMarkdown
+                    components={{
+                      a: ({ node, ...props }) => (
+                        <a
+                          {...props}
+                          className="text-primary underline hover:text-primary/80 cursor-pointer transition-colors"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        />
+                      ),
+                    }}
+                  >
+                    {memory.content}
+                  </ReactMarkdown>
                 </div>
               </CardContent>
             </Card>

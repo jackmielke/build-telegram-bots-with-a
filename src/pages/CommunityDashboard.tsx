@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Loader2, ArrowLeft, Home, MessageSquare, Bot, Brain, Settings, Check, Menu } from 'lucide-react';
+import { Loader2, ArrowLeft, Home, MessageSquare, Bot, Brain, Settings, Check, Menu, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -14,6 +14,7 @@ import HomePage from '@/components/dashboard/HomePage';
 import ChatHistoryDashboard from '@/components/dashboard/ChatHistoryDashboard';
 import UnifiedAgentSetup from '@/components/dashboard/UnifiedAgentSetup';
 import MemoryManagement from '@/components/dashboard/MemoryManagement';
+import MembersManagement from '@/components/dashboard/MembersManagement';
 import CommunitySettings from '@/components/dashboard/CommunitySettings';
 
 interface Community {
@@ -147,6 +148,7 @@ const CommunityDashboard = () => {
     { value: 'conversations', icon: MessageSquare, label: 'Conversations' },
     { value: 'agent', icon: Bot, label: 'Agent' },
     { value: 'memory', icon: Brain, label: 'Memory' },
+    { value: 'members', icon: Users, label: 'Members' },
     { value: 'settings', icon: Settings, label: 'Settings' },
   ];
 
@@ -252,7 +254,7 @@ const CommunityDashboard = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           {/* Desktop Tabs - Hidden on Mobile */}
-          <TabsList className="hidden sm:grid w-full grid-cols-5 gap-2 bg-card/50 p-2 h-auto">
+          <TabsList className="hidden sm:grid w-full grid-cols-6 gap-2 bg-card/50 p-2 h-auto">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -294,6 +296,10 @@ const CommunityDashboard = () => {
 
           <TabsContent value="memory" className="space-y-6">
             <MemoryManagement communityId={community.id} isAdmin={isAdmin} />
+          </TabsContent>
+
+          <TabsContent value="members" className="space-y-6">
+            <MembersManagement communityId={community.id} isAdmin={isAdmin} />
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6">

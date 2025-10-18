@@ -271,26 +271,9 @@ function isBotMentioned(message: any, botUsername?: string): boolean {
           return true;
         }
       }
-      // Bot commands: only respond if command is for this bot or is generic
-      if (entity.type === 'bot_command' && botUsername) {
-        const text = message.text || '';
-        const commandText = text.substring(entity.offset, entity.offset + entity.length);
-        
-        // Check if command is directed at this bot specifically (e.g., /start@thisbot)
-        if (commandText.includes(`@${botUsername}`)) {
-          return true;
-        }
-        
-        // If command has no @ suffix, it's a generic command (respond in DMs only)
-        // In groups, ignore generic commands unless they mention this bot
-        if (!commandText.includes('@')) {
-          // Only respond to generic commands in private chats
-          const chatType = message.chat?.type;
-          return chatType === 'private';
-        }
-        
-        // Command is for a different bot (e.g., /start@otherbot)
-        return false;
+      // Bot commands are considered as direct mentions
+      if (entity.type === 'bot_command') {
+        return true;
       }
     }
   }

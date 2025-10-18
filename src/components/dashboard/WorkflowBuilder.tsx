@@ -1005,103 +1005,26 @@ Please create this chatbot interface now!`;
                       <div>
                         <p className="text-xs font-medium text-muted-foreground mb-3">Chat Types</p>
                         <div className="space-y-2">
-                          {/* Private Chats */}
-                          <div className="flex items-center justify-between p-2 rounded bg-background/50">
-                            <div>
-                              <p className="text-sm font-medium">Private Chats</p>
-                              <p className="text-xs text-muted-foreground">1-on-1 conversations</p>
-                            </div>
-                            <Switch 
-                              checked={telegramWorkflow.configuration?.chat_types?.private || false}
-                              onCheckedChange={() => toggleChatType(telegramWorkflow.type, 'private', telegramWorkflow.configuration?.chat_types?.private || false)}
-                              disabled={!isAdmin}
-                            />
-                          </div>
-
-                          {/* Master Group Toggle */}
-                          <div className="flex items-center justify-between p-3 rounded-lg border border-primary/20 bg-primary/5">
-                            <div>
-                              <p className="text-sm font-medium">Group Chats (All)</p>
-                              <p className="text-xs text-muted-foreground">Enable/disable both groups and supergroups</p>
-                            </div>
-                            <Switch 
-                              checked={(telegramWorkflow.configuration?.chat_types?.group || false) && (telegramWorkflow.configuration?.chat_types?.supergroup || false)}
-                              onCheckedChange={async (checked) => {
-                                if (!isAdmin) return;
-                                const workflow = workflows.find(w => w.type === telegramWorkflow.type);
-                                const currentConfig = workflow?.configuration || {};
-                                const chatTypes = currentConfig.chat_types || {};
-                                
-                                const { error } = await supabase
-                                  .from('community_workflows')
-                                  .upsert({
-                                    community_id: community.id,
-                                    workflow_type: telegramWorkflow.type,
-                                    is_enabled: workflow?.enabled || false,
-                                    configuration: {
-                                      ...currentConfig,
-                                      chat_types: {
-                                        ...chatTypes,
-                                        group: checked,
-                                        supergroup: checked
-                                      }
-                                    }
-                                  }, {
-                                    onConflict: 'community_id,workflow_type'
-                                  });
-                                
-                                if (error) {
-                                  toast({
-                                    title: "Error",
-                                    description: "Failed to update group chat settings",
-                                    variant: "destructive"
-                                  });
-                                } else {
-                                  toast({
-                                    title: checked ? "Group Chats Enabled" : "Group Chats Disabled",
-                                    description: checked 
-                                      ? "Bot will respond when mentioned in all group chats" 
-                                      : "Bot will not respond in any group chats",
-                                  });
-                                  fetchWorkflows();
-                                }
-                              }}
-                              disabled={!isAdmin}
-                            />
-                          </div>
-
-                          {/* Individual Group Controls */}
-                          <Collapsible>
-                            <CollapsibleTrigger className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full justify-between p-2 rounded hover:bg-accent">
-                              <span>Advanced: Individual Group Controls</span>
-                              <ChevronDown className="h-4 w-4" />
-                            </CollapsibleTrigger>
-                            <CollapsibleContent className="space-y-2 mt-2">
-                              <div className="flex items-center justify-between p-2 rounded bg-background/50">
+                          {[
+                            { type: 'private', label: 'Private Chats', desc: '1-on-1 conversations' },
+                            { type: 'group', label: 'Groups', desc: 'Regular group chats' },
+                            { type: 'supergroup', label: 'Supergroups', desc: 'Large groups with admin features' }
+                          ].map((chatType) => {
+                            const isEnabled = telegramWorkflow.configuration?.chat_types?.[chatType.type] || false;
+                            return (
+                              <div key={chatType.type} className="flex items-center justify-between p-2 rounded bg-background/50">
                                 <div>
-                                  <p className="text-sm font-medium">Regular Groups</p>
-                                  <p className="text-xs text-muted-foreground">Standard group chats</p>
+                                  <p className="text-sm font-medium">{chatType.label}</p>
+                                  <p className="text-xs text-muted-foreground">{chatType.desc}</p>
                                 </div>
                                 <Switch 
-                                  checked={telegramWorkflow.configuration?.chat_types?.group || false}
-                                  onCheckedChange={() => toggleChatType(telegramWorkflow.type, 'group', telegramWorkflow.configuration?.chat_types?.group || false)}
+                                  checked={isEnabled}
+                                  onCheckedChange={() => toggleChatType(telegramWorkflow.type, chatType.type, isEnabled)}
                                   disabled={!isAdmin}
                                 />
                               </div>
-                              
-                              <div className="flex items-center justify-between p-2 rounded bg-background/50">
-                                <div>
-                                  <p className="text-sm font-medium">Supergroups</p>
-                                  <p className="text-xs text-muted-foreground">Large groups with admin features</p>
-                                </div>
-                                <Switch 
-                                  checked={telegramWorkflow.configuration?.chat_types?.supergroup || false}
-                                  onCheckedChange={() => toggleChatType(telegramWorkflow.type, 'supergroup', telegramWorkflow.configuration?.chat_types?.supergroup || false)}
-                                  disabled={!isAdmin}
-                                />
-                              </div>
-                            </CollapsibleContent>
-                          </Collapsible>
+                          );
+                          })}
                         </div>
                       </div>
 

@@ -355,25 +355,10 @@ serve(async (req) => {
         });
       }
       
-      // Check if this specific chat type is enabled
+      // Check if this specific chat type is enabled for RESPONSES
       const chatTypeEnabled = workflowStatus.configuration?.chat_types?.[chatType];
+      console.log(`Chat type '${chatType}' response enabled:`, chatTypeEnabled);
       
-      if (!chatTypeEnabled) {
-        console.log(`Chat type '${chatType}' is disabled for community:`, communityId);
-        
-        // Return success to Telegram but don't process the message
-        return new Response(JSON.stringify({ 
-          ok: true, 
-          message: `Chat type '${chatType}' disabled`,
-          chat_type: chatType,
-          workflow_enabled: true,
-          chat_type_enabled: false
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200
-        });
-      }
-
       console.log(`Processing ${chatType} message:`, body.message.text);
       
       // Check message age - don't respond to messages older than 2 minutes
@@ -835,6 +820,20 @@ serve(async (req) => {
 
           // Check if this message is a reply to a bot message
           const isReplyToBotMessage = body.message?.reply_to_message?.from?.id === botUserId;
+
+          // Check if responses are enabled for this chat type
+          if (!chatTypeEnabled) {
+            console.log(`Chat type '${chatType}' responses disabled, message saved but not responding`);
+            return new Response(JSON.stringify({ 
+              ok: true, 
+              message: `Chat type '${chatType}' responses disabled`,
+              saved: true,
+              responded: false
+            }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200
+            });
+          }
 
           // FOR GROUPS/SUPERGROUPS: Only respond if bot is mentioned, it's a command, or replying to bot
           if ((chatType === 'group' || chatType === 'supergroup') && 

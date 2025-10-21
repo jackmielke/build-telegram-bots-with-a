@@ -43,7 +43,7 @@ const AgentConfiguration = ({
     agent_instructions: community.agent_instructions || '',
     agent_intro_message: community.agent_intro_message || '',
     agent_avatar_url: community.agent_avatar_url || '',
-    agent_model: community.agent_model || 'gpt-5-mini-2025-08-07',
+    agent_model: community.agent_model || 'google/gemini-2.5-flash',
     agent_max_tokens: community.agent_max_tokens || 2000,
     agent_temperature: community.agent_temperature || 0.7,
     agent_suggested_messages: community.agent_suggested_messages || []
@@ -82,29 +82,29 @@ const AgentConfiguration = ({
     }
   };
   const availableModels = [{
-    value: 'gpt-5-2025-08-07',
-    label: 'GPT-5 (Latest)',
+    value: 'google/gemini-2.5-pro',
+    label: 'Gemini 2.5 Pro',
+    description: 'Best for vision + reasoning'
+  }, {
+    value: 'google/gemini-2.5-flash',
+    label: 'Gemini 2.5 Flash',
+    description: 'Balanced, vision-capable'
+  }, {
+    value: 'google/gemini-2.5-flash-lite',
+    label: 'Gemini 2.5 Flash Lite',
+    description: 'Fastest, cheapest'
+  }, {
+    value: 'openai/gpt-5',
+    label: 'GPT-5',
     description: 'Most capable flagship model'
   }, {
-    value: 'gpt-5-mini-2025-08-07',
+    value: 'openai/gpt-5-mini',
     label: 'GPT-5 Mini',
     description: 'Faster, cost-efficient'
   }, {
-    value: 'gpt-5-nano-2025-08-07',
+    value: 'openai/gpt-5-nano',
     label: 'GPT-5 Nano',
     description: 'Fastest, cheapest'
-  }, {
-    value: 'gpt-4.1-2025-04-14',
-    label: 'GPT-4.1',
-    description: 'Reliable flagship GPT-4'
-  }, {
-    value: 'gpt-4o-mini',
-    label: 'GPT-4o Mini',
-    description: 'Fast and affordable'
-  }, {
-    value: 'gpt-4o',
-    label: 'GPT-4o',
-    description: 'Powerful with vision'
   }];
   const addSuggestedMessage = () => {
     if (formData.agent_suggested_messages.length < 6) {
@@ -331,33 +331,26 @@ const AgentConfiguration = ({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* AI Provider Selection - Coming Soon */}
+            {/* AI Provider - Now using Lovable AI Gateway */}
             <div className="space-y-2">
               <Label htmlFor="ai_provider" className="flex items-center gap-2">
                 AI Provider
-                <Badge variant="secondary" className="text-xs">Coming Soon</Badge>
               </Label>
-              <Select value="openrouter" disabled>
+              <Select value="lovable" disabled>
                 <SelectTrigger>
                   <SelectValue placeholder="Select AI provider" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="openrouter">
+                  <SelectItem value="lovable">
                     <div>
-                      <div className="font-medium">OpenRouter</div>
-                      <div className="text-xs text-muted-foreground">Multiple model providers</div>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="lovable" disabled>
-                    <div>
-                      <div className="font-medium">Lovable AI</div>
-                      <div className="text-xs text-muted-foreground">GPT + Gemini models</div>
+                      <div className="font-medium">Lovable AI Gateway</div>
+                      <div className="text-xs text-muted-foreground">Access to GPT + Gemini models</div>
                     </div>
                   </SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Currently using OpenRouter. Lovable AI option coming soon.
+                Using Lovable AI Gateway for all AI models.
               </p>
             </div>
 

@@ -24,7 +24,7 @@ interface LLMSettingsProps {
 
 const LLMSettings = ({ community, isAdmin, onUpdate }: LLMSettingsProps) => {
   const [formData, setFormData] = useState({
-    agent_model: community.agent_model || 'gpt-5-mini-2025-08-07',
+    agent_model: community.agent_model || 'google/gemini-2.5-flash',
     agent_max_tokens: community.agent_max_tokens || 2000,
     agent_temperature: community.agent_temperature || 0.7,
   });

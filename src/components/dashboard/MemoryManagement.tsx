@@ -300,17 +300,33 @@ const MemoryManagement = ({ communityId, isAdmin }: MemoryManagementProps) => {
 
       if (error) throw error;
 
-      // If we are converting a specific memory, attach it to the new profile
-      if (convertingMemory?.id && newUser?.id) {
-        await supabase
-          .from('memories')
-          .update({ created_by: newUser.id })
-          .eq('id', convertingMemory.id);
+      // Add the new user to the community_members table
+      if (newUser?.id) {
+        const { error: memberError } = await supabase
+          .from('community_members')
+          .insert({
+            community_id: communityId,
+            user_id: newUser.id,
+            role: 'member'
+          });
+
+        if (memberError) {
+          console.error('Error adding to community:', memberError);
+          throw new Error('Failed to add user to community');
+        }
+
+        // If we are converting a specific memory, attach it to the new profile
+        if (convertingMemory?.id) {
+          await supabase
+            .from('memories')
+            .update({ created_by: newUser.id })
+            .eq('id', convertingMemory.id);
+        }
       }
 
       toast({
         title: 'Success',
-        description: `Profile created for ${profileFormData.name}`,
+        description: `Profile created for ${profileFormData.name} and added to community`,
       });
 
       setIsConvertDialogOpen(false);

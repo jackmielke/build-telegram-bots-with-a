@@ -36,7 +36,7 @@ serve(async (req) => {
 Extract these fields:
 - name: The person's full name
 - username: Their username/handle (if mentioned, otherwise generate from name)
-- bio: A concise bio (2-3 sentences max)
+- bio: Convert the text into a bio format. PRESERVE ALL THE ORIGINAL CONTENT AND DETAILS. Keep the same words and information. Only remove redundant mentions of their username or name if they appear within the text itself. Do not summarize or shorten - maintain the full length and all details.
 - interests_skills: Array of their interests, skills, or areas of expertise
 - headline: A short one-line headline about them
 
@@ -58,7 +58,7 @@ Return ONLY valid JSON with these exact field names. If information is missing, 
                 properties: {
                   name: { type: "string", description: "Full name" },
                   username: { type: "string", description: "Username or handle" },
-                  bio: { type: "string", description: "Short bio" },
+                  bio: { type: "string", description: "Full bio preserving all original content" },
                   interests_skills: { 
                     type: "array", 
                     items: { type: "string" },

@@ -414,10 +414,12 @@ serve(async (req) => {
           let userMessage = message?.text || message?.caption || 'Hello';
           const hasPhoto = !!message?.photo;
           const hasDocument = !!message?.document;
+          let imageUrl: string | null = null;
+          let attachments: any = null;
           
-          // Enhance message context for multi-modal content
+          // Prepare message text for photos/documents (will download image later after getting botToken)
           if (hasPhoto) {
-            userMessage = `[Photo${message.caption ? `: ${message.caption}` : ''}]`;
+            userMessage = message.caption || 'What do you see in this image?';
           } else if (hasDocument) {
             const fileName = message.document?.file_name || 'document';
             userMessage = `[Document: ${fileName}${message.caption ? ` - ${message.caption}` : ''}]`;
@@ -562,6 +564,40 @@ serve(async (req) => {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
               status: 200
             });
+          }
+          
+          // Download image if photo is present (now that we have botToken)
+          if (hasPhoto && message.photo) {
+            try {
+              // Get the largest photo size
+              const largestPhoto = message.photo[message.photo.length - 1];
+              const fileId = largestPhoto.file_id;
+              
+              // Get file path from Telegram
+              const fileResponse = await fetch(
+                `https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`
+              );
+              const fileData = await fileResponse.json();
+              
+              if (fileData.ok && fileData.result.file_path) {
+                // Construct the file URL
+                imageUrl = `https://api.telegram.org/file/bot${botToken}/${fileData.result.file_path}`;
+                
+                // Store attachment metadata
+                attachments = {
+                  images: [{
+                    telegram_file_id: fileId,
+                    file_url: imageUrl,
+                    file_size: largestPhoto.file_size,
+                    caption: message.caption || null
+                  }]
+                };
+                
+                console.log('📸 Image downloaded:', imageUrl);
+              }
+            } catch (error) {
+              console.error('Failed to download image:', error);
+            }
           }
           
           // Find or create user
@@ -714,6 +750,7 @@ serve(async (req) => {
               sender_id: userId, // NOW PROPERLY LINKED!
               sent_by: telegramUsername || firstName || 'telegram_user',
               topic_name: threadName, // Set thread name if we have it
+              attachments: attachments, // Store image/file metadata
               metadata: {
                 telegram_chat_id: chatId,
                 telegram_user_id: telegramUserId,
@@ -914,12 +951,21 @@ When asked about your capabilities or tools, describe them in simple, friendly t
 
 ${communityData?.agent_instructions || 'Be helpful, friendly, and concise.'}`;
 
-            // Build conversation history
+            // Build conversation history (include image attachments)
             const conversationMessages = conversationHistory && conversationHistory.length > 0
-              ? conversationHistory.reverse().map(msg => ({
-                  role: msg.sent_by === 'ai' ? 'assistant' : 'user',
-                  content: msg.content
-                }))
+              ? conversationHistory.reverse().map((msg: any) => {
+                  const baseMessage: any = {
+                    role: msg.sent_by === 'ai' ? 'assistant' : 'user',
+                    content: msg.content
+                  };
+                  
+                  // Add image attachment if present in message
+                  if (msg.attachments?.images && msg.attachments.images.length > 0) {
+                    baseMessage.imageUrl = msg.attachments.images[0].file_url;
+                  }
+                  
+                  return baseMessage;
+                })
               : [];
 
             // Call telegram-agent function
@@ -933,6 +979,7 @@ ${communityData?.agent_instructions || 'Be helpful, friendly, and concise.'}`;
                 },
                 body: JSON.stringify({
                   userMessage,
+                  imageUrl, // Pass the current image URL
                   conversationHistory: conversationMessages,
                   communityId,
                   userId,

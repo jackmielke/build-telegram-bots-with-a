@@ -713,6 +713,7 @@ export type Database = {
       }
       messages: {
         Row: {
+          attachments: Json | null
           chat_type: string | null
           community_id: string | null
           content: string
@@ -729,6 +730,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          attachments?: Json | null
           chat_type?: string | null
           community_id?: string | null
           content: string
@@ -745,6 +747,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          attachments?: Json | null
           chat_type?: string | null
           community_id?: string | null
           content?: string

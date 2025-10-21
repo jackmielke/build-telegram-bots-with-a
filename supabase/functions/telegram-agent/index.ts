@@ -502,6 +502,7 @@ serve(async (req) => {
 
     const { 
       userMessage, 
+      imageUrl, // Add imageUrl parameter
       conversationHistory, 
       communityId,
       userId,
@@ -513,6 +514,7 @@ serve(async (req) => {
 
     console.log('🤖 Agent request:', {
       userMessage: userMessage.substring(0, 50),
+      hasImage: !!imageUrl,
       historyLength: conversationHistory?.length || 0,
       communityId
     });
@@ -527,17 +529,37 @@ serve(async (req) => {
 
     console.log('🛠️ Available tools:', availableTools.map(t => t.function.name));
 
-    // Build messages for AI
+    // Build messages for AI with vision support
     const messages = [
       {
         role: 'system',
         content: systemPrompt
       },
-      ...conversationHistory.map((msg: any) => ({
-        role: msg.sent_by === 'ai' ? 'assistant' : 'user',
-        content: msg.content
-      })),
-      {
+      ...conversationHistory.map((msg: any) => {
+        // If message has an image, format it for vision
+        if (msg.imageUrl) {
+          return {
+            role: msg.role,
+            content: [
+              { type: 'text', text: msg.content },
+              { type: 'image_url', image_url: { url: msg.imageUrl } }
+            ]
+          };
+        }
+        // Text-only message
+        return {
+          role: msg.role,
+          content: msg.content
+        };
+      }),
+      // Current user message with optional image
+      imageUrl ? {
+        role: 'user',
+        content: [
+          { type: 'text', text: userMessage },
+          { type: 'image_url', image_url: { url: imageUrl } }
+        ]
+      } : {
         role: 'user',
         content: userMessage
       }

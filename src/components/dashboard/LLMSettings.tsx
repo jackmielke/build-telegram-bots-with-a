@@ -32,12 +32,12 @@ const LLMSettings = ({ community, isAdmin, onUpdate }: LLMSettingsProps) => {
   const { toast } = useToast();
 
   const availableModels = [
-    { value: 'gpt-5-2025-08-07', label: 'GPT-5 (Latest)', description: 'Most capable flagship model' },
-    { value: 'gpt-5-mini-2025-08-07', label: 'GPT-5 Mini', description: 'Faster, cost-efficient' },
-    { value: 'gpt-5-nano-2025-08-07', label: 'GPT-5 Nano', description: 'Fastest, cheapest' },
-    { value: 'gpt-4.1-2025-04-14', label: 'GPT-4.1', description: 'Reliable flagship GPT-4' },
-    { value: 'gpt-4o-mini', label: 'GPT-4o Mini', description: 'Fast and affordable' },
-    { value: 'gpt-4o', label: 'GPT-4o', description: 'Powerful with vision' }
+    { value: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro', description: 'Best for vision + reasoning', provider: 'Gemini' },
+    { value: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash', description: 'Balanced, vision-capable', provider: 'Gemini' },
+    { value: 'google/gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', description: 'Fastest, cheapest', provider: 'Gemini' },
+    { value: 'openai/gpt-5', label: 'GPT-5', description: 'Most capable flagship model', provider: 'OpenAI' },
+    { value: 'openai/gpt-5-mini', label: 'GPT-5 Mini', description: 'Faster, cost-efficient', provider: 'OpenAI' },
+    { value: 'openai/gpt-5-nano', label: 'GPT-5 Nano', description: 'Fastest, cheapest', provider: 'OpenAI' },
   ];
 
   const handleSave = async () => {
@@ -80,33 +80,26 @@ const LLMSettings = ({ community, isAdmin, onUpdate }: LLMSettingsProps) => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* AI Provider Selection - Coming Soon */}
+          {/* AI Provider - Now using Lovable AI Gateway */}
           <div className="space-y-2">
             <Label htmlFor="ai_provider" className="flex items-center gap-2">
               AI Provider
-              <Badge variant="secondary" className="text-xs">Coming Soon</Badge>
             </Label>
-            <Select value="openrouter" disabled>
+            <Select value="lovable" disabled>
               <SelectTrigger>
                 <SelectValue placeholder="Select AI provider" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="openrouter">
+                <SelectItem value="lovable">
                   <div>
-                    <div className="font-medium">OpenRouter</div>
-                    <div className="text-xs text-muted-foreground">Multiple model providers</div>
-                  </div>
-                </SelectItem>
-                <SelectItem value="lovable" disabled>
-                  <div>
-                    <div className="font-medium">Lovable AI</div>
-                    <div className="text-xs text-muted-foreground">GPT + Gemini models</div>
+                    <div className="font-medium">Lovable AI Gateway</div>
+                    <div className="text-xs text-muted-foreground">Access to GPT + Gemini models</div>
                   </div>
                 </SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Currently using OpenRouter. Lovable AI option coming soon.
+              Using Lovable AI Gateway for all AI models.
             </p>
           </div>
 
@@ -124,7 +117,10 @@ const LLMSettings = ({ community, isAdmin, onUpdate }: LLMSettingsProps) => {
                 {availableModels.map((model) => (
                   <SelectItem key={model.value} value={model.value}>
                     <div>
-                      <div className="font-medium">{model.label}</div>
+                      <div className="font-medium flex items-center gap-2">
+                        {model.label}
+                        <Badge variant="outline" className="text-[10px] px-1 py-0">{model.provider}</Badge>
+                      </div>
                       <div className="text-xs text-muted-foreground">{model.description}</div>
                     </div>
                   </SelectItem>

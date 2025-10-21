@@ -464,7 +464,7 @@ serve(async (req) => {
     // Get community and workflow config
     const { data: community, error: communityError } = await supabase
       .from('communities')
-      .select('id, name, agent_instructions, agent_name')
+      .select('id, name, agent_instructions, agent_name, agent_model')
       .eq('webhook_api_key', api_key)
       .single();
 
@@ -536,7 +536,7 @@ ${community.agent_instructions || 'Be helpful, friendly, and concise.'}`;
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
+          model: community.agent_model || 'google/gemini-2.5-flash',
           messages: currentMessages,
           tools: availableTools.length > 0 ? availableTools : undefined
         })
@@ -619,6 +619,7 @@ ${community.agent_instructions || 'Be helpful, friendly, and concise.'}`;
       // AI has final answer
       const responseText = choice.message.content;
       const tokensUsed = aiData.usage?.total_tokens || 0;
+      const modelUsed = community.agent_model || 'google/gemini-2.5-flash';
 
       console.log(`✅ Agent response complete (${tokensUsed} tokens, ${toolCalls.length} tools used)`);
 
@@ -627,7 +628,7 @@ ${community.agent_instructions || 'Be helpful, friendly, and concise.'}`;
         community_id: community.id,
         user_id: null,
         chat_type: 'webhook_agent',
-        model_used: 'google/gemini-2.5-flash',
+        model_used: modelUsed,
         tokens_used: tokensUsed,
         cost_usd: 0,
         message_count: 1,
@@ -646,7 +647,7 @@ ${community.agent_instructions || 'Be helpful, friendly, and concise.'}`;
           tool_calls: toolCalls,
           metadata: {
             community: community.name,
-            model: 'google/gemini-2.5-flash',
+            model: modelUsed,
             tokens_used: tokensUsed,
             tools_used: toolCalls.length
           }

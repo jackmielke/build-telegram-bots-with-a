@@ -917,7 +917,7 @@ serve(async (req) => {
             // Get community agent configuration for system prompt
             const { data: communityData } = await supabase
               .from('communities')
-              .select('agent_instructions, agent_name')
+              .select('agent_instructions, agent_name, agent_model')
               .eq('id', communityId)
               .single();
 
@@ -986,7 +986,8 @@ ${communityData?.agent_instructions || 'Be helpful, friendly, and concise.'}`;
                   systemPrompt,
                   telegramChatId: chatId,
                   botToken,
-                  enabledTools: hasAgentTools
+                  enabledTools: hasAgentTools,
+                  agentModel: communityData?.agent_model || 'google/gemini-2.5-flash'
                 })
               }
             );

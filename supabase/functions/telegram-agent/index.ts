@@ -509,7 +509,8 @@ serve(async (req) => {
       systemPrompt,
       telegramChatId,
       botToken,
-      enabledTools
+      enabledTools,
+      agentModel
     } = await req.json();
 
     console.log('🤖 Agent request:', {
@@ -582,7 +583,7 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
+          model: agentModel || 'google/gemini-2.5-flash',
           messages: currentMessages,
           // Only send tools that are enabled in configuration
           ...(availableTools.length > 0 ? { 

@@ -39,3 +39,6 @@ project_id = "efdqqnubowgwsnwvlalp"
 
   [functions.provision-telegram-user]
   verify_jwt = false
+
+  [functions.telegram-daily-message]
+  verify_jwt = false

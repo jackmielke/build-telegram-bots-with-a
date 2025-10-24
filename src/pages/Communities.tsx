@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Users, Crown, Shield, Plus, LogOut, Heart, Sparkles, Compass, Bot, Mic, Phone, PhoneOff } from 'lucide-react';
+import { Loader2, Users, Crown, Shield, Plus, LogOut, Heart, Sparkles, Compass, Bot, Mic, Phone, PhoneOff, Activity } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useConversation } from '@11labs/react';
 import CreateCommunityDialog from '@/components/CreateCommunityDialog';
@@ -27,6 +27,7 @@ interface Community {
 
 const Communities = () => {
   const [communities, setCommunities] = useState<Community[]>([]);
+  const [activeCommunities, setActiveCommunities] = useState<Community[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [showCreateBotWorkflow, setShowCreateBotWorkflow] = useState(false);
@@ -139,6 +140,18 @@ const Communities = () => {
       });
 
       setCommunities(formattedCommunities as Community[]);
+
+      // Fetch top 10 most recently active communities
+      const { data: activeData, error: activeError } = await supabase
+        .from('communities')
+        .select('id, name, description, cover_image_url, agent_name, agent_avatar_url, privacy_level, last_activity_at, elevenlabs_agent_id')
+        .not('last_activity_at', 'is', null)
+        .order('last_activity_at', { ascending: false })
+        .limit(10);
+
+      if (!activeError && activeData) {
+        setActiveCommunities(activeData.map(c => ({ ...c, role: 'none', is_favorited: false })) as Community[]);
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -590,6 +603,86 @@ const Communities = () => {
                      </Card>
                    ))}
                    <CreateCommunityDialog asCard onCommunityCreated={() => fetchCommunities(user?.id)} />
+                </div>
+              </div>
+            )}
+
+            {/* Active Communities Section */}
+            {activeCommunities.length > 0 && (
+              <div className="mb-8">
+                <div className="mb-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Sparkles className="w-5 h-5 text-primary" />
+                    <h2 className="text-xl font-semibold">Active Communities</h2>
+                    <Badge variant="secondary" className="text-xs">
+                      {activeCommunities.length}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Most recently active communities you can explore
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {activeCommunities.map((community) => (
+                    <Card
+                      key={community.id}
+                      className="group cursor-pointer hover:shadow-glow transition-all duration-300 border-border/50 hover:border-primary/50"
+                      onClick={() => navigate(`/explore`)}
+                    >
+                      <CardHeader className="space-y-3">
+                        <div className="flex items-start space-x-3">
+                          <div className="w-16 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center flex-shrink-0">
+                            {community.cover_image_url ? (
+                              <img 
+                                src={community.cover_image_url} 
+                                alt={community.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : community.agent_avatar_url ? (
+                              <img 
+                                src={community.agent_avatar_url} 
+                                alt={community.agent_name || community.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Bot className="w-6 h-6 text-primary" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <CardTitle className="text-lg group-hover:text-primary transition-colors truncate">
+                              {community.name}
+                            </CardTitle>
+                            {community.agent_name && (
+                              <p className="text-sm text-muted-foreground truncate">
+                                Agent: {community.agent_name}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </CardHeader>
+
+                      <CardContent>
+                        <CardDescription className="line-clamp-2">
+                          {community.description || "No description available"}
+                        </CardDescription>
+                        
+                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="outline" className="text-xs">
+                              {community.privacy_level}
+                            </Badge>
+                            <Badge variant="secondary" className="flex items-center space-x-1 text-xs">
+                              <Activity className="w-3 h-3" />
+                              <span>Active</span>
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Explore →
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
               </div>
             )}

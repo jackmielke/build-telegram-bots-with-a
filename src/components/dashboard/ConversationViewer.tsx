@@ -374,34 +374,34 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
     }
   };
 
-  const handleGenerateBio = async (message: Message) => {
+  const handleGenerateIntro = async (message: Message) => {
     try {
       setGeneratingBio(true);
       setSelectedMessage(message);
       
-      const userName = message.users?.name || message.metadata?.telegram_first_name || message.metadata?.telegram_username || 'User';
-      
-      const { data, error } = await supabase.functions.invoke('generate-bio', {
+      const { data, error } = await supabase.functions.invoke('generate-intro', {
         body: { 
-          messageContent: message.content,
-          userName: userName
+          conversationId: conversationId,
+          communityId: communityId,
+          singleMessage: message.content,
+          userId: message.sender_id
         }
       });
 
       if (error) throw error;
 
-      if (!data?.bio) {
-        throw new Error('No bio generated');
+      if (!data?.intro) {
+        throw new Error('No intro generated');
       }
 
-      setGeneratedBio(data.bio);
-      setEditingBio(data.bio);
+      setGeneratedBio(data.intro);
+      setEditingBio(data.intro);
       setBioDialogOpen(true);
     } catch (error) {
-      console.error('Error generating bio:', error);
+      console.error('Error generating intro:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate bio",
+        description: error instanceof Error ? error.message : "Failed to generate intro",
         variant: "destructive"
       });
     } finally {
@@ -868,18 +868,29 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
                               <span className="text-[10px] md:text-xs">{message.sender_id ? "Add to Community" : "Generate User"}</span>
                             </Button>
                           )}
-                          <Button
+                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleGenerateBio(message)}
+                            onClick={() => handleGenerateIntro(message)}
                             disabled={generatingBio}
                             className="h-5 md:h-6 px-1.5 md:px-2 flex items-center gap-1"
                           >
                             <Pencil className="w-3 h-3" />
                             <span className="text-[10px] md:text-xs">
-                              {generatingBio ? "Generating..." : "Add Bio"}
+                              {generatingBio ? "Generating..." : "Generate Intro"}
                             </span>
                           </Button>
+                          {message.sender_id && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => navigate(`/user/${message.sender_id}`)}
+                              className="h-5 md:h-6 px-1.5 md:px-2 flex items-center gap-1"
+                            >
+                              <User className="w-3 h-3" />
+                              <span className="text-[10px] md:text-xs">View Profile</span>
+                            </Button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -938,13 +949,13 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
         </DialogContent>
       </Dialog>
 
-      {/* Bio Generator Dialog */}
+      {/* Intro Generator Dialog */}
       <Dialog open={bioDialogOpen} onOpenChange={setBioDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Review Generated Bio</DialogTitle>
+            <DialogTitle>Review Generated Intro</DialogTitle>
             <DialogDescription>
-              Review the user information and edit the bio before saving
+              Review and edit the intro before saving to profile
             </DialogDescription>
           </DialogHeader>
           

@@ -18,7 +18,7 @@ graph LR
         TW2 -->|detects intro channel| GI[generate-intro]
         GI -->|calls| LAI[Lovable AI Gateway]
         LAI -->|returns intro text| GI
-        GI -->|saves to| U2[(users.intro field)]
+        GI -->|saves to| U2[(users.bio field)]
         U2 -.->|linked by| U2TG[telegram_user_id]
     end
     
@@ -33,9 +33,9 @@ graph LR
         ADMIN[Admin] -->|views| CONV[Conversations Tab]
         CONV -->|displays messages| MSG[(messages)]
         MSG -->|"Generate Intro" button| GI2[generate-intro]
-        GI2 -->|saves to| U4[(users.intro)]
+        GI2 -->|saves to| U4[(users.bio)]
         CONV -->|"View Profile" button| VP[UserProfile Page]
-        VP -->|shows| U4
+        VP -->|shows bio| U4
     end
     
     style U1 fill:#4ade80
@@ -57,8 +57,7 @@ erDiagram
         bigint telegram_user_id UK
         text telegram_username
         text name
-        text intro "NEW: Generated intro content"
-        text bio "User's custom bio"
+        text bio "Generated intro + custom bio"
         boolean is_claimed "Auto true on /start"
         timestamp created_at
     }
@@ -86,6 +85,6 @@ erDiagram
 ## Key Features
 
 1. **Auto-Claiming**: `/start` command automatically creates claimed profile with generated auth credentials
-2. **Intro Storage**: Intros stored directly on `users.intro` field (not in memories table)
+2. **Intro Storage**: Intros stored directly on `users.bio` field (not in memories table)
 3. **Testing UI**: Conversations tab has "Generate Intro" button + "View Profile" link
 4. **Cross-Platform**: Same profile works across Telegram, web apps, and external integrations

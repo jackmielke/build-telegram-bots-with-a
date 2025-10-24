@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { conversationId, communityId, singleMessage } = await req.json();
+    const { conversationId, communityId, singleMessage, userId } = await req.json();
     
     if (!conversationId && !singleMessage) {
       return new Response(
@@ -40,6 +40,7 @@ serve(async (req) => {
 
     // Fetch messages from the conversation or use single message
     let conversationText = '';
+    let detectedUserId = userId;
     
     if (singleMessage) {
       // Use the single message provided
@@ -71,6 +72,12 @@ serve(async (req) => {
           JSON.stringify({ error: 'No messages found in conversation' }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      }
+
+      // Get user_id from first user message if not provided
+      if (!detectedUserId) {
+        const firstUserMessage = messages.find(msg => msg.sent_by !== 'ai');
+        detectedUserId = firstUserMessage?.sender_id;
       }
 
       // Format the conversation for the AI
@@ -138,8 +145,27 @@ Return ONLY the intro text, nothing else.`;
       throw new Error('Failed to generate intro');
     }
 
+    // Save intro to user's bio field if userId is provided
+    if (detectedUserId) {
+      console.log('Saving intro to user bio:', detectedUserId);
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ bio: generatedIntro })
+        .eq('id', detectedUserId);
+
+      if (updateError) {
+        console.error('Error updating user bio:', updateError);
+        // Don't fail the request, just log the error
+      } else {
+        console.log('✅ Intro saved to user bio');
+      }
+    }
+
     return new Response(
-      JSON.stringify({ intro: generatedIntro }),
+      JSON.stringify({ 
+        intro: generatedIntro,
+        userId: detectedUserId 
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

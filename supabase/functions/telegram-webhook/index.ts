@@ -800,7 +800,8 @@ serve(async (req) => {
                       body: JSON.stringify({
                         conversationId: conversationId,
                         communityId: communityId,
-                        singleMessage: userMessage // Generate intro from this single message
+                        singleMessage: userMessage, // Generate intro from this single message
+                        userId: userId // Pass userId to save bio
                       })
                     }
                   );
@@ -809,28 +810,8 @@ serve(async (req) => {
                     const introData = await introResponse.json();
                     const generatedIntro = introData.intro;
                     
-                    // Save as memory
-                    const { error: memoryError } = await supabase
-                      .from('memories')
-                      .insert({
-                        community_id: communityId,
-                        content: generatedIntro,
-                        tags: ['intro', 'auto-generated', 'telegram'],
-                        created_by: userId,
-                        metadata: {
-                          source: 'telegram_auto_intro',
-                          thread_name: threadName,
-                          telegram_username: telegramUsername,
-                          telegram_user_id: telegramUserId,
-                          message_id: insertedMessage.id
-                        }
-                      });
-                    
-                    if (memoryError) {
-                      console.error('❌ Error saving auto-generated intro:', memoryError);
-                    } else {
-                      console.log('✅ Auto-generated intro saved to memories');
-                    }
+                    // Save intro to user's bio field (intro is already saved by generate-intro)
+                    console.log('✅ Auto-generated intro saved to user bio via generate-intro function');
                   } else {
                     console.error('❌ Error generating intro:', await introResponse.text());
                   }

@@ -1,5 +1,8 @@
 project_id = "efdqqnubowgwsnwvlalp"
 
+[pg_cron]
+enabled = true
+
 [functions]
   [functions.telegram-webhook]
   verify_jwt = false

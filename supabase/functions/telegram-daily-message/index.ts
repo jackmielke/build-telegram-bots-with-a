@@ -24,6 +24,14 @@ Deno.serve(async (req) => {
 
     console.log('🔄 Starting daily message broadcast...');
 
+    // Get current time in UTC
+    const now = new Date();
+    const currentHour = now.getUTCHours();
+    const currentMinute = now.getUTCMinutes();
+    const currentTime = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}:00`;
+    
+    console.log(`⏰ Current UTC time: ${currentTime}`);
+
     // Get all communities with daily messages enabled
     const { data: communities, error: communitiesError } = await supabase
       .rpc('get_communities_for_daily_message');
@@ -48,14 +56,34 @@ Deno.serve(async (req) => {
 
     // For each community, send messages to all active chat sessions
     for (const community of communities as Community[]) {
+      // Check if it's time to send for this community
+      const { data: communityDetails } = await supabase
+        .from('communities')
+        .select('daily_message_time')
+        .eq('id', community.community_id)
+        .single();
+      
+      if (communityDetails?.daily_message_time) {
+        const scheduledTime = communityDetails.daily_message_time;
+        // Compare hours and minutes only (ignore seconds)
+        const scheduledHourMin = scheduledTime.substring(0, 5);
+        const currentHourMin = currentTime.substring(0, 5);
+        
+        if (scheduledHourMin !== currentHourMin) {
+          console.log(`⏭️ Skipping ${community.community_name} - scheduled for ${scheduledTime}, current time is ${currentTime}`);
+          continue;
+        }
+      }
+      
       console.log(`\n📡 Processing community: ${community.community_name}`);
 
-      // Get all active chat sessions for this community
+      // Get all active chat sessions for this community (filtered by proactive_outreach_enabled)
       const { data: sessions, error: sessionsError } = await supabase
         .from('telegram_chat_sessions')
-        .select('telegram_chat_id, telegram_username, telegram_first_name')
+        .select('telegram_chat_id, telegram_username, telegram_first_name, proactive_outreach_enabled')
         .eq('community_id', community.community_id)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .eq('proactive_outreach_enabled', true); // Only send to users who opted in
 
       if (sessionsError) {
         console.error(`❌ Error fetching sessions for ${community.community_name}:`, sessionsError);

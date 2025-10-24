@@ -423,7 +423,7 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
             <span>Daily Notifications</span>
           </CardTitle>
           <CardDescription>
-            Schedule automatic daily messages to be sent to all bot users
+            Schedule automatic daily messages to active bot users who have opted in
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -431,7 +431,7 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
             <div className="space-y-0.5">
               <Label htmlFor="daily_message_enabled">Enable Daily Messages</Label>
               <p className="text-xs text-muted-foreground">
-                Send a scheduled message once per day to all active users
+                Send a scheduled message to active users who have proactive outreach enabled
               </p>
             </div>
             <Switch
@@ -455,7 +455,7 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
                   rows={4}
                 />
                 <p className="text-xs text-muted-foreground">
-                  This message will be sent to all active bot users at the scheduled time
+                  This message will be sent to bot users who have opted in for proactive messages
                 </p>
               </div>
 
@@ -469,7 +469,7 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
                   disabled={!isAdmin}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Currently set to 09:00 UTC daily. Messages are sent automatically via cron job.
+                  Time in UTC when messages will be sent. The cron job checks hourly for scheduled messages.
                 </p>
               </div>
             </>

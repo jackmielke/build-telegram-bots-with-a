@@ -37,6 +37,9 @@ interface Community {
   webhook_api_key: string | null;
   total_tokens_used: number | null;
   total_cost_usd: number | null;
+  daily_message_enabled: boolean | null;
+  daily_message_content: string | null;
+  daily_message_time: string | null;
   member_count?: number;
   user_role?: string;
 }

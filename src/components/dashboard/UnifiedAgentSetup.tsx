@@ -8,8 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Bot, Brain, MessageSquare, Upload, Loader2, Sparkles, Zap, Settings } from 'lucide-react';
+import { Bot, Brain, MessageSquare, Upload, Loader2, Sparkles, Zap, Settings, Bell } from 'lucide-react';
 import WorkflowBuilder from './WorkflowBuilder';
 import BotHealthIndicator from './BotHealthIndicator';
 
@@ -26,6 +27,9 @@ interface Community {
   agent_suggested_messages: string[] | null;
   telegram_bot_token: string | null;
   telegram_bot_url: string | null;
+  daily_message_enabled: boolean | null;
+  daily_message_content: string | null;
+  daily_message_time: string | null;
 }
 
 interface UnifiedAgentSetupProps {
@@ -43,7 +47,10 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
     agent_model: community.agent_model || 'google/gemini-2.5-flash',
     agent_max_tokens: community.agent_max_tokens || 2000,
     agent_temperature: community.agent_temperature || 0.7,
-    agent_suggested_messages: community.agent_suggested_messages || []
+    agent_suggested_messages: community.agent_suggested_messages || [],
+    daily_message_enabled: community.daily_message_enabled || false,
+    daily_message_content: community.daily_message_content || '',
+    daily_message_time: community.daily_message_time || '09:00:00'
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -405,6 +412,68 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
               </Button>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* 5. DAILY NOTIFICATIONS */}
+      <Card className="gradient-card border-border/50">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Bell className="w-5 h-5 text-primary" />
+            <span>Daily Notifications</span>
+          </CardTitle>
+          <CardDescription>
+            Schedule automatic daily messages to be sent to all bot users
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between space-x-2">
+            <div className="space-y-0.5">
+              <Label htmlFor="daily_message_enabled">Enable Daily Messages</Label>
+              <p className="text-xs text-muted-foreground">
+                Send a scheduled message once per day to all active users
+              </p>
+            </div>
+            <Switch
+              id="daily_message_enabled"
+              checked={formData.daily_message_enabled}
+              onCheckedChange={(checked) => setFormData({ ...formData, daily_message_enabled: checked })}
+              disabled={!isAdmin}
+            />
+          </div>
+
+          {formData.daily_message_enabled && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="daily_message_content">Daily Message</Label>
+                <Textarea
+                  id="daily_message_content"
+                  value={formData.daily_message_content}
+                  onChange={(e) => setFormData({ ...formData, daily_message_content: e.target.value })}
+                  placeholder="Good morning! Here's what's happening today..."
+                  disabled={!isAdmin}
+                  rows={4}
+                />
+                <p className="text-xs text-muted-foreground">
+                  This message will be sent to all active bot users at the scheduled time
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="daily_message_time">Send Time (UTC)</Label>
+                <Input
+                  id="daily_message_time"
+                  type="time"
+                  value={formData.daily_message_time.substring(0, 5)}
+                  onChange={(e) => setFormData({ ...formData, daily_message_time: e.target.value + ':00' })}
+                  disabled={!isAdmin}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Currently set to 09:00 UTC daily. Messages are sent automatically via cron job.
+                </p>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 

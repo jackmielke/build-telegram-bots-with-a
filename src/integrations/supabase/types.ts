@@ -236,6 +236,9 @@ export type Database = {
           cover_image_url: string | null
           created_at: string
           created_by: string | null
+          daily_message_content: string | null
+          daily_message_enabled: boolean | null
+          daily_message_time: string | null
           description: string | null
           elevenlabs_agent_id: string | null
           experiences: string[] | null
@@ -271,6 +274,9 @@ export type Database = {
           cover_image_url?: string | null
           created_at?: string
           created_by?: string | null
+          daily_message_content?: string | null
+          daily_message_enabled?: boolean | null
+          daily_message_time?: string | null
           description?: string | null
           elevenlabs_agent_id?: string | null
           experiences?: string[] | null
@@ -306,6 +312,9 @@ export type Database = {
           cover_image_url?: string | null
           created_at?: string
           created_by?: string | null
+          daily_message_content?: string | null
+          daily_message_enabled?: boolean | null
+          daily_message_time?: string | null
           description?: string | null
           elevenlabs_agent_id?: string | null
           experiences?: string[] | null
@@ -1502,10 +1511,6 @@ export type Database = {
         Args: { target_community_id: string }
         Returns: boolean
       }
-      binary_quantize: {
-        Args: { "": string } | { "": unknown }
-        Returns: unknown
-      }
       check_community_membership: {
         Args: { _auth_user_id: string; _community_id: string }
         Returns: boolean
@@ -1514,9 +1519,15 @@ export type Database = {
         Args: { table_name: string }
         Returns: string
       }
-      generate_universal_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
+      generate_universal_id: { Args: never; Returns: string }
+      get_communities_for_daily_message: {
+        Args: never
+        Returns: {
+          community_id: string
+          community_name: string
+          daily_message_content: string
+          telegram_bot_token: string
+        }[]
       }
       get_communities_with_favorites: {
         Args: { limit_count?: number; user_auth_id?: string }
@@ -1545,50 +1556,9 @@ export type Database = {
           privacy_level: string
         }[]
       }
-      get_current_user_from_context: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_user_id_from_auth: {
-        Args: { auth_user_id: string }
-        Returns: string
-      }
-      halfvec_avg: {
-        Args: { "": number[] }
-        Returns: unknown
-      }
-      halfvec_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      halfvec_send: {
-        Args: { "": unknown }
-        Returns: string
-      }
-      halfvec_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
-      }
-      has_role: {
-        Args: { _role: string; _user_id: string }
-        Returns: boolean
-      }
-      hnsw_bit_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnsw_halfvec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnsw_sparsevec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnswhandler: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
+      get_current_user_from_context: { Args: never; Returns: string }
+      get_user_id_from_auth: { Args: { auth_user_id: string }; Returns: string }
+      has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_community_admin: {
         Args: { community_id_param: string; user_auth_id: string }
         Returns: boolean
@@ -1596,26 +1566,6 @@ export type Database = {
       is_community_member: {
         Args: { community_id_param: string; user_id_param: string }
         Returns: boolean
-      }
-      ivfflat_bit_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      ivfflat_halfvec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      ivfflathandler: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      l2_norm: {
-        Args: { "": unknown } | { "": unknown }
-        Returns: number
-      }
-      l2_normalize: {
-        Args: { "": string } | { "": unknown } | { "": unknown }
-        Returns: unknown
       }
       semantic_search_users: {
         Args: {
@@ -1632,42 +1582,6 @@ export type Database = {
           similarity: number
           user_id: string
         }[]
-      }
-      sparsevec_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      sparsevec_send: {
-        Args: { "": unknown }
-        Returns: string
-      }
-      sparsevec_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
-      }
-      vector_avg: {
-        Args: { "": number[] }
-        Returns: string
-      }
-      vector_dims: {
-        Args: { "": string } | { "": unknown }
-        Returns: number
-      }
-      vector_norm: {
-        Args: { "": string }
-        Returns: number
-      }
-      vector_out: {
-        Args: { "": string }
-        Returns: unknown
-      }
-      vector_send: {
-        Args: { "": string }
-        Returns: string
-      }
-      vector_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
       }
     }
     Enums: {

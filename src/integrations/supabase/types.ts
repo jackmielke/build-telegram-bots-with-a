@@ -253,6 +253,7 @@ export type Database = {
           support_email: string | null
           telegram_bot_token: string | null
           telegram_bot_url: string | null
+          timezone: string | null
           total_cost_usd: number | null
           total_tokens_used: number | null
           universal_id: string
@@ -291,6 +292,7 @@ export type Database = {
           support_email?: string | null
           telegram_bot_token?: string | null
           telegram_bot_url?: string | null
+          timezone?: string | null
           total_cost_usd?: number | null
           total_tokens_used?: number | null
           universal_id: string
@@ -329,6 +331,7 @@ export type Database = {
           support_email?: string | null
           telegram_bot_token?: string | null
           telegram_bot_url?: string | null
+          timezone?: string | null
           total_cost_usd?: number | null
           total_tokens_used?: number | null
           universal_id?: string

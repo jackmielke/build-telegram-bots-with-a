@@ -41,6 +41,7 @@ interface Community {
   daily_message_enabled: boolean | null;
   daily_message_content: string | null;
   daily_message_time: string | null;
+  timezone: string | null;
   member_count?: number;
   user_role?: string;
 }

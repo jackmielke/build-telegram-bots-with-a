@@ -11,6 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Bot, Brain, MessageSquare, Upload, Loader2, Sparkles, Zap, Settings, Bell } from 'lucide-react';
+import { toZonedTime, fromZonedTime, formatInTimeZone } from 'date-fns-tz';
+import { parse, format } from 'date-fns';
 import WorkflowBuilder from './WorkflowBuilder';
 import BotHealthIndicator from './BotHealthIndicator';
 
@@ -30,6 +32,7 @@ interface Community {
   daily_message_enabled: boolean | null;
   daily_message_content: string | null;
   daily_message_time: string | null;
+  timezone: string | null;
 }
 
 interface UnifiedAgentSetupProps {
@@ -39,6 +42,20 @@ interface UnifiedAgentSetupProps {
 }
 
 const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupProps) => {
+  const timezone = community.timezone || 'UTC';
+  
+  // Convert UTC time to local timezone for display
+  const getLocalTime = (utcTimeString: string, tz: string): string => {
+    try {
+      const [hours, minutes] = utcTimeString.split(':');
+      const utcDate = new Date(Date.UTC(2000, 0, 1, parseInt(hours), parseInt(minutes), 0));
+      const zonedDate = toZonedTime(utcDate, tz);
+      return format(zonedDate, 'HH:mm');
+    } catch {
+      return '09:00';
+    }
+  };
+  
   const [formData, setFormData] = useState({
     agent_name: community.agent_name || '',
     agent_instructions: community.agent_instructions || '',
@@ -50,12 +67,38 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
     agent_suggested_messages: community.agent_suggested_messages || [],
     daily_message_enabled: community.daily_message_enabled || false,
     daily_message_content: community.daily_message_content || '',
-    daily_message_time: community.daily_message_time || '09:00:00'
+    daily_message_time: community.daily_message_time || '09:00:00',
+    timezone: timezone,
+    displayTime: getLocalTime(community.daily_message_time || '09:00:00', timezone)
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  
+  const commonTimezones = [
+    { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
+    { value: 'America/New_York', label: 'Eastern Time (US)' },
+    { value: 'America/Chicago', label: 'Central Time (US)' },
+    { value: 'America/Denver', label: 'Mountain Time (US)' },
+    { value: 'America/Los_Angeles', label: 'Pacific Time (US)' },
+    { value: 'America/Phoenix', label: 'Arizona' },
+    { value: 'America/Anchorage', label: 'Alaska' },
+    { value: 'Pacific/Honolulu', label: 'Hawaii' },
+    { value: 'Europe/London', label: 'London' },
+    { value: 'Europe/Paris', label: 'Paris' },
+    { value: 'Europe/Berlin', label: 'Berlin' },
+    { value: 'Europe/Rome', label: 'Rome' },
+    { value: 'Europe/Madrid', label: 'Madrid' },
+    { value: 'Europe/Athens', label: 'Athens' },
+    { value: 'Asia/Dubai', label: 'Dubai' },
+    { value: 'Asia/Kolkata', label: 'India' },
+    { value: 'Asia/Shanghai', label: 'China' },
+    { value: 'Asia/Tokyo', label: 'Tokyo' },
+    { value: 'Asia/Singapore', label: 'Singapore' },
+    { value: 'Australia/Sydney', label: 'Sydney' },
+    { value: 'Pacific/Auckland', label: 'New Zealand' }
+  ];
 
   const availableModels = [
     { value: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro', description: 'Best for vision + reasoning' },
@@ -70,14 +113,26 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
     if (!isAdmin) return;
     setSaving(true);
     try {
+      // Convert display time (in selected timezone) back to UTC before saving
+      const [hours, minutes] = formData.displayTime.split(':');
+      const localDate = new Date(2000, 0, 1, parseInt(hours), parseInt(minutes), 0);
+      const utcDate = fromZonedTime(localDate, formData.timezone);
+      const utcTime = format(utcDate, 'HH:mm:ss');
+      
+      const { displayTime, ...dataWithoutDisplay } = formData;
+      const dataToSave = {
+        ...dataWithoutDisplay,
+        daily_message_time: utcTime
+      };
+      
       const { error } = await supabase
         .from('communities')
-        .update(formData)
+        .update(dataToSave)
         .eq('id', community.id);
 
       if (error) throw error;
 
-      onUpdate({ ...community, ...formData });
+      onUpdate({ ...community, ...dataToSave });
       toast({
         title: "Agent Updated",
         description: "All agent settings have been saved successfully."
@@ -460,16 +515,42 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="daily_message_time">Send Time (UTC)</Label>
+                <Label htmlFor="timezone">Timezone</Label>
+                <Select
+                  value={formData.timezone}
+                  onValueChange={(value) => {
+                    const newDisplayTime = getLocalTime(formData.daily_message_time, value);
+                    setFormData({ ...formData, timezone: value, displayTime: newDisplayTime });
+                  }}
+                  disabled={!isAdmin}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select timezone" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {commonTimezones.map((tz) => (
+                      <SelectItem key={tz.value} value={tz.value}>
+                        {tz.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Your local timezone for scheduling messages
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="daily_message_time">Send Time</Label>
                 <Input
                   id="daily_message_time"
                   type="time"
-                  value={formData.daily_message_time.substring(0, 5)}
-                  onChange={(e) => setFormData({ ...formData, daily_message_time: e.target.value + ':00' })}
+                  value={formData.displayTime}
+                  onChange={(e) => setFormData({ ...formData, displayTime: e.target.value })}
                   disabled={!isAdmin}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Time in UTC when messages will be sent. The cron job checks hourly for scheduled messages.
+                  Time in {formData.timezone} when messages will be sent. The cron job checks hourly for scheduled messages.
                 </p>
               </div>
             </>

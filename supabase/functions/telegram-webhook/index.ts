@@ -555,6 +555,149 @@ serve(async (req) => {
               status: 200
             });
           }
+
+          // CHECK FOR /help COMMAND
+          if (userMessage.trim() === '/help') {
+            console.log('Detected /help command');
+            const botToken = await getBotToken(supabase, communityId);
+            if (!botToken) {
+              return new Response(JSON.stringify({ ok: true, message: 'Bot token not configured' }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 200
+              });
+            }
+
+            const helpText = `🤖 *Available Commands*\n\n` +
+              `/start - Start the bot\n` +
+              `/help - Show this help message\n` +
+              `/status - Check your notification status\n` +
+              `/notifications on - Enable daily notifications\n` +
+              `/notifications off - Disable daily notifications`;
+
+            await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: chatId,
+                text: helpText,
+                parse_mode: 'Markdown'
+              })
+            });
+
+            return new Response(JSON.stringify({ ok: true, message: 'Help sent' }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200
+            });
+          }
+
+          // CHECK FOR /status COMMAND
+          if (userMessage.trim() === '/status') {
+            console.log('Detected /status command');
+            const botToken = await getBotToken(supabase, communityId);
+            if (!botToken) {
+              return new Response(JSON.stringify({ ok: true, message: 'Bot token not configured' }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 200
+              });
+            }
+
+            const { data: session } = await supabase
+              .from('telegram_chat_sessions')
+              .select('proactive_outreach_enabled')
+              .eq('telegram_chat_id', chatId)
+              .eq('community_id', communityId)
+              .single();
+
+            const status = session?.proactive_outreach_enabled ? '✅ *Enabled*' : '❌ *Disabled*';
+            const statusText = `📊 *Your Notification Status*\n\n` +
+              `Daily Notifications: ${status}\n\n` +
+              `Use /notifications on or /notifications off to change your settings.`;
+
+            await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: chatId,
+                text: statusText,
+                parse_mode: 'Markdown'
+              })
+            });
+
+            return new Response(JSON.stringify({ ok: true, message: 'Status sent' }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200
+            });
+          }
+
+          // CHECK FOR /notifications COMMAND
+          if (userMessage.trim().startsWith('/notifications')) {
+            console.log('Detected /notifications command');
+            const botToken = await getBotToken(supabase, communityId);
+            if (!botToken) {
+              return new Response(JSON.stringify({ ok: true, message: 'Bot token not configured' }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 200
+              });
+            }
+
+            const enable = userMessage.trim() === '/notifications on';
+            const disable = userMessage.trim() === '/notifications off';
+
+            if (!enable && !disable) {
+              await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: chatId,
+                  text: '❌ Invalid command. Use:\n/notifications on\n/notifications off',
+                  parse_mode: 'Markdown'
+                })
+              });
+              return new Response(JSON.stringify({ ok: true, message: 'Invalid notifications command' }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 200
+              });
+            }
+
+            const { error } = await supabase
+              .from('telegram_chat_sessions')
+              .update({ proactive_outreach_enabled: enable })
+              .eq('telegram_chat_id', chatId)
+              .eq('community_id', communityId);
+
+            if (error) {
+              console.error('Error updating notification settings:', error);
+              await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: chatId,
+                  text: '❌ Failed to update notification settings. Please try again.',
+                  parse_mode: 'Markdown'
+                })
+              });
+            } else {
+              const emoji = enable ? '🔔' : '🔕';
+              const statusMsg = enable 
+                ? `${emoji} *Daily notifications enabled!*\n\nYou will receive daily messages from the community.`
+                : `${emoji} *Daily notifications disabled*\n\nYou will no longer receive daily messages.`;
+
+              await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: chatId,
+                  text: statusMsg,
+                  parse_mode: 'Markdown'
+                })
+              });
+            }
+
+            return new Response(JSON.stringify({ ok: true, message: 'Notifications toggled' }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200
+            });
+          }
           
           // Get bot token before creating/finding user
           const botToken = await getBotToken(supabase, communityId);

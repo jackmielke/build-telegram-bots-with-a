@@ -59,20 +59,25 @@ Deno.serve(async (req) => {
       // Check if it's time to send for this community
       const { data: communityDetails } = await supabase
         .from('communities')
-        .select('daily_message_time')
+        .select('daily_message_time, timezone')
         .eq('id', community.community_id)
         .single();
       
       if (communityDetails?.daily_message_time) {
-        const scheduledTime = communityDetails.daily_message_time;
-        // Compare hours and minutes only (ignore seconds)
-        const scheduledHourMin = scheduledTime.substring(0, 5);
+        const scheduledUTCTime = communityDetails.daily_message_time;
+        
+        // The stored time is in UTC, and the current time is also UTC
+        // So we can compare directly
+        const scheduledHourMin = scheduledUTCTime.substring(0, 5);
         const currentHourMin = currentTime.substring(0, 5);
         
         if (scheduledHourMin !== currentHourMin) {
-          console.log(`⏭️ Skipping ${community.community_name} - scheduled for ${scheduledTime}, current time is ${currentTime}`);
+          const timezone = communityDetails.timezone || 'UTC';
+          console.log(`⏭️ Skipping ${community.community_name} (${timezone}) - scheduled for ${scheduledUTCTime} UTC, current time is ${currentTime} UTC`);
           continue;
         }
+        
+        console.log(`✅ Time match for ${community.community_name} - sending daily messages`);
       }
       
       console.log(`\n📡 Processing community: ${community.community_name}`);

@@ -40,63 +40,70 @@ interface UnifiedAgentSetupProps {
 }
 
 const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupProps) => {
-  const timezone = community.timezone || 'UTC';
+  const timezone = community.timezone || 'America/Argentina/Buenos_Aires';
   
-  // Convert UTC time to local timezone for display using Intl API
+  // Convert UTC time to local timezone for display
   const getLocalTime = (utcTimeString: string, tz: string): string => {
     try {
       const [hours, minutes] = utcTimeString.split(':');
-      const utcDate = new Date(Date.UTC(2000, 0, 1, parseInt(hours), parseInt(minutes), 0));
-      const localTime = utcDate.toLocaleTimeString('en-US', {
+      // Create a date in UTC
+      const utcDate = new Date(`2000-01-01T${hours}:${minutes}:00Z`);
+      
+      // Format it in the target timezone
+      const formatter = new Intl.DateTimeFormat('en-US', {
         timeZone: tz,
         hour: '2-digit',
         minute: '2-digit',
         hour12: false
       });
-      return localTime;
+      
+      return formatter.format(utcDate);
     } catch {
       return '09:00';
     }
   };
   
-  // Convert local time to UTC for storage
+  // Convert local timezone time to UTC for storage
   const getUTCTime = (localTimeString: string, tz: string): string => {
     try {
       const [hours, minutes] = localTimeString.split(':');
-      // Create a date in the target timezone
-      const dateStr = `2000-01-01T${hours}:${minutes}:00`;
-      const localDate = new Date(dateStr);
       
-      // Get the timezone offset for this specific date/time
-      const localTimeInMs = localDate.getTime();
-      const localOffset = localDate.getTimezoneOffset() * 60000;
+      // Create a date string in the local timezone
+      const dateString = '2000-01-01';
+      const timeString = `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00`;
       
-      // Parse the time in the target timezone
-      const formatter = new Intl.DateTimeFormat('en-US', {
-        timeZone: tz,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-      });
+      // Parse as if it's in the target timezone
+      const localDateTimeString = `${dateString}T${timeString}`;
       
-      const parts = formatter.formatToParts(new Date(`2000-01-01T${hours}:${minutes}:00`));
-      const targetHour = parts.find(p => p.type === 'hour')?.value || '00';
-      const targetMinute = parts.find(p => p.type === 'minute')?.value || '00';
+      // Get offset for this timezone at this time
+      const testDate = new Date(localDateTimeString);
+      const utcDate = new Date(testDate.toLocaleString('en-US', { timeZone: 'UTC' }));
+      const tzDate = new Date(testDate.toLocaleString('en-US', { timeZone: tz }));
+      const offset = (tzDate.getTime() - utcDate.getTime()) / (1000 * 60); // offset in minutes
       
-      // Create UTC date
-      const targetDate = new Date(`2000-01-01T${targetHour}:${targetMinute}:00Z`);
-      const utcDate = new Date(targetDate.getTime() - (new Date().getTimezoneOffset() * 60000));
+      // Apply offset to get UTC time
+      let utcHours = parseInt(hours);
+      let utcMinutes = parseInt(minutes);
       
-      // Simple approach: just convert the time value
-      const testDate = new Date(`2000-01-01T${hours}:${minutes}:00`);
-      const utcHours = testDate.getUTCHours().toString().padStart(2, '0');
-      const utcMinutes = testDate.getUTCMinutes().toString().padStart(2, '0');
+      // Subtract the offset to get UTC
+      utcMinutes -= offset;
       
-      return `${utcHours}:${utcMinutes}:00`;
+      while (utcMinutes < 0) {
+        utcMinutes += 60;
+        utcHours -= 1;
+      }
+      while (utcMinutes >= 60) {
+        utcMinutes -= 60;
+        utcHours += 1;
+      }
+      while (utcHours < 0) {
+        utcHours += 24;
+      }
+      while (utcHours >= 24) {
+        utcHours -= 24;
+      }
+      
+      return `${utcHours.toString().padStart(2, '0')}:${utcMinutes.toString().padStart(2, '0')}:00`;
     } catch (e) {
       console.error('Error converting to UTC:', e);
       return `${localTimeString}:00`;
@@ -124,6 +131,7 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
   const { toast } = useToast();
   
   const commonTimezones = [
+    { value: 'America/Argentina/Buenos_Aires', label: 'Buenos Aires (Argentina)' },
     { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
     { value: 'America/New_York', label: 'Eastern Time (US)' },
     { value: 'America/Chicago', label: 'Central Time (US)' },
@@ -132,6 +140,8 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
     { value: 'America/Phoenix', label: 'Arizona' },
     { value: 'America/Anchorage', label: 'Alaska' },
     { value: 'Pacific/Honolulu', label: 'Hawaii' },
+    { value: 'America/Mexico_City', label: 'Mexico City' },
+    { value: 'America/Sao_Paulo', label: 'São Paulo (Brazil)' },
     { value: 'Europe/London', label: 'London' },
     { value: 'Europe/Paris', label: 'Paris' },
     { value: 'Europe/Berlin', label: 'Berlin' },

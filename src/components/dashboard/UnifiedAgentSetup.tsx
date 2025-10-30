@@ -10,7 +10,7 @@ import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Bot, Brain, MessageSquare, Upload, Loader2, Sparkles, Zap, Settings, Bell } from 'lucide-react';
+import { Bot, Brain, MessageSquare, Upload, Loader2, Sparkles, Zap, Settings, Bell, Users } from 'lucide-react';
 import WorkflowBuilder from './WorkflowBuilder';
 import BotHealthIndicator from './BotHealthIndicator';
 
@@ -127,6 +127,7 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   
@@ -253,6 +254,35 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
   const removeSuggestedMessage = (index: number) => {
     const newMessages = formData.agent_suggested_messages.filter((_, i) => i !== index);
     setFormData({ ...formData, agent_suggested_messages: newMessages });
+  };
+
+  const handleBackfillProfiles = async () => {
+    if (!isAdmin) return;
+    
+    setBackfilling(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('backfill-intros', {
+        body: { communityId: community.id }
+      });
+
+      if (error) throw error;
+
+      const stats = data?.stats || {};
+      toast({
+        title: "Profile Backfill Complete",
+        description: `Processed ${stats.successful || 0} intros. ${stats.failed > 0 ? `${stats.failed} failed.` : ''}`,
+        duration: 5000
+      });
+    } catch (error: any) {
+      console.error('Backfill error:', error);
+      toast({
+        title: "Backfill Failed",
+        description: error.message || "Failed to backfill profiles from intro messages",
+        variant: "destructive"
+      });
+    } finally {
+      setBackfilling(false);
+    }
   };
 
   return (
@@ -611,6 +641,54 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
           )}
         </CardContent>
       </Card>
+
+      {/* PROFILE MANAGEMENT */}
+      {isAdmin && (
+        <Card className="gradient-card border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Users className="w-5 h-5 text-primary" />
+              <span>Profile Management</span>
+            </CardTitle>
+            <CardDescription>
+              Generate user profiles from existing intro messages in Telegram
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+              <p className="text-sm">
+                This will scan all messages in the <strong>"Intros"</strong> channel and automatically 
+                generate profile bios for users who don't have one yet using AI.
+              </p>
+              <ul className="text-xs text-muted-foreground space-y-1 ml-4 list-disc">
+                <li>Only processes messages from the Intros channel</li>
+                <li>Skips users who already have bios</li>
+                <li>Uses AI to format intro messages into professional bios</li>
+                <li>Safe to run multiple times</li>
+              </ul>
+            </div>
+            
+            <Button
+              onClick={handleBackfillProfiles}
+              disabled={backfilling}
+              variant="outline"
+              className="w-full"
+            >
+              {backfilling ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating Profiles...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Generate Profiles from Intros
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* SAVE BUTTON */}
       {isAdmin && (

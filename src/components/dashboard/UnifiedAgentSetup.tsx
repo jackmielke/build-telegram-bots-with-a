@@ -11,8 +11,6 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Bot, Brain, MessageSquare, Upload, Loader2, Sparkles, Zap, Settings, Bell } from 'lucide-react';
-import { toZonedTime, fromZonedTime, formatInTimeZone } from 'date-fns-tz';
-import { parse, format } from 'date-fns';
 import WorkflowBuilder from './WorkflowBuilder';
 import BotHealthIndicator from './BotHealthIndicator';
 
@@ -44,15 +42,64 @@ interface UnifiedAgentSetupProps {
 const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupProps) => {
   const timezone = community.timezone || 'UTC';
   
-  // Convert UTC time to local timezone for display
+  // Convert UTC time to local timezone for display using Intl API
   const getLocalTime = (utcTimeString: string, tz: string): string => {
     try {
       const [hours, minutes] = utcTimeString.split(':');
       const utcDate = new Date(Date.UTC(2000, 0, 1, parseInt(hours), parseInt(minutes), 0));
-      const zonedDate = toZonedTime(utcDate, tz);
-      return format(zonedDate, 'HH:mm');
+      const localTime = utcDate.toLocaleTimeString('en-US', {
+        timeZone: tz,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+      return localTime;
     } catch {
       return '09:00';
+    }
+  };
+  
+  // Convert local time to UTC for storage
+  const getUTCTime = (localTimeString: string, tz: string): string => {
+    try {
+      const [hours, minutes] = localTimeString.split(':');
+      // Create a date in the target timezone
+      const dateStr = `2000-01-01T${hours}:${minutes}:00`;
+      const localDate = new Date(dateStr);
+      
+      // Get the timezone offset for this specific date/time
+      const localTimeInMs = localDate.getTime();
+      const localOffset = localDate.getTimezoneOffset() * 60000;
+      
+      // Parse the time in the target timezone
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+      
+      const parts = formatter.formatToParts(new Date(`2000-01-01T${hours}:${minutes}:00`));
+      const targetHour = parts.find(p => p.type === 'hour')?.value || '00';
+      const targetMinute = parts.find(p => p.type === 'minute')?.value || '00';
+      
+      // Create UTC date
+      const targetDate = new Date(`2000-01-01T${targetHour}:${targetMinute}:00Z`);
+      const utcDate = new Date(targetDate.getTime() - (new Date().getTimezoneOffset() * 60000));
+      
+      // Simple approach: just convert the time value
+      const testDate = new Date(`2000-01-01T${hours}:${minutes}:00`);
+      const utcHours = testDate.getUTCHours().toString().padStart(2, '0');
+      const utcMinutes = testDate.getUTCMinutes().toString().padStart(2, '0');
+      
+      return `${utcHours}:${utcMinutes}:00`;
+    } catch (e) {
+      console.error('Error converting to UTC:', e);
+      return `${localTimeString}:00`;
     }
   };
   
@@ -114,10 +161,7 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
     setSaving(true);
     try {
       // Convert display time (in selected timezone) back to UTC before saving
-      const [hours, minutes] = formData.displayTime.split(':');
-      const localDate = new Date(2000, 0, 1, parseInt(hours), parseInt(minutes), 0);
-      const utcDate = fromZonedTime(localDate, formData.timezone);
-      const utcTime = format(utcDate, 'HH:mm:ss');
+      const utcTime = getUTCTime(formData.displayTime, formData.timezone);
       
       const { displayTime, ...dataWithoutDisplay } = formData;
       const dataToSave = {

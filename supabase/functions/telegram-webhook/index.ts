@@ -1284,10 +1284,22 @@ ${communityData?.agent_instructions || 'You are a helpful community assistant.'}
 
             // Build conversation history for OpenAI (reverse to chronological order for sliding window)
             const conversationMessages = conversationHistory && conversationHistory.length > 0
-              ? conversationHistory.reverse().map(msg => ({
-                  role: msg.sent_by === 'ai' ? 'assistant' : 'user',
-                  content: msg.content
-                }))
+              ? conversationHistory.reverse().map((msg: any) => {
+                  // Include images if present
+                  if (msg.attachments?.images && msg.attachments.images.length > 0) {
+                    return {
+                      role: msg.sent_by === 'ai' ? 'assistant' : 'user',
+                      content: [
+                        { type: 'text', text: msg.content },
+                        { type: 'image_url', image_url: { url: msg.attachments.images[0].file_url } }
+                      ]
+                    };
+                  }
+                  return {
+                    role: msg.sent_by === 'ai' ? 'assistant' : 'user',
+                    content: msg.content
+                  };
+                })
               : [];
             
             // Call OpenAI for AI response
@@ -1301,6 +1313,20 @@ ${communityData?.agent_instructions || 'You are a helpful community assistant.'}
             const isLegacyModel = model.includes('gpt-4o') || model.includes('gpt-3.5');
             
             // Build request body based on model type
+            // Format current message with image if present
+            const currentUserMessage: any = imageUrl 
+              ? {
+                  role: 'user',
+                  content: [
+                    { type: 'text', text: userMessage },
+                    { type: 'image_url', image_url: { url: imageUrl } }
+                  ]
+                }
+              : {
+                  role: 'user',
+                  content: userMessage
+                };
+
             const requestBody: any = {
               model,
               messages: [
@@ -1309,10 +1335,7 @@ ${communityData?.agent_instructions || 'You are a helpful community assistant.'}
                   content: systemPrompt
                 },
                 ...conversationMessages, // Already limited to 7 messages by sliding window
-                {
-                  role: 'user',
-                  content: userMessage
-                }
+                currentUserMessage
               ]
             };
 

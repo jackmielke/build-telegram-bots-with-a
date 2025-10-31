@@ -119,7 +119,8 @@ async function findOrCreateUser(
   telegramUserId: number,
   telegramUsername: string | null,
   firstName: string | null,
-  lastName: string | null
+  lastName: string | null,
+  communityId: string
 ): Promise<string | null> {
   try {
     // First try to find existing user by telegram_user_id (most reliable)
@@ -215,10 +216,51 @@ async function findOrCreateUser(
     }
 
     console.log(`Created new unclaimed profile: ${username} (${displayName}) with photo`);
+    
+    // Add user to community
+    await addUserToCommunity(supabase, newUser.id, communityId);
+    
     return newUser.id;
   } catch (error) {
     console.error('Error in findOrCreateUser:', error);
     return null;
+  }
+}
+
+// Add user to community if not already a member
+async function addUserToCommunity(
+  supabase: any,
+  userId: string,
+  communityId: string
+): Promise<void> {
+  try {
+    // Check if already a member
+    const { data: existingMember } = await supabase
+      .from('community_members')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('community_id', communityId)
+      .maybeSingle();
+    
+    if (!existingMember) {
+      const { error } = await supabase
+        .from('community_members')
+        .insert({
+          user_id: userId,
+          community_id: communityId,
+          role: 'member'
+        });
+      
+      if (error) {
+        console.error('Error adding user to community:', error);
+      } else {
+        console.log(`Added user ${userId} to community ${communityId}`);
+      }
+    } else {
+      console.log(`User ${userId} already a member of community ${communityId}`);
+    }
+  } catch (error) {
+    console.error('Error in addUserToCommunity:', error);
   }
 }
 
@@ -489,7 +531,8 @@ serve(async (req) => {
               telegramUserId,
               telegramUsername,
               firstName,
-              lastName
+              lastName,
+              communityId
             );
             
             // Log the /start user message
@@ -750,7 +793,8 @@ serve(async (req) => {
           telegramUserId,
           telegramUsername,
           firstName,
-          lastName
+          lastName,
+          communityId
         );
           
           // Check if this is a profile claim verification code

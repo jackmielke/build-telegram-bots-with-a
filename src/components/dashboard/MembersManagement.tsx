@@ -220,12 +220,18 @@ const MembersManagement = ({ communityId, isAdmin }: MembersManagementProps) => 
                     navigate(`/user/${member.users.id}`);
                   }}
                 >
-                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
                     {member.users.avatar_url ? (
                       <img 
                         src={member.users.avatar_url} 
                         alt={member.users.name || 'User'}
-                        className="w-8 h-8 rounded-full"
+                        className="w-8 h-8 rounded-full object-cover"
+                        onError={(e) => {
+                          console.log('Failed to load avatar:', member.users.avatar_url);
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.parentElement!.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 text-primary"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>';
+                        }}
+                        referrerPolicy="no-referrer"
                       />
                     ) : (
                       <Users className="w-4 h-4 text-primary" />

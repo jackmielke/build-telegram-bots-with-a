@@ -69,12 +69,38 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${activeUserIds.size} users with recent messages, ${activeTelegramIds.size} with recent sessions`);
 
+    // If no active users at all, return early
+    if (activeUserIds.size === 0 && activeTelegramIds.size === 0) {
+      console.log('No active users found in the last 20 days');
+      return new Response(
+        JSON.stringify({
+          success: true,
+          summary: {
+            total_users: 0,
+            added: 0,
+            skipped: 0,
+            errors: 0,
+          },
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Build the OR filter safely - only include non-empty sets
+    const orConditions = [];
+    if (activeUserIds.size > 0) {
+      orConditions.push(`id.in.(${Array.from(activeUserIds).join(',')})`);
+    }
+    if (activeTelegramIds.size > 0) {
+      orConditions.push(`telegram_user_id.in.(${Array.from(activeTelegramIds).join(',')})`);
+    }
+
     // Fetch user details for these active users
     const { data: usersToAdd, error: queryError } = await supabaseClient
       .from('users')
       .select('id, telegram_user_id, telegram_username, name')
       .not('telegram_user_id', 'is', null)
-      .or(`id.in.(${Array.from(activeUserIds).join(',')}),telegram_user_id.in.(${Array.from(activeTelegramIds).join(',')})`);
+      .or(orConditions.join(','));
 
     if (queryError) {
       console.error('Error querying users:', queryError);

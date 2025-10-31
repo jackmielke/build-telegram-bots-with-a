@@ -214,7 +214,11 @@ const MembersManagement = ({ communityId, isAdmin }: MembersManagementProps) => 
               >
                 <div 
                   className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={() => navigate(`/user/${member.users.id}`)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    navigate(`/user/${member.users.id}`);
+                  }}
                 >
                   <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
                     {member.users.avatar_url ? (

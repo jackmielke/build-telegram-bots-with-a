@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Crown, Shield, UserMinus } from 'lucide-react';
+import { Users, Crown, Shield, UserMinus, UserPlus } from 'lucide-react';
 
 interface Member {
   id: string;
@@ -31,6 +31,7 @@ const MembersManagement = ({ communityId, isAdmin }: MembersManagementProps) => 
   const navigate = useNavigate();
   const [members, setMembers] = useState<Member[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
+  const [backfilling, setBackfilling] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -123,6 +124,35 @@ const MembersManagement = ({ communityId, isAdmin }: MembersManagementProps) => 
     }
   };
 
+  const backfillCommunityMembers = async () => {
+    if (!isAdmin) return;
+    
+    setBackfilling(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('backfill-community-members', {
+        body: { communityId },
+      });
+
+      if (error) throw error;
+      
+      const summary = data?.summary;
+      toast({
+        title: "Backfill Complete!",
+        description: `Added ${summary?.added || 0} members. Skipped ${summary?.skipped || 0}. Errors: ${summary?.errors || 0}`,
+      });
+      
+      fetchMembers();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to backfill members",
+        variant: "destructive"
+      });
+    } finally {
+      setBackfilling(false);
+    }
+  };
+
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'admin':
@@ -153,10 +183,23 @@ const MembersManagement = ({ communityId, isAdmin }: MembersManagementProps) => 
             <Users className="w-5 h-5 text-primary" />
             <span>Community Members</span>
           </div>
-          <Badge variant="secondary">{members.length} members</Badge>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={backfillCommunityMembers}
+                disabled={backfilling}
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                {backfilling ? 'Syncing...' : 'Sync Telegram Users'}
+              </Button>
+            )}
+            <Badge variant="secondary">{members.length} members</Badge>
+          </div>
         </CardTitle>
         <CardDescription>
-          View and manage community member roles
+          View and manage community member roles. Use Sync to add existing Telegram users to this community.
         </CardDescription>
       </CardHeader>
       <CardContent>

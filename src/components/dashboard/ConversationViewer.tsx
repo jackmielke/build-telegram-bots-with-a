@@ -375,16 +375,25 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
   };
 
   const handleGenerateIntro = async (message: Message) => {
+    // Directly copy the message text to the bio editor
+    setSelectedMessage(message);
+    setEditingBio(message.content);
+    setGeneratedBio('');
+    setBioDialogOpen(true);
+  };
+
+  const handleAIEnhancement = async () => {
+    if (!selectedMessage) return;
+    
     try {
       setGeneratingBio(true);
-      setSelectedMessage(message);
       
       const { data, error } = await supabase.functions.invoke('generate-intro', {
         body: { 
           conversationId: conversationId,
           communityId: communityId,
-          singleMessage: message.content,
-          userId: message.sender_id
+          singleMessage: selectedMessage.content,
+          userId: selectedMessage.sender_id
         }
       });
 
@@ -396,12 +405,16 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
 
       setGeneratedBio(data.intro);
       setEditingBio(data.intro);
-      setBioDialogOpen(true);
+      
+      toast({
+        title: "Success",
+        description: "AI-enhanced bio generated",
+      });
     } catch (error) {
-      console.error('Error generating intro:', error);
+      console.error('Error generating AI enhancement:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate intro",
+        description: error instanceof Error ? error.message : "Failed to generate AI enhancement",
         variant: "destructive"
       });
     } finally {
@@ -872,12 +885,11 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
                             variant="outline"
                             size="sm"
                             onClick={() => handleGenerateIntro(message)}
-                            disabled={generatingBio}
                             className="h-5 md:h-6 px-1.5 md:px-2 flex items-center gap-1"
                           >
                             <Pencil className="w-3 h-3" />
                             <span className="text-[10px] md:text-xs">
-                              {generatingBio ? "Generating..." : "Generate Intro"}
+                              Add to Bio
                             </span>
                           </Button>
                           {message.sender_id && (
@@ -953,9 +965,9 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
       <Dialog open={bioDialogOpen} onOpenChange={setBioDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Review Generated Intro</DialogTitle>
+            <DialogTitle>Edit User Bio</DialogTitle>
             <DialogDescription>
-              Review and edit the intro before saving to profile
+              Edit the bio or use AI to enhance it before saving to profile
             </DialogDescription>
           </DialogHeader>
           
@@ -1007,7 +1019,17 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
 
             {/* Bio Editor */}
             <div>
-              <label className="text-sm font-medium mb-2 block">Generated Bio</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium">User Bio</label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAIEnhancement}
+                  disabled={generatingBio}
+                >
+                  {generatingBio ? 'Generating...' : '✨ AI Enhancement'}
+                </Button>
+              </div>
               <Textarea
                 value={editingBio}
                 onChange={(e) => setEditingBio(e.target.value)}
@@ -1016,7 +1038,7 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
                 className="w-full"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Edit the bio to make it more accurate before saving
+                Edit the bio directly or use AI enhancement to generate a professional version
               </p>
             </div>
           </div>
@@ -1026,7 +1048,7 @@ const ConversationViewer = ({ conversationId, communityId, onBack }: Conversatio
               Cancel
             </Button>
             <Button onClick={handleSaveBio}>
-              Save Bio & Create Profile
+              Confirm & Save Bio
             </Button>
           </DialogFooter>
         </DialogContent>

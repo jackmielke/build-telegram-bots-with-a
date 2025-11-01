@@ -660,6 +660,27 @@ serve(async (req) => {
       iterationCount++;
       console.log(`🔄 Agent iteration ${iterationCount}`);
 
+      // Normalize model to allowed Lovable AI identifiers
+      const allowedModels = [
+        'google/gemini-2.5-pro',
+        'google/gemini-2.5-flash',
+        'google/gemini-2.5-flash-lite',
+        'google/gemini-2.5-flash-image',
+        'openai/gpt-5',
+        'openai/gpt-5-mini',
+        'openai/gpt-5-nano',
+      ];
+      const normalizeModel = (m: string | null | undefined) => {
+        if (!m) return 'google/gemini-2.5-flash';
+        const l = m.toLowerCase();
+        if (l.startsWith('gpt-4o')) return 'google/gemini-2.5-flash';
+        if (l === 'gpt-5') return 'openai/gpt-5';
+        if (l === 'gpt-5-mini') return 'openai/gpt-5-mini';
+        if (l === 'gpt-5-nano') return 'openai/gpt-5-nano';
+        return allowedModels.includes(m) ? m : 'google/gemini-2.5-flash';
+      };
+      const modelToUse = normalizeModel(agentModel);
+
       const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -667,7 +688,7 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: agentModel || 'google/gemini-2.5-flash',
+          model: modelToUse,
           messages: currentMessages,
           // Only send tools that are enabled in configuration
           ...(availableTools.length > 0 ? { 

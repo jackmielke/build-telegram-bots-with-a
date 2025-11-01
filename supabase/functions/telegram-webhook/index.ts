@@ -1118,8 +1118,17 @@ When asked about your capabilities or tools, describe them in simple, friendly t
 - I can look through recent conversations to find information
 - I can save important information to remember for later
 - I can search community member profiles to find people with specific skills or interests
+${hasAgentTools.submit_vibe ? '- I can analyze photos and give vibe scores using AI vision' : ''}
 
-${communityData?.agent_instructions || 'Be helpful, friendly, and concise.'}`;
+${hasAgentTools.submit_vibe ? `VIBE CHECK TOOL USAGE:
+- When someone sends a photo AND mentions vibe/score/rate/check/vibes, AUTOMATICALLY use the submit_vibe tool
+- Extract the person's name from: their Telegram first name ("${firstName}"), username ("${telegramUsername}"), or ask them if both are unavailable
+- Be enthusiastic! Say things like "Let me check your vibe!" or "Time for a vibe analysis!" or "Analyzing your vibes..."
+- After getting the score, celebrate it with emojis and commentary based on the score (high scores = fire emojis, lower scores = encouraging words)
+- If someone sends a photo without vibe keywords, you can offer: "Want me to check your vibe?"
+- The submit_vibe tool requires a 'name' parameter - always provide the person's name when calling it
+
+` : ''}${communityData?.agent_instructions || 'Be helpful, friendly, and concise.'}`;
 
             // Build conversation history (include image attachments)
             const conversationMessages = conversationHistory && conversationHistory.length > 0

@@ -510,8 +510,9 @@ async function executeTool(
           const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
           const imageData = `data:${contentType};base64,${base64Image}`;
           
-          // Call the submit-vibe endpoint
-          const vibeResponse = await fetch('https://hzrdpoyxamsptfbgrhru.supabase.co/functions/v1/submit-vibe', {
+          // Call the submit-vibe endpoint using environment variable
+          const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+          const vibeResponse = await fetch(`${supabaseUrl}/functions/v1/submit-vibe`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

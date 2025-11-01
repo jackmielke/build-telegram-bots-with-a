@@ -20,6 +20,7 @@ interface WorkflowCheck {
       search_chat_history?: boolean;
       save_memory?: boolean;
       search_profiles?: boolean;
+      submit_vibe?: boolean;
     };
     auto_intro_generation?: {
       enabled?: boolean;
@@ -1076,7 +1077,8 @@ serve(async (req) => {
             hasAgentTools.search_memory ||
             hasAgentTools.search_chat_history ||
             hasAgentTools.save_memory ||
-            hasAgentTools.search_profiles
+            hasAgentTools.search_profiles ||
+            hasAgentTools.submit_vibe
           );
 
           if (agentToolsEnabled) {
@@ -1154,7 +1156,10 @@ ${communityData?.agent_instructions || 'Be helpful, friendly, and concise.'}`;
                   systemPrompt,
                   telegramChatId: chatId,
                   botToken,
-                  enabledTools: hasAgentTools,
+                  enabledTools: {
+                    ...hasAgentTools,
+                    submit_vibe: true // Enable by default for vibe scoring
+                  },
                   agentModel: communityData?.agent_model || 'google/gemini-2.5-flash'
                 })
               }

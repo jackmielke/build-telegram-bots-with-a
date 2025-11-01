@@ -127,6 +127,23 @@ const AGENT_TOOLS = [
         required: ["url"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "submit_vibe",
+      description: "Analyze someone's vibe from their photo and submit it to the community vibe leaderboard. Use this when someone sends a photo and wants their vibe scored, or when they ask to check/rate their vibe. The AI will analyze the image and return a vibe score (0-100) with fun analysis.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: "The person's name or username to submit the vibe score under"
+          }
+        },
+        required: ["name"]
+      }
+    }
   }
 ];
 
@@ -136,7 +153,8 @@ async function executeTool(
   args: any,
   supabase: any,
   communityId: string,
-  userId: string | null
+  userId: string | null,
+  imageUrl?: string
 ): Promise<string> {
   console.log(`🔧 Executing tool: ${toolName}`, args);
 
@@ -467,6 +485,72 @@ async function executeTool(
         }
       }
 
+      case "submit_vibe": {
+        console.log(`✨ Submitting vibe score for: "${args.name}"`);
+        
+        if (!imageUrl) {
+          return `Cannot submit vibe - no image was provided. Ask the user to send a photo.`;
+        }
+        
+        try {
+          // Fetch the image from the URL
+          const imageResponse = await fetch(imageUrl);
+          if (!imageResponse.ok) {
+            return `Failed to fetch image: ${imageResponse.status} ${imageResponse.statusText}`;
+          }
+          
+          // Convert to base64
+          const imageBuffer = await imageResponse.arrayBuffer();
+          const base64Image = btoa(
+            new Uint8Array(imageBuffer)
+              .reduce((data, byte) => data + String.fromCharCode(byte), '')
+          );
+          
+          // Determine image type from URL or default to jpeg
+          const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
+          const imageData = `data:${contentType};base64,${base64Image}`;
+          
+          // Call the submit-vibe endpoint
+          const vibeResponse = await fetch('https://hzrdpoyxamsptfbgrhru.supabase.co/functions/v1/submit-vibe', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              imageData: imageData,
+              name: args.name
+            })
+          });
+          
+          if (!vibeResponse.ok) {
+            const errorText = await vibeResponse.text();
+            console.error('Vibe submission error:', vibeResponse.status, errorText);
+            return `Failed to submit vibe: ${vibeResponse.status} ${errorText}`;
+          }
+          
+          const vibeData = await vibeResponse.json();
+          
+          if (!vibeData.success) {
+            return `Vibe submission failed: ${JSON.stringify(vibeData)}`;
+          }
+          
+          const result = vibeData.data;
+          
+          return `✨ Vibe Score Submitted! ✨
+
+🎯 Score: ${result.score}/100
+👤 Name: ${result.name}
+💭 Analysis: ${result.vibe_analysis}
+📅 Submitted: ${new Date(result.created_at).toLocaleString()}
+
+The vibe has been recorded on the leaderboard! 🏆`;
+          
+        } catch (error) {
+          console.error('Error submitting vibe:', error);
+          return `Failed to submit vibe: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        }
+      }
+
       default:
         return `Unknown tool: ${toolName}`;
     }
@@ -657,6 +741,11 @@ serve(async (req) => {
                 ? `📄 Reading webpage: ${args.url}...`
                 : '📄 Reading webpage...';
               break;
+            case 'submit_vibe':
+              toolMessage = args.name
+                ? `✨ Analyzing ${args.name}'s vibe...`
+                : '✨ Analyzing vibe...';
+              break;
             default:
               toolMessage = `🔧 Using tool: ${toolName}`;
           }
@@ -682,7 +771,8 @@ serve(async (req) => {
               args,
               supabase,
               communityId,
-              userId
+              userId,
+              imageUrl
             );
             console.log(`✅ Tool ${toolName} executed successfully`);
           } catch (toolError) {

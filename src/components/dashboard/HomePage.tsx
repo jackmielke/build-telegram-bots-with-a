@@ -344,6 +344,7 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
     { name: 'get_member_profiles', label: 'Member Profiles' },
     { name: 'semantic_profile_search', label: 'Semantic Search' },
     { name: 'scrape_webpage', label: 'Scrape Webpage' },
+    { name: 'submit_vibe', label: 'Submit Vibe' },
   ];
 
   const formatTimeAgo = (dateString: string) => {
@@ -592,7 +593,8 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
                                     search_chat_history: 'Search Chat History - Look up past conversations',
                                     get_member_profiles: 'Get Member Profiles - Fetch all member profiles with context',
                                     semantic_profile_search: 'Semantic Profile Search - AI-powered member search',
-                                    scrape_webpage: 'Scrape Webpage - Extract content from URLs'
+                                    scrape_webpage: 'Scrape Webpage - Extract content from URLs',
+                                    submit_vibe: 'Submit Vibe - Analyze photos and submit vibe scores to leaderboard'
                                   };
                                   return `- ${toolLabels[toolName] || toolName}`;
                                 })

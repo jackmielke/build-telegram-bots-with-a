@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2?target=deno';
+import { trackLLMCall, completeLLMCall, trackToolCall } from '../_shared/langsmith.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -529,6 +530,24 @@ ${community.agent_instructions || 'Be helpful, friendly, and concise.'}`;
       iterationCount++;
       console.log(`🔄 Agent iteration ${iterationCount}`);
 
+      // Start LangSmith tracking (fail-safe)
+      const langsmithKey = Deno.env.get('LANGSMITH_API_KEY');
+      let runId: string | null = null;
+      
+      if (langsmithKey) {
+        runId = await trackLLMCall(
+          `webhook-agent-iteration-${iterationCount}`,
+          {
+            model: community.agent_model || 'google/gemini-2.5-flash',
+            messages: currentMessages,
+            community: community.name,
+            api_key_used: api_key.substring(0, 8) + '...'
+          },
+          langsmithKey,
+          'webhook-agent'
+        );
+      }
+
       const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -545,11 +564,26 @@ ${community.agent_instructions || 'Be helpful, friendly, and concise.'}`;
       if (!aiResponse.ok) {
         const errorText = await aiResponse.text();
         console.error('AI API error:', aiResponse.status, errorText);
+        
+        // Complete LangSmith tracking with error (fail-safe)
+        if (langsmithKey && runId) {
+          await completeLLMCall(runId, null, langsmithKey, `HTTP ${aiResponse.status}: ${errorText}`);
+        }
+        
         throw new Error('AI service unavailable');
       }
 
       const aiData = await aiResponse.json();
       const choice = aiData.choices[0];
+      
+      // Complete LangSmith tracking with success (fail-safe)
+      if (langsmithKey && runId) {
+        await completeLLMCall(runId, {
+          response: choice.message.content,
+          usage: aiData.usage,
+          tool_calls: choice.message.tool_calls?.length || 0
+        }, langsmithKey);
+      }
       
       // If AI wants to use tools
       if (choice.message.tool_calls && choice.message.tool_calls.length > 0) {

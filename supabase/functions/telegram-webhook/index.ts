@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2?target=deno';
+import { trackLLMCall, completeLLMCall, trackToolCall } from '../_shared/langsmith.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -1433,6 +1434,24 @@ ${communityData?.agent_instructions || 'You are a helpful community assistant.'}
               // Newer models don't support temperature parameter
             }
 
+            // Start LangSmith tracking (fail-safe)
+            const langsmithKey = Deno.env.get('LANGSMITH_API_KEY');
+            let runId: string | null = null;
+            
+            if (langsmithKey) {
+              runId = await trackLLMCall(
+                'telegram-webhook-standard',
+                {
+                  model: model,
+                  messages: conversationMessages.slice(-10), // Last 10 messages
+                  user: userName,
+                  chat_type: chatType
+                },
+                langsmithKey,
+                'telegram-webhook'
+              );
+            }
+            
             const startTime = Date.now();
             const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
               method: 'POST',
@@ -1556,6 +1575,18 @@ ${communityData?.agent_instructions || 'You are a helpful community assistant.'}
                   toolResponseBody.temperature = communityData?.agent_temperature || 0.7;
                 } else {
                   toolResponseBody.max_completion_tokens = communityData?.agent_max_tokens || 4000;
+                }
+                
+                // Track tool call in LangSmith (fail-safe)
+                if (langsmithKey && runId) {
+                  await trackToolCall(
+                    'search_chat_history',
+                    { days_back: daysBack },
+                    searchResults,
+                    langsmithKey,
+                    runId,
+                    'telegram-webhook'
+                  );
                 }
                 
                 // Call OpenAI again with tool results

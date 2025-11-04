@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2?target=deno';
+import { trackLLMCall, completeLLMCall, trackToolCall } from '../_shared/langsmith.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -682,6 +683,25 @@ serve(async (req) => {
       };
       const modelToUse = normalizeModel(agentModel);
 
+      // Start LangSmith tracking (fail-safe)
+      const langsmithKey = Deno.env.get('LANGSMITH_API_KEY');
+      let runId: string | null = null;
+      
+      if (langsmithKey) {
+        runId = await trackLLMCall(
+          `telegram-agent-iteration-${iterationCount}`,
+          {
+            model: modelToUse,
+            messages: currentMessages,
+            tools: availableTools.map(t => t.function.name),
+            community_id: communityId,
+            user_id: userId
+          },
+          langsmithKey,
+          'telegram-agent'
+        );
+      }
+
       const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -702,12 +722,27 @@ serve(async (req) => {
       if (!aiResponse.ok) {
         const errorText = await aiResponse.text();
         console.error('❌ AI API error:', aiResponse.status, errorText);
+        
+        // Complete LangSmith tracking with error (fail-safe)
+        if (langsmithKey && runId) {
+          await completeLLMCall(runId, null, langsmithKey, `HTTP ${aiResponse.status}: ${errorText}`);
+        }
+        
         throw new Error(`AI API failed: ${aiResponse.status}`);
       }
 
       const aiData = await aiResponse.json();
       const choice = aiData.choices[0];
       const message = choice.message;
+      
+      // Complete LangSmith tracking with success (fail-safe)
+      if (langsmithKey && runId) {
+        await completeLLMCall(runId, {
+          message: message,
+          usage: aiData.usage,
+          model: aiData.model
+        }, langsmithKey);
+      }
 
       // Check if AI wants to use tools
       if (message.tool_calls && message.tool_calls.length > 0) {
@@ -812,6 +847,18 @@ serve(async (req) => {
                 })
               }).catch(err => console.log('Error sending error notification:', err));
             }
+          }
+
+          // Track tool call in LangSmith (fail-safe)
+          if (langsmithKey && runId) {
+            await trackToolCall(
+              toolName,
+              args,
+              toolResult,
+              langsmithKey,
+              runId,
+              'telegram-agent'
+            );
           }
 
           // Add tool result to conversation

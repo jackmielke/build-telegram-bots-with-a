@@ -23,6 +23,7 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
   const [systemPrompt, setSystemPrompt] = useState('You are a helpful community assistant.');
   const [previousPrompt, setPreviousPrompt] = useState('');
   const [improvingPrompt, setImprovingPrompt] = useState(false);
+  const [introMessage, setIntroMessage] = useState("Hello! I'm here to help you and the community. Feel free to ask me anything!");
   const [respondInPrivate, setRespondInPrivate] = useState(true);
   const [respondInGroups, setRespondInGroups] = useState(false);
   const [respondInSupergroups, setRespondInSupergroups] = useState(false);
@@ -258,6 +259,9 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
 
       // Set the system prompt from bot description
       setSystemPrompt(botDescription);
+      
+      // Set default intro message if none exists
+      setIntroMessage("Hello! I'm here to help you and the community. Feel free to ask me anything!");
 
       setStep('success');
 
@@ -334,6 +338,7 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
       setBotDetails(null);
       setSystemPrompt('You are a helpful community assistant.');
       setPreviousPrompt('');
+      setIntroMessage("Hello! I'm here to help you and the community. Feel free to ask me anything!");
       setRespondInPrivate(true);
       setRespondInGroups(false);
       setRespondInSupergroups(false);
@@ -616,6 +621,23 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
                 </div>
               </div>
 
+              {/* Intro Message */}
+              <div className="space-y-2">
+                <Label htmlFor="intro_message" className="text-base font-semibold">
+                  Intro Message
+                </Label>
+                <Textarea
+                  id="intro_message"
+                  value={introMessage}
+                  onChange={(e) => setIntroMessage(e.target.value)}
+                  placeholder="The first message users will see when they start chatting with your bot..."
+                  className="min-h-[80px]"
+                />
+                <p className="text-xs text-muted-foreground">
+                  This is the greeting message users see when they first interact with your bot.
+                </p>
+              </div>
+
               {/* Memories Section */}
               <div className="space-y-2">
                 <Label className="text-base font-semibold">Memory & Context</Label>
@@ -644,11 +666,12 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
                     try {
                       setCreating(true);
                       
-                      // Update the community with the system prompt
+                      // Update the community with the system prompt and intro message
                       const { error: communityError } = await supabase
                         .from('communities')
                         .update({
-                          agent_instructions: systemPrompt
+                          agent_instructions: systemPrompt,
+                          agent_intro_message: introMessage
                         })
                         .eq('id', botDetails.communityId);
 

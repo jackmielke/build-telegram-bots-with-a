@@ -16,6 +16,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import BotHealthIndicator from './BotHealthIndicator';
 import VoiceInterface from './VoiceInterface';
 import { TelegramBotDialog } from '../TelegramBotDialog';
+import { CustomToolsToggleView } from './custom-tools/CustomToolsToggleView';
 import botfatherGroupSettings from '@/assets/botfather-group-settings.png';
 import {
   Zap, 
@@ -82,6 +83,7 @@ const WorkflowBuilder = ({ community, isAdmin, onUpdate }: WorkflowBuilderProps)
   const [testMessage, setTestMessage] = useState('');
   const [testResponse, setTestResponse] = useState('');
   const [testingWebhook, setTestingWebhook] = useState(false);
+  const [customToolsEnabled, setCustomToolsEnabled] = useState(false);
   const EDGE_FUNCTION_URL = 'https://efdqqnubowgwsnwvlalp.supabase.co/functions/v1/telegram-webhook';
   const WEBHOOK_HANDLER_URL = 'https://efdqqnubowgwsnwvlalp.supabase.co/functions/v1/webhook-handler';
   const { toast } = useToast();
@@ -1190,27 +1192,26 @@ Please create this chatbot interface now!`;
                                 />
                               </div>
 
-                              {/* Custom Tools Management */}
-                              <div className="mt-4 pt-4 border-t border-border">
+                              {/* Custom Tools Toggle */}
+                              <div>
                                 <div className="flex items-center justify-between mb-2">
                                   <div>
                                     <p className="text-sm font-medium">⚡ Custom Tools</p>
                                     <p className="text-xs text-muted-foreground">Connect external APIs for additional capabilities</p>
                                   </div>
+                                  <Switch
+                                    checked={customToolsEnabled}
+                                    onCheckedChange={setCustomToolsEnabled}
+                                    disabled={!isAdmin}
+                                  />
                                 </div>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  className="w-full"
-                                  onClick={() => {
-                                    const customToolsTab = document.querySelector('[data-tab-value="custom-tools"]') as HTMLButtonElement;
-                                    if (customToolsTab) customToolsTab.click();
-                                  }}
-                                  disabled={!isAdmin}
-                                >
-                                  <Settings className="mr-2 h-4 w-4" />
-                                  Manage Custom Tools
-                                </Button>
+                                
+                                {customToolsEnabled && (
+                                  <CustomToolsToggleView 
+                                    communityId={community.id} 
+                                    isAdmin={isAdmin}
+                                  />
+                                )}
                               </div>
                             </CollapsibleContent>
                           </Collapsible>

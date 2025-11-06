@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Loader2, ArrowLeft, Home, MessageSquare, Bot, Brain, Settings, Check, Menu, Users, Send } from 'lucide-react';
+import { Loader2, ArrowLeft, Home, MessageSquare, Bot, Brain, Settings, Check, Menu, Users, Send, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -17,6 +17,7 @@ import MemoryManagement from '@/components/dashboard/MemoryManagement';
 import MembersManagement from '@/components/dashboard/MembersManagement';
 import CommunitySettings from '@/components/dashboard/CommunitySettings';
 import TelegramUsersManagement from '@/components/dashboard/TelegramUsersManagement';
+import { CustomToolsManager } from '@/components/dashboard/CustomToolsManager';
 
 interface Community {
   id: string;
@@ -152,6 +153,7 @@ const CommunityDashboard = () => {
     { value: 'home', icon: Home, label: 'Home' },
     { value: 'conversations', icon: MessageSquare, label: 'Conversations' },
     { value: 'agent', icon: Bot, label: 'Agent' },
+    { value: 'custom-tools', icon: Zap, label: 'Custom Tools' },
     { value: 'telegram', icon: Send, label: 'Telegram Users' },
     { value: 'memory', icon: Brain, label: 'Memory' },
     { value: 'members', icon: Users, label: 'Members' },
@@ -260,7 +262,7 @@ const CommunityDashboard = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           {/* Desktop Tabs - Hidden on Mobile */}
-          <TabsList className="hidden sm:grid w-full grid-cols-7 gap-2 bg-card/50 p-2 h-auto">
+          <TabsList className="hidden sm:grid w-full grid-cols-8 gap-2 bg-card/50 p-2 h-auto">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -298,6 +300,10 @@ const CommunityDashboard = () => {
               isAdmin={isAdmin} 
               onUpdate={(updatedCommunity) => setCommunity(prev => ({ ...prev, ...updatedCommunity }))} 
             />
+          </TabsContent>
+
+          <TabsContent value="custom-tools" className="space-y-6">
+            <CustomToolsManager />
           </TabsContent>
 
           <TabsContent value="telegram" className="space-y-6">

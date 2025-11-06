@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Users, MessageSquare, DollarSign, Bot, Zap, TrendingUp, Activity, Calendar, ArrowRight, Sparkles, Plus, ExternalLink, ChevronDown, ChevronUp, Brain, Code, Copy } from 'lucide-react';
+import { Users, MessageSquare, DollarSign, Bot, Zap, TrendingUp, Activity, Calendar, ArrowRight, Sparkles, Plus, ExternalLink, ChevronDown, ChevronUp, Brain, Code, Copy, Settings } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { TelegramBotDialog } from '@/components/TelegramBotDialog';
 import BotOnboarding from '@/components/dashboard/BotOnboarding';
@@ -422,6 +422,47 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
           </CardContent>
         </Card>
       )}
+
+      {/* Quick Actions */}
+      <Card className="gradient-card border-border/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Zap className="w-5 h-5 text-primary" />
+            Quick Actions
+          </CardTitle>
+          <CardDescription>
+            Manage your bot and community settings
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Button
+              onClick={() => onNavigate('agent')}
+              className="w-full"
+              variant="outline"
+            >
+              <Bot className="mr-2 h-4 w-4" />
+              Bot Settings
+            </Button>
+            <Button
+              onClick={() => onNavigate('custom-tools')}
+              className="w-full"
+              variant="outline"
+            >
+              <Zap className="mr-2 h-4 w-4" />
+              Custom Tools
+            </Button>
+            <Button
+              onClick={() => onNavigate('settings')}
+              className="w-full"
+              variant="outline"
+            >
+              <Settings className="mr-2 h-4 w-4" />
+              Community Settings
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Recent Conversations */}
       <Card className="gradient-card border-border/50">

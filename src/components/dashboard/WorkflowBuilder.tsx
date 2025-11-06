@@ -41,7 +41,9 @@ import {
   Copy,
   RefreshCw,
   ExternalLink,
-  Phone
+  Phone,
+  Plus,
+  Settings
 } from 'lucide-react';
 
 interface Community {
@@ -1186,6 +1188,29 @@ Please create this chatbot interface now!`;
                                   onCheckedChange={() => toggleAgentTool(telegramWorkflow.type, 'scrape_webpage', telegramWorkflow.configuration?.agent_tools?.scrape_webpage || false)}
                                   disabled={!isAdmin}
                                 />
+                              </div>
+
+                              {/* Custom Tools Management */}
+                              <div className="mt-4 pt-4 border-t border-border">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div>
+                                    <p className="text-sm font-medium">⚡ Custom Tools</p>
+                                    <p className="text-xs text-muted-foreground">Connect external APIs for additional capabilities</p>
+                                  </div>
+                                </div>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="w-full"
+                                  onClick={() => {
+                                    const customToolsTab = document.querySelector('[data-tab-value="custom-tools"]') as HTMLButtonElement;
+                                    if (customToolsTab) customToolsTab.click();
+                                  }}
+                                  disabled={!isAdmin}
+                                >
+                                  <Settings className="mr-2 h-4 w-4" />
+                                  Manage Custom Tools
+                                </Button>
                               </div>
                             </CollapsibleContent>
                           </Collapsible>

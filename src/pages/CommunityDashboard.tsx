@@ -270,6 +270,7 @@ const CommunityDashboard = () => {
                   key={item.value}
                   value={item.value} 
                   className="flex flex-col items-center justify-center gap-2 py-4 px-3 text-sm font-medium rounded-lg border border-transparent data-[state=active]:border-primary/20 data-[state=active]:shadow-sm"
+                  data-tab-value={item.value}
                 >
                   <Icon className="w-6 h-6 text-primary" />
                   <span className="text-xs">{item.label}</span>

@@ -155,7 +155,8 @@ async function executeTool(
   supabase: any,
   communityId: string,
   userId: string | null,
-  imageUrl?: string
+  imageUrl?: string,
+  toolDefinition?: any
 ): Promise<string> {
   console.log(`🔧 Executing tool: ${toolName}`, args);
 
@@ -553,6 +554,18 @@ The vibe has been recorded on the leaderboard! 🏆`;
       }
 
       default:
+        // Check if this is a custom tool
+        const customToolConfig = toolDefinition?._config;
+        if (customToolConfig) {
+          return await executeCustomTool(
+            customToolConfig,
+            args,
+            supabase,
+            communityId,
+            userId,
+            undefined // messageContext - could be passed if needed
+          );
+        }
         return `Unknown tool: ${toolName}`;
     }
   } catch (error) {
@@ -572,6 +585,227 @@ function getTimeAgo(timestamp: string): string {
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   return `${diffDays}d ago`;
+}
+
+// Transform AI arguments to API request format using template
+function transformRequest(args: any, template: any): any {
+  if (!template) return args;
+  
+  const result: any = {};
+  for (const [key, value] of Object.entries(template)) {
+    if (typeof value === 'string' && value.includes('{{')) {
+      // Replace {{argName}} with actual value from args
+      let replacedValue = value;
+      Object.entries(args).forEach(([argName, argValue]) => {
+        replacedValue = replacedValue.replace(`{{${argName}}}`, String(argValue));
+      });
+      result[key] = replacedValue;
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
+// Transform API response using mapping configuration
+function transformResponse(data: any, mapping: any): string {
+  if (!mapping) return JSON.stringify(data, null, 2);
+  
+  if (mapping.format === 'template' && mapping.template) {
+    let result = mapping.template;
+    
+    // Flatten nested objects for template replacement
+    const flattenObject = (obj: any, prefix = ''): Record<string, any> => {
+      const flattened: Record<string, any> = {};
+      for (const [key, value] of Object.entries(obj)) {
+        const fullKey = prefix ? `${prefix}.${key}` : key;
+        if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+          Object.assign(flattened, flattenObject(value, fullKey));
+        } else {
+          flattened[fullKey] = value;
+        }
+      }
+      return flattened;
+    };
+    
+    const flatData = flattenObject(data);
+    Object.entries(flatData).forEach(([key, value]) => {
+      result = result.replaceAll(`{{${key}}}`, String(value));
+    });
+    
+    return result;
+  }
+  
+  return JSON.stringify(data, null, 2);
+}
+
+// Load custom tools from database
+async function loadCustomTools(communityId: string, supabase: any): Promise<any[]> {
+  try {
+    const { data: customTools, error } = await supabase
+      .from('custom_tools')
+      .select('*')
+      .eq('community_id', communityId)
+      .eq('is_enabled', true);
+    
+    if (error) {
+      console.error('Error loading custom tools:', error);
+      return [];
+    }
+    
+    if (!customTools || customTools.length === 0) return [];
+    
+    console.log(`📦 Loaded ${customTools.length} custom tools for community ${communityId}`);
+    
+    return customTools.map((tool: any) => ({
+      type: "function",
+      function: {
+        name: tool.name,
+        description: tool.description,
+        parameters: {
+          type: "object",
+          properties: tool.parameters || {},
+          required: Object.keys(tool.parameters || {}).filter(
+            key => tool.parameters[key]?.required === true
+          )
+        }
+      },
+      _custom: true,
+      _config: tool
+    }));
+  } catch (error) {
+    console.error('Exception loading custom tools:', error);
+    return [];
+  }
+}
+
+// Execute a custom tool by making HTTP request to external API
+async function executeCustomTool(
+  toolConfig: any,
+  args: any,
+  supabase: any,
+  communityId: string,
+  userId: string | null,
+  messageContext?: string
+): Promise<string> {
+  const startTime = Date.now();
+  
+  try {
+    // Transform arguments using request template
+    const requestBody = transformRequest(args, toolConfig.request_template);
+    
+    // Build headers
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
+    
+    if (toolConfig.auth_type === 'api_key' && toolConfig.auth_value) {
+      headers['X-API-Key'] = toolConfig.auth_value;
+    } else if (toolConfig.auth_type === 'bearer' && toolConfig.auth_value) {
+      headers['Authorization'] = `Bearer ${toolConfig.auth_value}`;
+    }
+    
+    console.log(`🔧 Executing custom tool: ${toolConfig.name}`);
+    console.log(`   Endpoint: ${toolConfig.endpoint_url}`);
+    console.log(`   Method: ${toolConfig.http_method}`);
+    
+    // Make HTTP request with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), (toolConfig.timeout_seconds || 10) * 1000);
+    
+    const response = await fetch(toolConfig.endpoint_url, {
+      method: toolConfig.http_method || 'POST',
+      headers,
+      body: toolConfig.http_method !== 'GET' ? JSON.stringify(requestBody) : undefined,
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    const executionTime = Date.now() - startTime;
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      
+      // Log error
+      await supabase.from('custom_tool_logs').insert({
+        tool_id: toolConfig.id,
+        community_id: communityId,
+        user_id: userId,
+        executed_at: new Date().toISOString(),
+        input_data: args,
+        status_code: response.status,
+        error_message: errorText,
+        execution_time_ms: executionTime,
+        message_context: messageContext
+      });
+      
+      // Update tool error count
+      await supabase
+        .from('custom_tools')
+        .update({ 
+          error_count: toolConfig.error_count + 1,
+          last_error: `${response.status}: ${errorText}`,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', toolConfig.id);
+      
+      return `Tool "${toolConfig.display_name}" failed: ${response.status} ${errorText}`;
+    }
+    
+    const responseData = await response.json();
+    
+    // Transform response using mapping
+    const result = transformResponse(responseData, toolConfig.response_mapping);
+    
+    // Log success
+    await supabase.from('custom_tool_logs').insert({
+      tool_id: toolConfig.id,
+      community_id: communityId,
+      user_id: userId,
+      executed_at: new Date().toISOString(),
+      input_data: args,
+      output_data: responseData,
+      status_code: response.status,
+      execution_time_ms: executionTime,
+      message_context: messageContext
+    });
+    
+    // Update success metrics
+    await supabase
+      .from('custom_tools')
+      .update({ 
+        last_test_at: new Date().toISOString(),
+        last_test_result: responseData,
+        error_count: 0,
+        last_error: null
+      })
+      .eq('id', toolConfig.id);
+    
+    console.log(`✅ Custom tool ${toolConfig.name} completed in ${executionTime}ms`);
+    
+    return result;
+    
+  } catch (error) {
+    const executionTime = Date.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    console.error(`❌ Custom tool ${toolConfig.name} error:`, errorMessage);
+    
+    // Log error
+    await supabase.from('custom_tool_logs').insert({
+      tool_id: toolConfig.id,
+      community_id: communityId,
+      user_id: userId,
+      executed_at: new Date().toISOString(),
+      input_data: args,
+      error_message: errorMessage,
+      execution_time_ms: executionTime,
+      message_context: messageContext
+    });
+    
+    return `Failed to execute "${toolConfig.display_name}": ${errorMessage}`;
+  }
 }
 
 serve(async (req) => {
@@ -605,13 +839,19 @@ serve(async (req) => {
       communityId
     });
 
-    // Filter tools based on enabled configuration
-    const availableTools = AGENT_TOOLS.filter(tool => {
+    // Filter built-in tools based on enabled configuration
+    const availableBuiltInTools = AGENT_TOOLS.filter(tool => {
       const toolName = tool.function.name;
       // Map tool names to configuration keys
       const configKey = toolName; // web_search, search_memory, etc.
       return enabledTools && enabledTools[configKey] === true;
     });
+
+    // Load custom tools from database
+    const customTools = await loadCustomTools(communityId, supabase);
+    
+    // Merge built-in and custom tools
+    const availableTools = [...availableBuiltInTools, ...customTools];
 
     console.log('🛠️ Available tools:', availableTools.map(t => t.function.name));
 
@@ -822,13 +1062,17 @@ serve(async (req) => {
           // Execute the tool with error handling
           let toolResult: string;
           try {
+            // Find the tool definition to pass custom config if available
+            const toolDefinition = availableTools.find(t => t.function.name === toolName);
+            
             toolResult = await executeTool(
               toolName,
               args,
               supabase,
               communityId,
               userId,
-              imageUrl
+              imageUrl,
+              toolDefinition
             );
             console.log(`✅ Tool ${toolName} executed successfully`);
           } catch (toolError) {

@@ -504,6 +504,156 @@ export type Database = {
           },
         ]
       }
+      custom_tool_logs: {
+        Row: {
+          community_id: string
+          error_message: string | null
+          executed_at: string
+          execution_time_ms: number | null
+          id: string
+          input_data: Json | null
+          message_context: string | null
+          output_data: Json | null
+          status_code: number | null
+          tool_id: string
+          user_id: string | null
+        }
+        Insert: {
+          community_id: string
+          error_message?: string | null
+          executed_at?: string
+          execution_time_ms?: number | null
+          id?: string
+          input_data?: Json | null
+          message_context?: string | null
+          output_data?: Json | null
+          status_code?: number | null
+          tool_id: string
+          user_id?: string | null
+        }
+        Update: {
+          community_id?: string
+          error_message?: string | null
+          executed_at?: string
+          execution_time_ms?: number | null
+          id?: string
+          input_data?: Json | null
+          message_context?: string | null
+          output_data?: Json | null
+          status_code?: number | null
+          tool_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_tool_logs_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_tool_logs_tool_id_fkey"
+            columns: ["tool_id"]
+            isOneToOne: false
+            referencedRelation: "custom_tools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_tool_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_tools: {
+        Row: {
+          auth_type: string
+          auth_value: string | null
+          category: string | null
+          community_id: string
+          created_at: string
+          description: string
+          display_name: string
+          endpoint_url: string
+          error_count: number | null
+          http_method: string
+          icon: string | null
+          id: string
+          is_enabled: boolean | null
+          last_error: string | null
+          last_test_at: string | null
+          last_test_result: Json | null
+          name: string
+          parameters: Json | null
+          rate_limit_per_hour: number | null
+          request_template: Json | null
+          response_mapping: Json | null
+          timeout_seconds: number | null
+          updated_at: string
+        }
+        Insert: {
+          auth_type?: string
+          auth_value?: string | null
+          category?: string | null
+          community_id: string
+          created_at?: string
+          description: string
+          display_name: string
+          endpoint_url: string
+          error_count?: number | null
+          http_method?: string
+          icon?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          last_error?: string | null
+          last_test_at?: string | null
+          last_test_result?: Json | null
+          name: string
+          parameters?: Json | null
+          rate_limit_per_hour?: number | null
+          request_template?: Json | null
+          response_mapping?: Json | null
+          timeout_seconds?: number | null
+          updated_at?: string
+        }
+        Update: {
+          auth_type?: string
+          auth_value?: string | null
+          category?: string | null
+          community_id?: string
+          created_at?: string
+          description?: string
+          display_name?: string
+          endpoint_url?: string
+          error_count?: number | null
+          http_method?: string
+          icon?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          last_error?: string | null
+          last_test_at?: string | null
+          last_test_result?: Json | null
+          name?: string
+          parameters?: Json | null
+          rate_limit_per_hour?: number | null
+          request_template?: Json | null
+          response_mapping?: Json | null
+          timeout_seconds?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_tools_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       embedding_batch_progress: {
         Row: {
           batch_size: number | null
@@ -674,6 +824,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      game_leaderboard: {
+        Row: {
+          created_at: string
+          id: string
+          player_name: string
+          score: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          player_name: string
+          score?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          player_name?: string
+          score?: number
+        }
+        Relationships: []
       }
       memories: {
         Row: {

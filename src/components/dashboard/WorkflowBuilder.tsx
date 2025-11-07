@@ -460,7 +460,8 @@ Please create this chatbot interface now!`;
         search_chat_history: enable,
         save_memory: enable,
         search_profiles: enable,
-        scrape_webpage: enable
+        scrape_webpage: enable,
+        broadcast_message: enable
       };
 
       const { error } = await supabase
@@ -500,7 +501,7 @@ Please create this chatbot interface now!`;
   // Helper function to check if agent mode is active (any tool enabled)
   const isAgentModeActive = (workflow: any): boolean => {
     const tools = workflow.configuration?.agent_tools || {};
-    return tools.web_search || tools.search_memory || tools.search_chat_history || tools.save_memory || tools.search_profiles || tools.scrape_webpage;
+    return tools.web_search || tools.search_memory || tools.search_chat_history || tools.save_memory || tools.search_profiles || tools.scrape_webpage || tools.broadcast_message;
   };
 
   const toggleAutoIntroGeneration = async (workflowType: string, currentEnabled: boolean) => {
@@ -1192,6 +1193,19 @@ Please create this chatbot interface now!`;
                                 />
                               </div>
 
+                              {/* Broadcast Messaging */}
+                              <div className="flex items-center justify-between p-2 rounded bg-background/50">
+                                <div>
+                                  <p className="text-sm font-medium">📣 Broadcast Messaging</p>
+                                  <p className="text-xs text-muted-foreground">Allow AI to broadcast to all previous chat participants</p>
+                                </div>
+                                <Switch 
+                                  checked={telegramWorkflow.configuration?.agent_tools?.broadcast_message || false}
+                                  onCheckedChange={() => toggleAgentTool(telegramWorkflow.type, 'broadcast_message', telegramWorkflow.configuration?.agent_tools?.broadcast_message || false)}
+                                  disabled={!isAdmin}
+                                />
+                              </div>
+                              
                               {/* Custom Tools Toggle */}
                               <div>
                                 <div className="flex items-center justify-between mb-2">

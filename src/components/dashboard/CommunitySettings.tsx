@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Users, Settings, Copy, RefreshCw, Upload, X } from 'lucide-react';
+import { TokenManagement } from './TokenManagement';
 
 interface Community {
   id: string;
@@ -498,6 +499,15 @@ const CommunitySettings = ({ community, isAdmin, onUpdate }: CommunitySettingsPr
           </div>
         </CardContent>
       </Card>
+
+      {/* Token Management */}
+      {isAdmin && (
+        <TokenManagement
+          communityId={community.id}
+          communityName={community.name}
+          coverImageUrl={community.cover_image_url}
+        />
+      )}
 
     </div>
   );

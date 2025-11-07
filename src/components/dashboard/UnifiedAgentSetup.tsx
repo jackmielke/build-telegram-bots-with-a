@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Bot, Brain, MessageSquare, Upload, Loader2, Sparkles, Zap, Settings, Bell, Users } from 'lucide-react';
 import WorkflowBuilder from './WorkflowBuilder';
 import BotHealthIndicator from './BotHealthIndicator';
+import { CustomToolsToggleView } from './custom-tools/CustomToolsToggleView';
 
 interface Community {
   id: string;
@@ -352,6 +353,8 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Custom Tools Section */}
+          <CustomToolsToggleView communityId={community.id} isAdmin={isAdmin} />
           {/* AI Provider - Now using Lovable AI Gateway */}
           <div className="space-y-2">
             <Label htmlFor="ai_provider" className="flex items-center gap-2">

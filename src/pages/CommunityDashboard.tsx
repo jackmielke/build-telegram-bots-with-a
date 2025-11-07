@@ -153,8 +153,6 @@ const CommunityDashboard = () => {
     { value: 'home', icon: Home, label: 'Home' },
     { value: 'conversations', icon: MessageSquare, label: 'Conversations' },
     { value: 'agent', icon: Bot, label: 'Agent' },
-    { value: 'custom-tools', icon: Zap, label: 'Custom Tools' },
-    { value: 'telegram', icon: Send, label: 'Telegram Users' },
     { value: 'memory', icon: Brain, label: 'Memory' },
     { value: 'members', icon: Users, label: 'Members' },
     { value: 'settings', icon: Settings, label: 'Settings' },
@@ -262,7 +260,7 @@ const CommunityDashboard = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           {/* Desktop Tabs - Hidden on Mobile */}
-          <TabsList className="hidden sm:grid w-full grid-cols-8 gap-2 bg-card/50 p-2 h-auto">
+          <TabsList className="hidden sm:grid w-full grid-cols-6 gap-2 bg-card/50 p-2 h-auto">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -301,14 +299,6 @@ const CommunityDashboard = () => {
               isAdmin={isAdmin} 
               onUpdate={(updatedCommunity) => setCommunity(prev => ({ ...prev, ...updatedCommunity }))} 
             />
-          </TabsContent>
-
-          <TabsContent value="custom-tools" className="space-y-6">
-            <CustomToolsManager />
-          </TabsContent>
-
-          <TabsContent value="telegram" className="space-y-6">
-            <TelegramUsersManagement communityId={community.id} isAdmin={isAdmin} />
           </TabsContent>
 
           <TabsContent value="memory" className="space-y-6">

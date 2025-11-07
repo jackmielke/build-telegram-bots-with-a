@@ -134,6 +134,8 @@ async function findOrCreateUser(
     
     if (existingUserById) {
       console.log(`Found existing user by telegram_user_id: ${telegramUserId}`);
+      // Ensure membership in this community
+      await addUserToCommunity(supabase, existingUserById.id, communityId);
       return existingUserById.id;
     }
 
@@ -152,6 +154,8 @@ async function findOrCreateUser(
           .from('users')
           .update({ telegram_user_id: telegramUserId })
           .eq('id', existingUser.id);
+        // Ensure membership in this community
+        await addUserToCommunity(supabase, existingUser.id, communityId);
         return existingUser.id;
       }
       
@@ -172,6 +176,8 @@ async function findOrCreateUser(
           })
           .eq('id', userByUsername.id);
         console.log(`Updated telegram info for existing user: ${telegramUsername}`);
+        // Ensure membership in this community
+        await addUserToCommunity(supabase, userByUsername.id, communityId);
         return userByUsername.id;
       }
     }
@@ -811,13 +817,26 @@ serve(async (req) => {
             if (!existingSession) {
               // Create new session with notifications enabled by default
               console.log('Creating new chat session with notifications enabled for private chat');
+              // Try to resolve the actual bot record for proper linkage
+              let botId = communityId;
+              try {
+                const { data: bot } = await supabase
+                  .from('telegram_bots')
+                  .select('id')
+                  .eq('community_id', communityId)
+                  .eq('is_active', true)
+                  .maybeSingle();
+                if (bot?.id) botId = bot.id as string;
+              } catch (e) {
+                console.warn('Could not resolve bot id for session; falling back to community id');
+              }
               await supabase
                 .from('telegram_chat_sessions')
                 .insert({
                   telegram_chat_id: chatId,
                   telegram_user_id: telegramUserId,
                   community_id: communityId,
-                  bot_id: communityId, // Using community_id as bot_id for now
+                  bot_id: botId,
                   telegram_username: telegramUsername,
                   telegram_first_name: firstName,
                   telegram_last_name: lastName,

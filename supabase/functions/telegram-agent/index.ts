@@ -852,6 +852,9 @@ serve(async (req) => {
     
     // Merge built-in and custom tools
     const availableTools = [...availableBuiltInTools, ...customTools];
+    
+    // Create a Set of available tool names for security validation
+    const availableToolNames = new Set(availableTools.map(t => t.function.name));
 
     console.log('🛠️ Available tools:', availableTools.map(t => t.function.name));
 
@@ -995,13 +998,15 @@ serve(async (req) => {
           const toolName = toolCall.function.name;
           const args = JSON.parse(toolCall.function.arguments || '{}');
           
-          // SECURITY CHECK: Verify tool is actually enabled
-          if (!enabledTools || !enabledTools[toolName]) {
-            console.error(`⚠️ Tool ${toolName} was called but is not enabled in configuration`);
+          // SECURITY CHECK: Verify tool is actually available
+          // Check against availableToolNames which includes both built-in (already filtered)
+          // and custom tools (already filtered by is_enabled=true)
+          if (!availableToolNames.has(toolName)) {
+            console.error(`⚠️ Tool ${toolName} was called but is not in available tools list`);
             currentMessages.push({
               role: 'tool',
               tool_call_id: toolCall.id,
-              content: `Error: Tool ${toolName} is not enabled. Available tools: ${Object.keys(enabledTools || {}).filter(k => enabledTools[k]).join(', ')}`
+              content: `Error: Tool ${toolName} is not available. Available tools: ${Array.from(availableToolNames).join(', ')}`
             });
             continue; // Skip this tool
           }

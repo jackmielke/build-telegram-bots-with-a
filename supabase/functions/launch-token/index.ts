@@ -176,6 +176,29 @@ serve(async (req) => {
     const { result: metadataHash } = await metadataResponse.json();
     console.log('Metadata uploaded, hash:', metadataHash);
 
+    // Compute beneficiaries to satisfy template requirements (65% preset + 35% beneficiaries = 100%)
+    const WEI_100 = 1000000000000000000n; // 100%
+    const TEMPLATE_BASE_SHARE = 650000000000000000n; // 65% preset by template
+    const REQUIRED_BENEFICIARY_TOTAL = WEI_100 - TEMPLATE_BASE_SHARE; // 35%
+
+    // Normalize/validate beneficiaries
+    let finalBeneficiaries: Array<{ beneficiary: string; share: string }> = Array.isArray(beneficiaries) ? beneficiaries : [];
+
+    // If none provided, allocate 35% to the launching user by default
+    if (!finalBeneficiaries.length) {
+      finalBeneficiaries = [{ beneficiary: userAddress, share: REQUIRED_BENEFICIARY_TOTAL.toString() }];
+    } else {
+      // Validate total equals the required 35%
+      try {
+        const total = finalBeneficiaries.reduce((acc, b) => acc + BigInt(b.share), 0n);
+        if (total !== REQUIRED_BENEFICIARY_TOTAL) {
+          throw new Error(`Beneficiaries shares must total exactly ${REQUIRED_BENEFICIARY_TOTAL.toString()} (35%). Got ${total.toString()}.`);
+        }
+      } catch (e) {
+        throw new Error(`Invalid beneficiaries format: ${(e as Error).message}`);
+      }
+    }
+
     // STEP 3: Encode auction template
     console.log('Step 3: Encoding auction template...');
     const encodeResponse = await fetch(`https://api.long.xyz/v1/auction-templates?chainId=${chainId}`, {
@@ -191,7 +214,7 @@ serve(async (req) => {
           token_symbol: tokenSymbol,
           token_uri: `ipfs://${metadataHash}`,
           user_address: userAddress,
-          beneficiaries: beneficiaries
+          beneficiaries: finalBeneficiaries
         }
       }),
     });
@@ -248,7 +271,7 @@ serve(async (req) => {
         launch_metadata: {
           social_links: socialLinks,
           vesting_recipients: vestingRecipients,
-          beneficiaries: beneficiaries,
+          beneficiaries: finalBeneficiaries,
           user_address: userAddress
         },
         created_by: userData.id

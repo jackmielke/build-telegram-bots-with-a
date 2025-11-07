@@ -216,6 +216,7 @@ const CommunityDashboard = () => {
                           onClick={() => {
                             setActiveTab(item.value);
                             setMobileMenuOpen(false);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
                           }}
                         >
                           <Icon className="w-5 h-5 mr-3" />
@@ -258,7 +259,10 @@ const CommunityDashboard = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={(value) => {
+          setActiveTab(value);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }} className="space-y-6">
           {/* Desktop Tabs - Hidden on Mobile */}
           <TabsList className="hidden sm:grid w-full grid-cols-6 gap-2 bg-card/50 p-2 h-auto">
             {navItems.map((item) => {
@@ -282,10 +286,11 @@ const CommunityDashboard = () => {
               community={community} 
               onNavigate={(tab, conversationId) => {
                 setActiveTab(tab);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
                 if (conversationId && tab === 'conversations') {
                   sessionStorage.setItem('selectedConversation', conversationId);
                 }
-              }} 
+              }}
             />
           </TabsContent>
 

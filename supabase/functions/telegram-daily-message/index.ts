@@ -66,18 +66,24 @@ Deno.serve(async (req) => {
       if (communityDetails?.daily_message_time) {
         const scheduledUTCTime = communityDetails.daily_message_time;
         
-        // The stored time is in UTC, and the current time is also UTC
-        // So we can compare directly
-        const scheduledHourMin = scheduledUTCTime.substring(0, 5);
-        const currentHourMin = currentTime.substring(0, 5);
+        // Parse scheduled time (HH:MM:SS format)
+        const [schedHour, schedMin] = scheduledUTCTime.split(':').map(Number);
+        const scheduledMinutes = schedHour * 60 + schedMin;
         
-        if (scheduledHourMin !== currentHourMin) {
+        // Current time in minutes
+        const currentMinutes = currentHour * 60 + currentMinute;
+        
+        // Check if we're within ±7 minutes of the scheduled time (14 minute window)
+        // This ensures we catch the message even if cron runs slightly off schedule
+        const timeDiff = Math.abs(currentMinutes - scheduledMinutes);
+        
+        if (timeDiff > 7) {
           const timezone = communityDetails.timezone || 'UTC';
-          console.log(`⏭️ Skipping ${community.community_name} (${timezone}) - scheduled for ${scheduledUTCTime} UTC, current time is ${currentTime} UTC`);
+          console.log(`⏭️ Skipping ${community.community_name} (${timezone}) - scheduled for ${scheduledUTCTime} UTC, current time is ${currentTime} UTC (diff: ${timeDiff} min)`);
           continue;
         }
         
-        console.log(`✅ Time match for ${community.community_name} - sending daily messages`);
+        console.log(`✅ Time match for ${community.community_name} - sending daily messages (within ${timeDiff} min window)`);
       }
       
       console.log(`\n📡 Processing community: ${community.community_name}`);

@@ -10,7 +10,6 @@ import BotOnboarding from '@/components/dashboard/BotOnboarding';
 import { CreateBotWorkflow } from '@/components/dashboard/CreateBotWorkflow';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
-
 interface Community {
   id: string;
   name: string;
@@ -21,12 +20,10 @@ interface Community {
   telegram_bot_url: string | null;
   webhook_api_key: string | null;
 }
-
 interface HomePageProps {
   community: Community;
   onNavigate: (tab: string, conversationId?: string) => void;
 }
-
 interface RecentConversation {
   conversation_id: string;
   chat_type: string;
@@ -34,15 +31,16 @@ interface RecentConversation {
   last_message_at: string;
   display_name: string;
 }
-
 interface AgentWorkflow {
   id: string;
   workflow_type: string;
   is_enabled: boolean;
   configuration: any;
 }
-
-const HomePage = ({ community, onNavigate }: HomePageProps) => {
+const HomePage = ({
+  community,
+  onNavigate
+}: HomePageProps) => {
   const hasTelegram = !!community.telegram_bot_token;
   const [recentConversations, setRecentConversations] = useState<RecentConversation[]>([]);
   const [loadingConversations, setLoadingConversations] = useState(true);
@@ -57,68 +55,59 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
   const [workflows, setWorkflows] = useState<AgentWorkflow[]>([]);
   const [loadingWorkflows, setLoadingWorkflows] = useState(true);
   const [webhookApiKey, setWebhookApiKey] = useState<string | null>(null);
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   useEffect(() => {
     fetchRecentConversations();
     fetchMemories();
     fetchAgentInstructions();
     fetchWorkflows();
     fetchWebhookApiKey();
-    
+
     // Check if onboarding was completed
     const completed = localStorage.getItem(`onboarding_completed_${community.id}`);
     setOnboardingCompleted(!!completed);
-    
+
     // Auto-open bot dialog if no telegram bot is connected
     if (!hasTelegram) {
       setShowBotDialog(true);
     }
   }, [community.id, hasTelegram]);
-
   const fetchRecentConversations = async () => {
     try {
-      const { data, error } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('community_id', community.id)
-        .order('last_message_at', { ascending: false })
-        .limit(5);
-
+      const {
+        data,
+        error
+      } = await supabase.from('conversations').select('*').eq('community_id', community.id).order('last_message_at', {
+        ascending: false
+      }).limit(5);
       if (error) throw error;
-
-      const enriched = await Promise.all(
-        (data || []).map(async (conv) => {
-          const { data: firstMessage } = await supabase
-            .from('messages')
-            .select('metadata, sent_by')
-            .eq('conversation_id', conv.conversation_id)
-            .order('created_at', { ascending: true })
-            .limit(1)
-            .single();
-
-          let displayName = conv.topic_name || 'Untitled';
-          if (firstMessage?.metadata) {
-            const meta = firstMessage.metadata as any;
-            if (conv.chat_type === 'telegram_bot') {
-              if (meta.chat_type_detail === 'private') {
-                displayName = `DM: ${meta.telegram_first_name || meta.telegram_username || 'User'}`;
-              } else if (meta.telegram_chat_title) {
-                displayName = meta.telegram_chat_title;
-              }
+      const enriched = await Promise.all((data || []).map(async conv => {
+        const {
+          data: firstMessage
+        } = await supabase.from('messages').select('metadata, sent_by').eq('conversation_id', conv.conversation_id).order('created_at', {
+          ascending: true
+        }).limit(1).single();
+        let displayName = conv.topic_name || 'Untitled';
+        if (firstMessage?.metadata) {
+          const meta = firstMessage.metadata as any;
+          if (conv.chat_type === 'telegram_bot') {
+            if (meta.chat_type_detail === 'private') {
+              displayName = `DM: ${meta.telegram_first_name || meta.telegram_username || 'User'}`;
+            } else if (meta.telegram_chat_title) {
+              displayName = meta.telegram_chat_title;
             }
           }
-
-          return {
-            conversation_id: conv.conversation_id,
-            chat_type: conv.chat_type,
-            message_count: conv.message_count,
-            last_message_at: conv.last_message_at,
-            display_name: displayName
-          };
-        })
-      );
-
+        }
+        return {
+          conversation_id: conv.conversation_id,
+          chat_type: conv.chat_type,
+          message_count: conv.message_count,
+          last_message_at: conv.last_message_at,
+          display_name: displayName
+        };
+      }));
       setRecentConversations(enriched);
     } catch (error) {
       console.error('Error fetching recent conversations:', error);
@@ -126,84 +115,71 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
       setLoadingConversations(false);
     }
   };
-
   const fetchMemories = async () => {
     try {
-      const { data, error } = await supabase
-        .from('memories')
-        .select('*')
-        .eq('community_id', community.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
+      const {
+        data,
+        error
+      } = await supabase.from('memories').select('*').eq('community_id', community.id).order('created_at', {
+        ascending: false
+      }).limit(10);
       if (error) throw error;
       setMemories(data || []);
     } catch (error) {
       console.error('Error fetching memories:', error);
     }
   };
-
   const fetchAgentInstructions = async () => {
     try {
-      const { data, error } = await supabase
-        .from('communities')
-        .select('agent_instructions')
-        .eq('id', community.id)
-        .single();
-
+      const {
+        data,
+        error
+      } = await supabase.from('communities').select('agent_instructions').eq('id', community.id).single();
       if (error) throw error;
       setAgentInstructions(data?.agent_instructions || 'No instructions set yet.');
     } catch (error) {
       console.error('Error fetching agent instructions:', error);
     }
   };
-
   const fetchWebhookApiKey = async () => {
     try {
-      const { data, error } = await supabase
-        .from('communities')
-        .select('webhook_api_key')
-        .eq('id', community.id)
-        .single();
-
+      const {
+        data,
+        error
+      } = await supabase.from('communities').select('webhook_api_key').eq('id', community.id).single();
       if (error) throw error;
       setWebhookApiKey(data.webhook_api_key || community.webhook_api_key);
     } catch (error) {
       console.error('Error fetching webhook API key:', error);
     }
   };
-
   const fetchWorkflows = async () => {
     try {
-      const { data, error } = await supabase
-        .from('community_workflows')
-        .select('*')
-        .eq('community_id', community.id)
-        .in('workflow_type', ['telegram_integration', 'webhook_integration', 'webhook_agent']);
-
+      const {
+        data,
+        error
+      } = await supabase.from('community_workflows').select('*').eq('community_id', community.id).in('workflow_type', ['telegram_integration', 'webhook_integration', 'webhook_agent']);
       if (error) throw error;
-      
       const workflows = data || [];
-      
+
       // Ensure webhook_agent workflow exists
       const hasWebhookAgent = workflows.some(w => w.workflow_type === 'webhook_agent');
       if (!hasWebhookAgent) {
-        const { data: newWorkflow, error: insertError } = await supabase
-          .from('community_workflows')
-          .insert({
-            community_id: community.id,
-            workflow_type: 'webhook_agent',
-            is_enabled: false,
-            configuration: { agent_tools: {} }
-          })
-          .select()
-          .single();
-        
+        const {
+          data: newWorkflow,
+          error: insertError
+        } = await supabase.from('community_workflows').insert({
+          community_id: community.id,
+          workflow_type: 'webhook_agent',
+          is_enabled: false,
+          configuration: {
+            agent_tools: {}
+          }
+        }).select().single();
         if (!insertError && newWorkflow) {
           workflows.push(newWorkflow);
         }
       }
-      
       setWorkflows(workflows);
     } catch (error) {
       console.error('Error fetching workflows:', error);
@@ -211,33 +187,30 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
       setLoadingWorkflows(false);
     }
   };
-
   const handleWorkflowToggle = async (workflowType: string, enabled: boolean) => {
     const workflow = workflows.find(w => w.workflow_type === workflowType);
-    
     if (workflow) {
       await toggleWorkflow(workflow.id, workflow.is_enabled);
     } else {
       // Create the workflow if it doesn't exist
       try {
-        const { data: newWorkflow, error } = await supabase
-          .from('community_workflows')
-          .insert({
-            community_id: community.id,
-            workflow_type: workflowType,
-            is_enabled: enabled,
-            configuration: { agent_tools: {} }
-          })
-          .select()
-          .single();
-
+        const {
+          data: newWorkflow,
+          error
+        } = await supabase.from('community_workflows').insert({
+          community_id: community.id,
+          workflow_type: workflowType,
+          is_enabled: enabled,
+          configuration: {
+            agent_tools: {}
+          }
+        }).select().single();
         if (error) throw error;
-
         if (newWorkflow) {
           setWorkflows(prev => [...prev, newWorkflow]);
           toast({
             title: "Success",
-            description: `Workflow ${enabled ? 'enabled' : 'disabled'}`,
+            description: `Workflow ${enabled ? 'enabled' : 'disabled'}`
           });
         }
       } catch (error) {
@@ -245,108 +218,112 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
         toast({
           title: "Error",
           description: "Failed to create workflow",
-          variant: "destructive",
+          variant: "destructive"
         });
       }
     }
   };
-
   const toggleWorkflow = async (workflowId: string, currentState: boolean) => {
     try {
-      const { error } = await supabase
-        .from('community_workflows')
-        .update({ is_enabled: !currentState })
-        .eq('id', workflowId);
-
+      const {
+        error
+      } = await supabase.from('community_workflows').update({
+        is_enabled: !currentState
+      }).eq('id', workflowId);
       if (error) throw error;
-
-      setWorkflows(prev => 
-        prev.map(w => w.id === workflowId ? { ...w, is_enabled: !currentState } : w)
-      );
-
+      setWorkflows(prev => prev.map(w => w.id === workflowId ? {
+        ...w,
+        is_enabled: !currentState
+      } : w));
       toast({
         title: "Success",
-        description: `Workflow ${!currentState ? 'enabled' : 'disabled'}`,
+        description: `Workflow ${!currentState ? 'enabled' : 'disabled'}`
       });
     } catch (error) {
       console.error('Error toggling workflow:', error);
       toast({
         title: "Error",
         description: "Failed to update workflow status",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const toggleAgentTool = async (workflowId: string, toolName: string, currentConfig: any) => {
     const agentTools = currentConfig?.agent_tools || {};
     const updatedTools = {
       ...agentTools,
       [toolName]: !agentTools[toolName]
     };
-
     try {
-      const { error } = await supabase
-        .from('community_workflows')
-        .update({ 
-          configuration: { 
-            ...currentConfig, 
-            agent_tools: updatedTools 
-          } 
-        })
-        .eq('id', workflowId);
-
+      const {
+        error
+      } = await supabase.from('community_workflows').update({
+        configuration: {
+          ...currentConfig,
+          agent_tools: updatedTools
+        }
+      }).eq('id', workflowId);
       if (error) throw error;
-
-      setWorkflows(prev => 
-        prev.map(w => w.id === workflowId 
-          ? { ...w, configuration: { ...w.configuration, agent_tools: updatedTools } } 
-          : w
-        )
-      );
-
+      setWorkflows(prev => prev.map(w => w.id === workflowId ? {
+        ...w,
+        configuration: {
+          ...w.configuration,
+          agent_tools: updatedTools
+        }
+      } : w));
       toast({
         title: "Success",
-        description: `${toolName.replace(/_/g, ' ')} ${updatedTools[toolName] ? 'enabled' : 'disabled'}`,
+        description: `${toolName.replace(/_/g, ' ')} ${updatedTools[toolName] ? 'enabled' : 'disabled'}`
       });
     } catch (error) {
       console.error('Error toggling tool:', error);
       toast({
         title: "Error",
         description: "Failed to update tool configuration",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast({
       title: "Copied!",
-      description: `${label} copied to clipboard`,
+      description: `${label} copied to clipboard`
     });
   };
-
   const getWorkflowLabel = (type: string) => {
     const labels: Record<string, string> = {
       'telegram_integration': 'Telegram Agent',
       'webhook_integration': 'Webhook Integration',
-      'webhook_agent': 'Webhook Agent (with Tools)',
+      'webhook_agent': 'Webhook Agent (with Tools)'
     };
     return labels[type] || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
-
-  const availableAgentTools = [
-    { name: 'web_search', label: 'Web Search' },
-    { name: 'search_memory', label: 'Search Memory' },
-    { name: 'save_memory', label: 'Save Memory' },
-    { name: 'search_chat_history', label: 'Search Chat History' },
-    { name: 'get_member_profiles', label: 'Member Profiles' },
-    { name: 'semantic_profile_search', label: 'Semantic Search' },
-    { name: 'scrape_webpage', label: 'Scrape Webpage' },
-    { name: 'submit_vibe', label: 'Submit Vibe' },
-  ];
-
+  const availableAgentTools = [{
+    name: 'web_search',
+    label: 'Web Search'
+  }, {
+    name: 'search_memory',
+    label: 'Search Memory'
+  }, {
+    name: 'save_memory',
+    label: 'Save Memory'
+  }, {
+    name: 'search_chat_history',
+    label: 'Search Chat History'
+  }, {
+    name: 'get_member_profiles',
+    label: 'Member Profiles'
+  }, {
+    name: 'semantic_profile_search',
+    label: 'Semantic Search'
+  }, {
+    name: 'scrape_webpage',
+    label: 'Scrape Webpage'
+  }, {
+    name: 'submit_vibe',
+    label: 'Submit Vibe'
+  }];
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -354,49 +331,31 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
-
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString();
   };
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       {/* New Bot Workflow */}
-      <CreateBotWorkflow 
-        open={showCreateBotWorkflow}
-        onOpenChange={setShowCreateBotWorkflow}
-      />
+      <CreateBotWorkflow open={showCreateBotWorkflow} onOpenChange={setShowCreateBotWorkflow} />
 
       {/* Telegram Bot Dialog - Auto-opens if no bot connected */}
-      <TelegramBotDialog
-        communityId={community.id}
-        open={showBotDialog}
-        onOpenChange={setShowBotDialog}
-        onSuccess={() => {
-          setShowBotDialog(false);
-          setShowOnboarding(true); // Show onboarding after bot connection
-        }}
-      />
+      <TelegramBotDialog communityId={community.id} open={showBotDialog} onOpenChange={setShowBotDialog} onSuccess={() => {
+      setShowBotDialog(false);
+      setShowOnboarding(true); // Show onboarding after bot connection
+    }} />
 
       {/* Bot Onboarding - Shows after bot is connected */}
-      <BotOnboarding
-        open={showOnboarding}
-        onOpenChange={setShowOnboarding}
-        communityId={community.id}
-        communityName={community.name}
-        onComplete={() => {
-          localStorage.setItem(`onboarding_completed_${community.id}`, 'true');
-          setOnboardingCompleted(true);
-          setShowOnboarding(false);
-          window.location.reload(); // Refresh to show updated state
-        }}
-      />
+      <BotOnboarding open={showOnboarding} onOpenChange={setShowOnboarding} communityId={community.id} communityName={community.name} onComplete={() => {
+      localStorage.setItem(`onboarding_completed_${community.id}`, 'true');
+      setOnboardingCompleted(true);
+      setShowOnboarding(false);
+      window.location.reload(); // Refresh to show updated state
+    }} />
 
       {/* Hero CTA - New Bot - Show only if no bot connected */}
-      {!hasTelegram && (
-        <Card className="gradient-card border-primary/20 bg-gradient-to-br from-primary/10 to-accent/10">
+      {!hasTelegram && <Card className="gradient-card border-primary/20 bg-gradient-to-br from-primary/10 to-accent/10">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -410,18 +369,13 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
                   </p>
                 </div>
               </div>
-              <Button 
-                onClick={() => setShowCreateBotWorkflow(true)}
-                size="lg"
-                className="gradient-primary hover:shadow-glow"
-              >
+              <Button onClick={() => setShowCreateBotWorkflow(true)} size="lg" className="gradient-primary hover:shadow-glow">
                 <Plus className="w-4 h-4 mr-2" />
                 New Bot
               </Button>
             </div>
           </CardContent>
-        </Card>
-      )}
+        </Card>}
 
       {/* Quick Actions */}
       <Card className="gradient-card border-border/50">
@@ -436,27 +390,12 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Button
-              onClick={() => onNavigate('agent')}
-              className="w-full"
-              variant="outline"
-            >
+            <Button onClick={() => onNavigate('agent')} className="w-full" variant="outline">
               <Bot className="mr-2 h-4 w-4" />
               Bot Settings
             </Button>
-            <Button
-              onClick={() => onNavigate('custom-tools')}
-              className="w-full"
-              variant="outline"
-            >
-              <Zap className="mr-2 h-4 w-4" />
-              Custom Tools
-            </Button>
-            <Button
-              onClick={() => onNavigate('settings')}
-              className="w-full"
-              variant="outline"
-            >
+            
+            <Button onClick={() => onNavigate('settings')} className="w-full" variant="outline">
               <Settings className="mr-2 h-4 w-4" />
               Community Settings
             </Button>
@@ -477,55 +416,31 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
                 Latest activity in your community
               </CardDescription>
             </div>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => onNavigate('conversations')}
-            >
+            <Button variant="ghost" size="sm" onClick={() => onNavigate('conversations')}>
               View All
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
         </CardHeader>
         <CardContent>
-          {loadingConversations ? (
-            <div className="text-center py-8 text-muted-foreground">
+          {loadingConversations ? <div className="text-center py-8 text-muted-foreground">
               <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50 animate-pulse" />
               <p className="text-sm">Loading conversations...</p>
-            </div>
-          ) : recentConversations.length === 0 ? (
-            <div className="text-center py-8">
+            </div> : recentConversations.length === 0 ? <div className="text-center py-8">
               <Bot className="w-12 h-12 mx-auto mb-3 text-primary opacity-80" />
               <h4 className="font-semibold text-lg mb-2">Start Your First Conversation</h4>
               <p className="text-sm text-muted-foreground mb-4">
                 Connect with your bot on Telegram to begin chatting
               </p>
-              {community.telegram_bot_url && (
-                <Button 
-                  asChild
-                  className="gradient-primary hover:shadow-glow"
-                >
-                  <a 
-                    href={community.telegram_bot_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                  >
+              {community.telegram_bot_url && <Button asChild className="gradient-primary hover:shadow-glow">
+                  <a href={community.telegram_bot_url} target="_blank" rel="noopener noreferrer">
                     <MessageSquare className="w-4 h-4 mr-2" />
                     Chat with Bot
                     <ExternalLink className="w-4 h-4 ml-2" />
                   </a>
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {recentConversations.map((conv) => (
-                <Button
-                  key={conv.conversation_id}
-                  variant="ghost"
-                  className="w-full h-auto p-3 justify-start hover:bg-primary/10 border border-border/30"
-                  onClick={() => onNavigate('conversations', conv.conversation_id)}
-                >
+                </Button>}
+            </div> : <div className="space-y-2">
+              {recentConversations.map(conv => <Button key={conv.conversation_id} variant="ghost" className="w-full h-auto p-3 justify-start hover:bg-primary/10 border border-border/30" onClick={() => onNavigate('conversations', conv.conversation_id)}>
                   <div className="flex items-center gap-3 w-full text-left">
                     <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
                       {conv.chat_type === 'telegram_bot' ? <Bot className="w-5 h-5" /> : <MessageSquare className="w-5 h-5" />}
@@ -545,10 +460,8 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
                     </div>
                     <ArrowRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   </div>
-                </Button>
-              ))}
-            </div>
-          )}
+                </Button>)}
+            </div>}
         </CardContent>
       </Card>
 
@@ -564,19 +477,13 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {loadingWorkflows ? (
-            <div className="text-center py-4 text-muted-foreground">
+          {loadingWorkflows ? <div className="text-center py-4 text-muted-foreground">
               <Activity className="w-6 h-6 mx-auto mb-2 opacity-50 animate-pulse" />
               <p className="text-sm">Loading workflows...</p>
-            </div>
-          ) : workflows.length === 0 ? (
-            <div className="text-center py-4 text-muted-foreground">
+            </div> : workflows.length === 0 ? <div className="text-center py-4 text-muted-foreground">
               <p className="text-sm">No workflows configured yet</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {workflows.map((workflow) => (
-                <div key={workflow.id}>
+            </div> : <div className="space-y-3">
+              {workflows.map(workflow => <div key={workflow.id}>
                   <div className="flex items-center justify-between p-3 rounded-lg border border-border/30 hover:bg-primary/5 transition-colors">
                     <div className="flex-1">
                       <div className="font-medium">{getWorkflowLabel(workflow.workflow_type)}</div>
@@ -584,36 +491,25 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
                         {workflow.is_enabled ? 'Active' : 'Inactive'}
                       </div>
                     </div>
-                    <Switch
-                      checked={workflow.is_enabled}
-                      onCheckedChange={() => toggleWorkflow(workflow.id, workflow.is_enabled)}
-                    />
+                    <Switch checked={workflow.is_enabled} onCheckedChange={() => toggleWorkflow(workflow.id, workflow.is_enabled)} />
                   </div>
                   
                   {/* Agent Tools for Telegram and Webhook Agent */}
-                  {(workflow.workflow_type === 'telegram_integration' || workflow.workflow_type === 'webhook_agent') && workflow.is_enabled && (
-                    <div className="ml-6 mt-2 p-3 rounded-lg bg-muted/30 border border-border/20">
+                  {(workflow.workflow_type === 'telegram_integration' || workflow.workflow_type === 'webhook_agent') && workflow.is_enabled && <div className="ml-6 mt-2 p-3 rounded-lg bg-muted/30 border border-border/20">
                       <div className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
                         <Brain className="w-3 h-3" />
                         Agent Tools
                       </div>
                       <div className="space-y-2">
-                        {availableAgentTools.map((tool) => (
-                          <div key={tool.name} className="flex items-center justify-between">
+                        {availableAgentTools.map(tool => <div key={tool.name} className="flex items-center justify-between">
                             <span className="text-sm">{tool.label}</span>
-                            <Switch
-                              checked={workflow.configuration?.agent_tools?.[tool.name] === true}
-                              onCheckedChange={() => toggleAgentTool(workflow.id, tool.name, workflow.configuration)}
-                            />
-                          </div>
-                        ))}
+                            <Switch checked={workflow.configuration?.agent_tools?.[tool.name] === true} onCheckedChange={() => toggleAgentTool(workflow.id, tool.name, workflow.configuration)} />
+                          </div>)}
                       </div>
-                    </div>
-                  )}
+                    </div>}
 
                   {/* Webhook Agent - Copy Prompt Button */}
-                  {workflow.workflow_type === 'webhook_agent' && workflow.is_enabled && (
-                    <div className="ml-6 mt-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                  {workflow.workflow_type === 'webhook_agent' && workflow.is_enabled && <div className="ml-6 mt-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
                       <div className="flex items-start gap-2">
                         <Code className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
                         <div className="flex-1 text-sm space-y-2">
@@ -621,31 +517,23 @@ const HomePage = ({ community, onNavigate }: HomePageProps) => {
                           <p className="text-xs text-muted-foreground">
                             Build AI-powered interfaces with tool-calling capabilities
                           </p>
-                          <Button
-                            onClick={() => {
-                              const agentTools = workflow.configuration?.agent_tools || {};
-                              const enabledTools = Object.entries(agentTools)
-                                .filter(([_, enabled]) => enabled)
-                                .map(([toolName]) => {
-                                  const toolLabels: Record<string, string> = {
-                                    web_search: 'Web Search - Search the web for current information',
-                                    search_memory: 'Search Memory - Query community memories',
-                                    save_memory: 'Save Memory - Store new information',
-                                    search_chat_history: 'Search Chat History - Look up past conversations',
-                                    get_member_profiles: 'Get Member Profiles - Fetch all member profiles with context',
-                                    semantic_profile_search: 'Semantic Profile Search - AI-powered member search',
-                                    scrape_webpage: 'Scrape Webpage - Extract content from URLs',
-                                    submit_vibe: 'Submit Vibe - Analyze photos and submit vibe scores to leaderboard'
-                                  };
-                                  return `- ${toolLabels[toolName] || toolName}`;
-                                })
-                                .join('\n');
-
-                              const toolsSection = enabledTools 
-                                ? `\nThe agent has access to these tools:\n${enabledTools}\n`
-                                : '\nNo agent tools are currently enabled.\n';
-
-                              const prompt = `The webhook agent is available at:
+                          <Button onClick={() => {
+                    const agentTools = workflow.configuration?.agent_tools || {};
+                    const enabledTools = Object.entries(agentTools).filter(([_, enabled]) => enabled).map(([toolName]) => {
+                      const toolLabels: Record<string, string> = {
+                        web_search: 'Web Search - Search the web for current information',
+                        search_memory: 'Search Memory - Query community memories',
+                        save_memory: 'Save Memory - Store new information',
+                        search_chat_history: 'Search Chat History - Look up past conversations',
+                        get_member_profiles: 'Get Member Profiles - Fetch all member profiles with context',
+                        semantic_profile_search: 'Semantic Profile Search - AI-powered member search',
+                        scrape_webpage: 'Scrape Webpage - Extract content from URLs',
+                        submit_vibe: 'Submit Vibe - Analyze photos and submit vibe scores to leaderboard'
+                      };
+                      return `- ${toolLabels[toolName] || toolName}`;
+                    }).join('\n');
+                    const toolsSection = enabledTools ? `\nThe agent has access to these tools:\n${enabledTools}\n` : '\nNo agent tools are currently enabled.\n';
+                    const prompt = `The webhook agent is available at:
 POST https://efdqqnubowgwsnwvlalp.supabase.co/functions/v1/webhook-agent
 
 **API Key:** ${webhookApiKey || 'Please generate an API key first in the Workflow Builder'}
@@ -673,23 +561,16 @@ Response includes:
 }
 
 Use this to build chat interfaces, chatbots, or AI-powered workflows. The tool_calls array shows which tools were executed and their results.`;
-                              copyToClipboard(prompt, 'Webhook agent integration guide');
-                            }}
-                            variant="outline"
-                            size="sm"
-                            className="mt-1"
-                          >
+                    copyToClipboard(prompt, 'Webhook agent integration guide');
+                  }} variant="outline" size="sm" className="mt-1">
                             <Copy className="w-3 h-3 mr-2" />
                             Copy Integration Guide
                           </Button>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+                    </div>}
+                </div>)}
+            </div>}
         </CardContent>
       </Card>
 
@@ -705,35 +586,20 @@ Use this to build chat interfaces, chatbots, or AI-powered workflows. The tool_c
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {memories.length === 0 ? (
-            <div className="text-center py-4 text-muted-foreground">
+          {memories.length === 0 ? <div className="text-center py-4 text-muted-foreground">
               <Brain className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p className="text-sm">No memories yet</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {memories.slice(0, 3).map((memory) => (
-                <div key={memory.id} className="p-3 rounded-lg border border-border/30 hover:bg-primary/5 transition-colors">
+            </div> : <div className="space-y-2">
+              {memories.slice(0, 3).map(memory => <div key={memory.id} className="p-3 rounded-lg border border-border/30 hover:bg-primary/5 transition-colors">
                   <p className="text-sm line-clamp-2">{memory.content}</p>
-                  {memory.tags && memory.tags.length > 0 && (
-                    <div className="flex gap-1 mt-2">
-                      {memory.tags.slice(0, 3).map((tag: string) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
+                  {memory.tags && memory.tags.length > 0 && <div className="flex gap-1 mt-2">
+                      {memory.tags.slice(0, 3).map((tag: string) => <Badge key={tag} variant="secondary" className="text-xs">
                           {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="mt-3 w-full"
-            onClick={() => onNavigate('memory')}
-          >
+                        </Badge>)}
+                    </div>}
+                </div>)}
+            </div>}
+          <Button variant="outline" size="sm" className="mt-3 w-full" onClick={() => onNavigate('memory')}>
             View All Memories
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
@@ -755,12 +621,7 @@ Use this to build chat interfaces, chatbots, or AI-powered workflows. The tool_c
           <div className="bg-muted/50 rounded-lg p-4 text-sm whitespace-pre-wrap max-h-[200px] overflow-y-auto">
             {agentInstructions}
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="mt-3"
-            onClick={() => onNavigate('agent')}
-          >
+          <Button variant="outline" size="sm" className="mt-3" onClick={() => onNavigate('agent')}>
             Edit Instructions
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
@@ -768,8 +629,7 @@ Use this to build chat interfaces, chatbots, or AI-powered workflows. The tool_c
       </Card>
 
       {/* Telegram Connection CTA - Show if not connected */}
-      {!hasTelegram && (
-        <Card className="gradient-card border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
+      {!hasTelegram && <Card className="gradient-card border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
@@ -784,17 +644,12 @@ Use this to build chat interfaces, chatbots, or AI-powered workflows. The tool_c
             </div>
           </CardHeader>
           <CardContent>
-            <Button 
-              onClick={() => setShowBotDialog(true)} 
-              className="gradient-primary hover:shadow-glow"
-              size="lg"
-            >
+            <Button onClick={() => setShowBotDialog(true)} className="gradient-primary hover:shadow-glow" size="lg">
               <Zap className="w-4 h-4 mr-2" />
               Connect Telegram Bot
             </Button>
           </CardContent>
-        </Card>
-      )}
+        </Card>}
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -849,8 +704,7 @@ Use this to build chat interfaces, chatbots, or AI-powered workflows. The tool_c
       </div>
 
       {/* Bot Status */}
-      {hasTelegram && (
-        <Card className="gradient-card border-border/50">
+      {hasTelegram && <Card className="gradient-card border-border/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Activity className="w-5 h-5 text-primary" />
@@ -864,24 +718,14 @@ Use this to build chat interfaces, chatbots, or AI-powered workflows. The tool_c
                 Connected
               </Badge>
             </div>
-            {community.telegram_bot_url && (
-              <div className="flex items-center justify-between">
+            {community.telegram_bot_url && <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Bot Link</span>
-                <a 
-                  href={community.telegram_bot_url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-sm text-primary hover:underline"
-                >
+                <a href={community.telegram_bot_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">
                   Open in Telegram
                 </a>
-              </div>
-            )}
+              </div>}
           </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+        </Card>}
+    </div>;
 };
-
 export default HomePage;

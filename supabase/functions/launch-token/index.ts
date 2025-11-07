@@ -227,6 +227,7 @@ serve(async (req) => {
 
     const { result: encodeResult } = await encodeResponse.json();
     console.log('Template encoded successfully');
+    console.log('Encode result:', JSON.stringify(encodeResult, null, 2));
 
     // STEP 4: Broadcast sponsored transaction
     console.log('Step 4: Broadcasting sponsored transaction...');
@@ -249,9 +250,30 @@ serve(async (req) => {
 
     const { result: broadcastResult } = await broadcastResponse.json();
     console.log('Transaction broadcasted:', broadcastResult.transaction_hash);
+    console.log('Broadcast result:', JSON.stringify(broadcastResult, null, 2));
 
     // STEP 5: Store token info in database
     console.log('Step 5: Storing token in database...');
+    
+    // Extract token address - it might be in different places depending on the response
+    const tokenAddress = encodeResult.token_address || 
+                        encodeResult.tokenAddress || 
+                        broadcastResult.token_address ||
+                        broadcastResult.tokenAddress ||
+                        broadcastResult.contract_address;
+    
+    const hookAddress = encodeResult.hook_address || 
+                       encodeResult.hookAddress ||
+                       broadcastResult.hook_address ||
+                       broadcastResult.hookAddress;
+    
+    console.log('Extracted token_address:', tokenAddress);
+    console.log('Extracted hook_address:', hookAddress);
+    
+    if (!tokenAddress) {
+      throw new Error('Token address not found in API response. Check logs for response structure.');
+    }
+    
     const { data: tokenData, error: tokenError } = await supabaseClient
       .from('bot_tokens')
       .insert({
@@ -259,20 +281,22 @@ serve(async (req) => {
         token_name: tokenName,
         token_symbol: tokenSymbol,
         token_description: tokenDescription,
-        token_address: encodeResult.token_address,
-        hook_address: encodeResult.hook_address,
+        token_address: tokenAddress,
+        hook_address: hookAddress || '',
         transaction_hash: broadcastResult.transaction_hash,
         image_ipfs_hash: imageHash,
         metadata_ipfs_hash: metadataHash,
         chain_id: chainId,
         template_id: templateId,
-        initial_supply: encodeResult.params?.initial_supply,
-        num_tokens_to_sell: encodeResult.params?.num_tokens_to_sell,
+        initial_supply: encodeResult.params?.initial_supply || encodeResult.initial_supply,
+        num_tokens_to_sell: encodeResult.params?.num_tokens_to_sell || encodeResult.num_tokens_to_sell,
         launch_metadata: {
           social_links: socialLinks,
           vesting_recipients: vestingRecipients,
           beneficiaries: finalBeneficiaries,
-          user_address: userAddress
+          user_address: userAddress,
+          encode_result: encodeResult,
+          broadcast_result: broadcastResult
         },
         created_by: userData.id
       })

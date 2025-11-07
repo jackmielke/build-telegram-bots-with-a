@@ -48,3 +48,6 @@ enabled = true
 
   [functions.backfill-intros]
   verify_jwt = true
+
+  [functions.generate-tool-prompt]
+  verify_jwt = true

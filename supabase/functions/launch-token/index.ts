@@ -271,8 +271,9 @@ serve(async (req) => {
     console.log('Extracted hook_address:', hookAddress);
     
     if (!tokenAddress) {
-      throw new Error('Token address not found in API response. Check logs for response structure.');
+      console.warn('Token address missing in API response. Falling back to zero-address and marking as pending.');
     }
+    const safeTokenAddress = tokenAddress || '0x0000000000000000000000000000000000000000';
     
     const { data: tokenData, error: tokenError } = await supabaseClient
       .from('bot_tokens')
@@ -281,7 +282,7 @@ serve(async (req) => {
         token_name: tokenName,
         token_symbol: tokenSymbol,
         token_description: tokenDescription,
-        token_address: tokenAddress,
+        token_address: safeTokenAddress,
         hook_address: hookAddress || '',
         transaction_hash: broadcastResult.transaction_hash,
         image_ipfs_hash: imageHash,
@@ -296,7 +297,8 @@ serve(async (req) => {
           beneficiaries: finalBeneficiaries,
           user_address: userAddress,
           encode_result: encodeResult,
-          broadcast_result: broadcastResult
+          broadcast_result: broadcastResult,
+          token_address_pending: !tokenAddress
         },
         created_by: userData.id
       })

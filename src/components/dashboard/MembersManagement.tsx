@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Crown, Shield, UserMinus, UserPlus } from 'lucide-react';
+import { Users, Crown, Shield, UserMinus, UserPlus, MessageSquare, MessageSquareOff } from 'lucide-react';
 
 interface Member {
   id: string;
@@ -19,7 +19,12 @@ interface Member {
     email: string | null;
     avatar_url: string | null;
     is_claimed: boolean | null;
+    telegram_user_id: number | null;
   };
+  telegram_session?: {
+    is_active: boolean;
+    proactive_outreach_enabled: boolean;
+  } | null;
 }
 
 interface MembersManagementProps {
@@ -40,7 +45,8 @@ const MembersManagement = ({ communityId, isAdmin }: MembersManagementProps) => 
 
   const fetchMembers = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch community members with user details
+      const { data: membersData, error: membersError } = await supabase
         .from('community_members')
         .select(`
           id,
@@ -52,14 +58,45 @@ const MembersManagement = ({ communityId, isAdmin }: MembersManagementProps) => 
             name,
             email,
             avatar_url,
-            is_claimed
+            is_claimed,
+            telegram_user_id
           )
         `)
         .eq('community_id', communityId)
         .order('joined_at', { ascending: true });
 
-      if (error) throw error;
-      setMembers(data || []);
+      if (membersError) throw membersError;
+
+      // Fetch telegram sessions for this community
+      const { data: sessionsData, error: sessionsError } = await supabase
+        .from('telegram_chat_sessions')
+        .select('telegram_user_id, is_active, proactive_outreach_enabled')
+        .eq('community_id', communityId);
+
+      if (sessionsError) {
+        console.error('Error fetching telegram sessions:', sessionsError);
+      }
+
+      // Create a map of telegram_user_id to session data
+      const sessionsMap = new Map(
+        (sessionsData || []).map(session => [
+          session.telegram_user_id,
+          {
+            is_active: session.is_active,
+            proactive_outreach_enabled: session.proactive_outreach_enabled
+          }
+        ])
+      );
+
+      // Merge the data
+      const enrichedMembers = (membersData || []).map(member => ({
+        ...member,
+        telegram_session: member.users.telegram_user_id 
+          ? sessionsMap.get(member.users.telegram_user_id) || null
+          : null
+      }));
+
+      setMembers(enrichedMembers);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -249,7 +286,7 @@ const MembersManagement = ({ communityId, isAdmin }: MembersManagementProps) => 
                 
                 <div className="flex items-center space-x-3">
                   <div className="text-right">
-                    <div className="flex items-center gap-2 justify-end">
+                    <div className="flex items-center gap-2 justify-end flex-wrap">
                       <Badge variant={getRoleBadgeVariant(member.role)} className="flex items-center space-x-1">
                         {getRoleIcon(member.role)}
                         <span className="capitalize">{member.role}</span>
@@ -259,6 +296,17 @@ const MembersManagement = ({ communityId, isAdmin }: MembersManagementProps) => 
                           Unclaimed
                         </Badge>
                       )}
+                      {member.telegram_session?.is_active && member.telegram_session?.proactive_outreach_enabled ? (
+                        <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20 flex items-center gap-1">
+                          <MessageSquare className="w-3 h-3" />
+                          Can Broadcast
+                        </Badge>
+                      ) : member.users.telegram_user_id ? (
+                        <Badge variant="outline" className="text-xs bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/20 flex items-center gap-1">
+                          <MessageSquareOff className="w-3 h-3" />
+                          No DM Access
+                        </Badge>
+                      ) : null}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Joined {new Date(member.joined_at).toLocaleDateString()}

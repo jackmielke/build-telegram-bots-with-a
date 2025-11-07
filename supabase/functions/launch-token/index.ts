@@ -182,15 +182,15 @@ serve(async (req) => {
     const REQUIRED_BENEFICIARY_TOTAL = WEI_100 - TEMPLATE_BASE_SHARE; // 35%
 
     // Normalize/validate beneficiaries
-    let finalBeneficiaries: Array<{ beneficiary: string; share: string }> = Array.isArray(beneficiaries) ? beneficiaries : [];
+    let finalBeneficiaries: Array<{ beneficiary: string; shares: string }> = Array.isArray(beneficiaries) ? beneficiaries : [];
 
     // If none provided, allocate 35% to the launching user by default
     if (!finalBeneficiaries.length) {
-      finalBeneficiaries = [{ beneficiary: userAddress, share: REQUIRED_BENEFICIARY_TOTAL.toString() }];
+      finalBeneficiaries = [{ beneficiary: userAddress, shares: REQUIRED_BENEFICIARY_TOTAL.toString() }];
     } else {
       // Validate total equals the required 35%
       try {
-        const total = finalBeneficiaries.reduce((acc, b) => acc + BigInt(b.share), 0n);
+        const total = finalBeneficiaries.reduce((acc, b) => acc + BigInt(b.shares), 0n);
         if (total !== REQUIRED_BENEFICIARY_TOTAL) {
           throw new Error(`Beneficiaries shares must total exactly ${REQUIRED_BENEFICIARY_TOTAL.toString()} (35%). Got ${total.toString()}.`);
         }

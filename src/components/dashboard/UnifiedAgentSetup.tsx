@@ -10,10 +10,134 @@ import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Bot, Brain, MessageSquare, Upload, Loader2, Sparkles, Zap, Settings, Bell, Users } from 'lucide-react';
+import { Bot, Brain, MessageSquare, Upload, Loader2, Sparkles, Zap, Settings, Bell, Users, Megaphone } from 'lucide-react';
 import WorkflowBuilder from './WorkflowBuilder';
 import BotHealthIndicator from './BotHealthIndicator';
 import { CustomToolsToggleView } from './custom-tools/CustomToolsToggleView';
+import { Card as CustomCard, CardContent as CustomCardContent, CardDescription as CustomCardDescription, CardHeader as CustomCardHeader, CardTitle as CustomCardTitle } from "@/components/ui/card";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+
+// Broadcast Tool Component
+function BroadcastToolSection({ communityId, isAdmin }: { communityId: string; isAdmin: boolean }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: customTools } = useQuery({
+    queryKey: ['custom-tools', communityId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('custom_tools')
+        .select('*')
+        .eq('community_id', communityId);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!communityId
+  });
+
+  const toggleBroadcastMutation = useMutation({
+    mutationFn: async (isEnabled: boolean) => {
+      const broadcastToolName = 'broadcast_message';
+      
+      if (isEnabled) {
+        const { data: existingTool } = await supabase
+          .from('custom_tools')
+          .select('id')
+          .eq('community_id', communityId)
+          .eq('name', broadcastToolName)
+          .single();
+
+        if (existingTool) {
+          const { error } = await supabase
+            .from('custom_tools')
+            .update({ is_enabled: true })
+            .eq('id', existingTool.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('custom_tools')
+            .insert({
+              community_id: communityId,
+              name: broadcastToolName,
+              display_name: 'Broadcast Message',
+              description: 'Send a message to all users who have had a conversation with the bot',
+              category: 'Communication',
+              endpoint_url: 'https://efdqqnubowgwsnwvlalp.supabase.co/functions/v1/telegram-broadcast',
+              http_method: 'POST',
+              auth_type: 'bearer',
+              auth_value: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmZHFxbnVib3dnd3Nud3ZsYWxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwMjkxMzEsImV4cCI6MjA2NTYwNTEzMX0.VaAOevdkwQmOxd9ksOtOhnODVCITDhmtAgyE456IxbM',
+              is_enabled: true,
+              parameters: {
+                message: {
+                  type: 'string',
+                  description: 'The message to broadcast to all users',
+                  required: true
+                },
+                include_opted_out: {
+                  type: 'boolean',
+                  description: 'Include users who opted out of notifications (default: false)',
+                  required: false
+                }
+              },
+              request_template: {
+                community_id: communityId,
+                message: '{{message}}',
+                filter: {
+                  include_opted_out: '{{include_opted_out}}'
+                }
+              }
+            });
+          if (error) throw error;
+        }
+      } else {
+        const { error } = await supabase
+          .from('custom_tools')
+          .update({ is_enabled: false })
+          .eq('community_id', communityId)
+          .eq('name', broadcastToolName);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['custom-tools', communityId] });
+      toast({ title: "Broadcast tool updated" });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update broadcast tool.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const broadcastTool = customTools?.find(t => t.name === 'broadcast_message');
+  const isBroadcastEnabled = broadcastTool?.is_enabled || false;
+
+  return (
+    <CustomCard className="border-primary/20 bg-primary/5">
+      <CustomCardHeader className="py-3 px-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <Megaphone className="h-4 w-4 text-primary" />
+              <CustomCardTitle className="text-sm font-medium">Broadcast Messaging</CustomCardTitle>
+              <Badge variant="outline" className="text-xs bg-primary/10 shrink-0">Built-in</Badge>
+            </div>
+            <CustomCardDescription className="text-xs">
+              Allow AI to send messages to all previous chat participants
+            </CustomCardDescription>
+          </div>
+          <Switch
+            checked={isBroadcastEnabled}
+            onCheckedChange={(checked) => toggleBroadcastMutation.mutate(checked)}
+            disabled={!isAdmin || toggleBroadcastMutation.isPending}
+          />
+        </div>
+      </CustomCardHeader>
+    </CustomCard>
+  );
+}
 
 interface Community {
   id: string;
@@ -353,8 +477,14 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Broadcast Tool - Separate Section */}
+          <BroadcastToolSection communityId={community.id} isAdmin={isAdmin} />
+          
           {/* Custom Tools Section */}
-          <CustomToolsToggleView communityId={community.id} isAdmin={isAdmin} />
+          <div className="pt-4 border-t border-border">
+            <CustomToolsToggleView communityId={community.id} isAdmin={isAdmin} />
+          </div>
+          
           {/* AI Provider - Now using Lovable AI Gateway */}
           <div className="space-y-2">
             <Label htmlFor="ai_provider" className="flex items-center gap-2">

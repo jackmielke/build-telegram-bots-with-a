@@ -183,12 +183,12 @@ export function CustomToolsToggleView({ communityId, isAdmin }: CustomToolsToggl
   }
 
   return (
-    <div className="space-y-4 mt-4 pt-4 border-t border-border">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium flex items-center gap-2">
             <Zap className="h-4 w-4 text-primary" />
-            Connected Tools ({customTools?.length || 0})
+            Custom Tools ({customTools?.filter(t => t.name !== 'broadcast_message').length || 0})
           </p>
           <p className="text-xs text-muted-foreground">
             External APIs your bot can use
@@ -204,29 +204,6 @@ export function CustomToolsToggleView({ communityId, isAdmin }: CustomToolsToggl
           Add Tool
         </Button>
       </div>
-
-      {/* Built-in Broadcast Tool */}
-      <Card className="border-primary/20 bg-primary/5">
-        <CardHeader className="py-3 px-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <Megaphone className="h-4 w-4 text-primary" />
-                <CardTitle className="text-sm font-medium">Broadcast Messaging</CardTitle>
-                <Badge variant="outline" className="text-xs bg-primary/10 shrink-0">Built-in</Badge>
-              </div>
-              <CardDescription className="text-xs">
-                Allow AI to send messages to all previous chat participants
-              </CardDescription>
-            </div>
-            <Switch
-              checked={isBroadcastEnabled}
-              onCheckedChange={(checked) => toggleBroadcastMutation.mutate(checked)}
-              disabled={!isAdmin || toggleBroadcastMutation.isPending}
-            />
-          </div>
-        </CardHeader>
-      </Card>
 
       {!customTools || customTools.filter(t => t.name !== 'broadcast_message').length === 0 ? (
         <Card className="bg-muted/30">

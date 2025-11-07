@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Bot, ExternalLink, Loader2, Check, MessageSquare, Settings, Undo, Info, AlertCircle } from 'lucide-react';
@@ -548,7 +549,8 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-6 py-4">
+            <ScrollArea className="max-h-[60vh] pr-4">
+              <div className="space-y-6 py-4">
               {/* DM Settings */}
               <div className="space-y-3">
                 <Label className="text-base font-semibold">Message Settings</Label>
@@ -664,19 +666,6 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
                 </p>
               </div>
 
-              {/* Memories Section */}
-              <div className="space-y-2">
-                <Label className="text-base font-semibold">Memory & Context</Label>
-                <div className="p-4 bg-muted/50 rounded-lg border">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Your bot will automatically save important information from conversations to provide better, more contextual responses over time.
-                  </p>
-                  <p className="text-sm text-primary font-medium">
-                    Memory saving is enabled by default
-                  </p>
-                </div>
-              </div>
-
               {/* Action Buttons */}
               <div className="flex gap-3 pt-2">
                 <Button
@@ -778,7 +767,8 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
                   )}
                 </Button>
               </div>
-            </div>
+              </div>
+            </ScrollArea>
           </>
         )}
       </DialogContent>

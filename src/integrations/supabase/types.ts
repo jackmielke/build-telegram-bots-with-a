@@ -166,6 +166,84 @@ export type Database = {
           },
         ]
       }
+      bot_tokens: {
+        Row: {
+          chain_id: number
+          community_id: string
+          created_at: string
+          created_by: string | null
+          hook_address: string | null
+          id: string
+          image_ipfs_hash: string | null
+          initial_supply: string | null
+          launch_metadata: Json | null
+          metadata_ipfs_hash: string | null
+          num_tokens_to_sell: string | null
+          template_id: string
+          token_address: string
+          token_description: string | null
+          token_name: string
+          token_symbol: string
+          transaction_hash: string
+          updated_at: string
+        }
+        Insert: {
+          chain_id?: number
+          community_id: string
+          created_at?: string
+          created_by?: string | null
+          hook_address?: string | null
+          id?: string
+          image_ipfs_hash?: string | null
+          initial_supply?: string | null
+          launch_metadata?: Json | null
+          metadata_ipfs_hash?: string | null
+          num_tokens_to_sell?: string | null
+          template_id: string
+          token_address: string
+          token_description?: string | null
+          token_name: string
+          token_symbol: string
+          transaction_hash: string
+          updated_at?: string
+        }
+        Update: {
+          chain_id?: number
+          community_id?: string
+          created_at?: string
+          created_by?: string | null
+          hook_address?: string | null
+          id?: string
+          image_ipfs_hash?: string | null
+          initial_supply?: string | null
+          launch_metadata?: Json | null
+          metadata_ipfs_hash?: string | null
+          num_tokens_to_sell?: string | null
+          template_id?: string
+          token_address?: string
+          token_description?: string | null
+          token_name?: string
+          token_symbol?: string
+          transaction_hash?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_tokens_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_tokens_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       characters: {
         Row: {
           community_id: string | null

@@ -1,0 +1,250 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const LONG_API_KEY = Deno.env.get('LONG_API_KEY');
+    if (!LONG_API_KEY) {
+      throw new Error('LONG_API_KEY is not configured');
+    }
+
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: { Authorization: req.headers.get('Authorization')! },
+        },
+      }
+    );
+
+    // Get the authenticated user
+    const {
+      data: { user },
+      error: authError,
+    } = await supabaseClient.auth.getUser();
+
+    if (authError || !user) {
+      throw new Error('Unauthorized');
+    }
+
+    // Get user's internal ID
+    const { data: userData, error: userError } = await supabaseClient
+      .from('users')
+      .select('id')
+      .eq('auth_user_id', user.id)
+      .single();
+
+    if (userError || !userData) {
+      throw new Error('User not found');
+    }
+
+    const {
+      communityId,
+      tokenName,
+      tokenSymbol,
+      tokenDescription,
+      imageFile,
+      templateId,
+      chainId = 8453, // Base chain default
+      userAddress,
+      socialLinks = [],
+      vestingRecipients = [],
+      beneficiaries = []
+    } = await req.json();
+
+    if (!communityId || !tokenName || !tokenSymbol || !imageFile || !templateId || !userAddress) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Starting token launch for:', tokenName);
+
+    // STEP 1: Upload image to IPFS
+    console.log('Step 1: Uploading image to IPFS...');
+    const imageFormData = new FormData();
+    
+    // Convert base64 to blob if needed
+    let imageBlob;
+    if (imageFile.startsWith('data:')) {
+      const base64Data = imageFile.split(',')[1];
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      imageBlob = new Blob([byteArray], { type: 'image/png' });
+    } else {
+      imageBlob = new Blob([imageFile], { type: 'image/png' });
+    }
+
+    imageFormData.append('image', imageBlob, 'token-image.png');
+
+    const imageResponse = await fetch('https://api.long.xyz/v1/ipfs/upload-image', {
+      method: 'POST',
+      headers: {
+        'X-API-KEY': LONG_API_KEY,
+      },
+      body: imageFormData,
+    });
+
+    if (!imageResponse.ok) {
+      const errorText = await imageResponse.text();
+      console.error('Image upload failed:', errorText);
+      throw new Error(`Failed to upload image: ${errorText}`);
+    }
+
+    const { result: imageHash } = await imageResponse.json();
+    console.log('Image uploaded, hash:', imageHash);
+
+    // STEP 2: Upload metadata to IPFS
+    console.log('Step 2: Uploading metadata to IPFS...');
+    const metadataResponse = await fetch('https://api.long.xyz/v1/ipfs/upload-metadata', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-KEY': LONG_API_KEY,
+      },
+      body: JSON.stringify({
+        name: tokenName,
+        description: tokenDescription || `${tokenName} token launched via BotBuilder`,
+        image_hash: imageHash,
+        social_links: socialLinks,
+        vesting_recipients: vestingRecipients,
+        fee_receiver: ''
+      }),
+    });
+
+    if (!metadataResponse.ok) {
+      const errorText = await metadataResponse.text();
+      console.error('Metadata upload failed:', errorText);
+      throw new Error(`Failed to upload metadata: ${errorText}`);
+    }
+
+    const { result: metadataHash } = await metadataResponse.json();
+    console.log('Metadata uploaded, hash:', metadataHash);
+
+    // STEP 3: Encode auction template
+    console.log('Step 3: Encoding auction template...');
+    const encodeResponse = await fetch(`https://api.long.xyz/v1/auction-templates?chainId=${chainId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-KEY': LONG_API_KEY,
+      },
+      body: JSON.stringify({
+        template_id: templateId,
+        metadata: {
+          token_name: tokenName,
+          token_symbol: tokenSymbol,
+          token_uri: `ipfs://${metadataHash}`,
+          user_address: userAddress,
+          beneficiaries: beneficiaries
+        }
+      }),
+    });
+
+    if (!encodeResponse.ok) {
+      const errorText = await encodeResponse.text();
+      console.error('Template encoding failed:', errorText);
+      throw new Error(`Failed to encode template: ${errorText}`);
+    }
+
+    const { result: encodeResult } = await encodeResponse.json();
+    console.log('Template encoded successfully');
+
+    // STEP 4: Broadcast sponsored transaction
+    console.log('Step 4: Broadcasting sponsored transaction...');
+    const broadcastResponse = await fetch('https://api.long.xyz/v1/sponsorship', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-KEY': LONG_API_KEY,
+      },
+      body: JSON.stringify({
+        encoded_payload: encodeResult.encoded_payload
+      }),
+    });
+
+    if (!broadcastResponse.ok) {
+      const errorText = await broadcastResponse.text();
+      console.error('Broadcast failed:', errorText);
+      throw new Error(`Failed to broadcast transaction: ${errorText}`);
+    }
+
+    const { result: broadcastResult } = await broadcastResponse.json();
+    console.log('Transaction broadcasted:', broadcastResult.transaction_hash);
+
+    // STEP 5: Store token info in database
+    console.log('Step 5: Storing token in database...');
+    const { data: tokenData, error: tokenError } = await supabaseClient
+      .from('bot_tokens')
+      .insert({
+        community_id: communityId,
+        token_name: tokenName,
+        token_symbol: tokenSymbol,
+        token_description: tokenDescription,
+        token_address: encodeResult.token_address,
+        hook_address: encodeResult.hook_address,
+        transaction_hash: broadcastResult.transaction_hash,
+        image_ipfs_hash: imageHash,
+        metadata_ipfs_hash: metadataHash,
+        chain_id: chainId,
+        template_id: templateId,
+        initial_supply: encodeResult.params?.initial_supply,
+        num_tokens_to_sell: encodeResult.params?.num_tokens_to_sell,
+        launch_metadata: {
+          social_links: socialLinks,
+          vesting_recipients: vestingRecipients,
+          beneficiaries: beneficiaries,
+          user_address: userAddress
+        },
+        created_by: userData.id
+      })
+      .select()
+      .single();
+
+    if (tokenError) {
+      console.error('Failed to store token:', tokenError);
+      throw new Error(`Failed to store token: ${tokenError.message}`);
+    }
+
+    console.log('Token launch complete!');
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        token: tokenData,
+        transactionHash: broadcastResult.transaction_hash,
+        explorerUrl: `https://basescan.org/tx/${broadcastResult.transaction_hash}`
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      }
+    );
+  } catch (error) {
+    console.error('Token launch error:', error);
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      }
+    );
+  }
+});

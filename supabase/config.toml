@@ -49,5 +49,8 @@ enabled = true
   [functions.backfill-intros]
   verify_jwt = true
 
-  [functions.generate-tool-prompt]
-  verify_jwt = true
+[functions.generate-tool-prompt]
+verify_jwt = true
+
+[functions.launch-token]
+verify_jwt = true

@@ -70,44 +70,84 @@ serve(async (req) => {
     }
 
     console.log('Starting token launch for:', tokenName);
+    console.log('API Key present:', !!LONG_API_KEY);
+    console.log('API Key length:', LONG_API_KEY?.length);
 
     // STEP 1: Upload image to IPFS
     console.log('Step 1: Uploading image to IPFS...');
-    const imageFormData = new FormData();
     
-    // Convert base64 to blob if needed
-    let imageBlob;
-    if (imageFile.startsWith('data:')) {
-      const base64Data = imageFile.split(',')[1];
-      const byteCharacters = atob(base64Data);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
+    let imageHash: string;
+    try {
+      // Convert base64 data URL to raw base64 string if needed
+      let base64Data: string;
+      if (imageFile.startsWith('data:')) {
+        base64Data = imageFile.split(',')[1];
+      } else if (imageFile.startsWith('http')) {
+        // If it's a URL, fetch it first
+        const imgResponse = await fetch(imageFile);
+        const imgBlob = await imgResponse.blob();
+        const arrayBuffer = await imgBlob.arrayBuffer();
+        base64Data = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      } else {
+        base64Data = imageFile;
       }
-      const byteArray = new Uint8Array(byteNumbers);
-      imageBlob = new Blob([byteArray], { type: 'image/png' });
-    } else {
-      imageBlob = new Blob([imageFile], { type: 'image/png' });
+
+      // Decode base64 to Uint8Array
+      const binaryString = atob(base64Data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      // Create File object (not just Blob) for better compatibility
+      const file = new File([bytes], 'token-image.png', { type: 'image/png' });
+      
+      console.log('Image file created, size:', file.size, 'bytes');
+
+      // Create FormData and append the file
+      const formData = new FormData();
+      formData.append('image', file);
+
+      console.log('Making request to Long.xyz API...');
+      const imageResponse = await fetch('https://api.long.xyz/v1/ipfs/upload-image', {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': LONG_API_KEY,
+          // Note: Don't set Content-Type, let fetch handle it automatically
+        },
+        body: formData,
+      });
+
+      console.log('Response status:', imageResponse.status);
+      
+      if (!imageResponse.ok) {
+        const errorText = await imageResponse.text();
+        console.error('Image upload failed:', errorText);
+        console.error('Response headers:', Object.fromEntries(imageResponse.headers.entries()));
+        
+        if (imageResponse.status === 403) {
+          throw new Error(`API Key Authentication Failed: Please verify your Long.xyz API key has upload permissions. Status: ${imageResponse.status}`);
+        }
+        
+        throw new Error(`Failed to upload image (${imageResponse.status}): ${errorText}`);
+      }
+
+      console.log('Image upload successful');
+      const imageResult = await imageResponse.json();
+      console.log('Image response:', imageResult);
+      
+      if (!imageResult.result) {
+        throw new Error('Invalid response from IPFS upload - missing result field');
+      }
+
+      imageHash = imageResult.result;
+
+    } catch (uploadError) {
+      console.error('Image upload error details:', uploadError);
+      throw new Error(`Image upload failed: ${uploadError instanceof Error ? uploadError.message : String(uploadError)}`);
     }
-
-    imageFormData.append('image', imageBlob, 'token-image.png');
-
-    const imageResponse = await fetch('https://api.long.xyz/v1/ipfs/upload-image', {
-      method: 'POST',
-      headers: {
-        'X-API-KEY': LONG_API_KEY,
-      },
-      body: imageFormData,
-    });
-
-    if (!imageResponse.ok) {
-      const errorText = await imageResponse.text();
-      console.error('Image upload failed:', errorText);
-      throw new Error(`Failed to upload image: ${errorText}`);
-    }
-
-    const { result: imageHash } = await imageResponse.json();
-    console.log('Image uploaded, hash:', imageHash);
+    
+    console.log('Image uploaded successfully, hash:', imageHash);
 
     // STEP 2: Upload metadata to IPFS
     console.log('Step 2: Uploading metadata to IPFS...');

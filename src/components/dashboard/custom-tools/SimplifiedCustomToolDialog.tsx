@@ -43,6 +43,7 @@ export function SimplifiedCustomToolDialog({
 
   // Manual Entry State
   const [toolName, setToolName] = useState("");
+  const [description, setDescription] = useState("");
   const [apiUrl, setApiUrl] = useState("");
   const [authToken, setAuthToken] = useState("");
   const [parameters, setParameters] = useState<Array<{ name: string; description: string }>>([]);
@@ -50,6 +51,7 @@ export function SimplifiedCustomToolDialog({
   useEffect(() => {
     if (editingTool) {
       setToolName(editingTool.display_name || "");
+      setDescription(editingTool.description || "");
       setApiUrl(editingTool.endpoint_url || "");
       setAuthToken(editingTool.auth_value || "");
       
@@ -69,6 +71,7 @@ export function SimplifiedCustomToolDialog({
     setGeneratedPrompt("");
     setPromptCopied(false);
     setToolName("");
+    setDescription("");
     setApiUrl("");
     setAuthToken("");
     setParameters([]);
@@ -95,6 +98,9 @@ export function SimplifiedCustomToolDialog({
 
       if (data.generatedPrompt) {
         setGeneratedPrompt(data.generatedPrompt);
+        
+        // Auto-populate description with the original tool description
+        setDescription(toolDescription);
         
         // Auto-fill suggested details if available
         if (data.suggestedDetails) {
@@ -170,7 +176,7 @@ export function SimplifiedCustomToolDialog({
         community_id: communityId,
         name: toolName.toLowerCase().replace(/\s+/g, '_'),
         display_name: toolName,
-        description: `Call ${toolName} API with provided parameters`,
+        description: description || `Call ${toolName} API with provided parameters`,
         endpoint_url: apiUrl,
         http_method: "POST",
         auth_type: authToken ? "bearer" : "none",
@@ -366,6 +372,17 @@ export function SimplifiedCustomToolDialog({
                     </div>
 
                     <div className="space-y-2">
+                      <Label htmlFor="tool-description">Description</Label>
+                      <Textarea
+                        id="tool-description"
+                        placeholder="What does this tool do?"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        rows={2}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
                       <Label htmlFor="api-url">API Endpoint URL *</Label>
                       <Input
                         id="api-url"
@@ -449,6 +466,17 @@ export function SimplifiedCustomToolDialog({
                     placeholder="e.g., send_sms, get_weather"
                     value={toolName}
                     onChange={(e) => setToolName(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="manual-tool-description">Description</Label>
+                  <Textarea
+                    id="manual-tool-description"
+                    placeholder="What does this tool do?"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={2}
                   />
                 </div>
 

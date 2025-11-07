@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Bot, ExternalLink, Loader2, Check, MessageSquare, Settings, Undo, Info } from 'lucide-react';
+import { Bot, ExternalLink, Loader2, Check, MessageSquare, Settings, Undo, Info, AlertCircle } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useNavigate } from 'react-router-dom';
 
@@ -36,6 +36,32 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
   } | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Handler for group chat toggle with privacy mode warning
+  const handleGroupsToggle = (checked: boolean) => {
+    setRespondInGroups(checked);
+    if (checked) {
+      toast({
+        title: "Important: Privacy Mode Required",
+        description: "Make sure you've disabled privacy mode for your bot via BotFather, or else the bot will not be able to see messages in groups.",
+        variant: "default",
+        duration: 8000,
+      });
+    }
+  };
+
+  // Handler for supergroup toggle with privacy mode warning
+  const handleSupergroupsToggle = (checked: boolean) => {
+    setRespondInSupergroups(checked);
+    if (checked) {
+      toast({
+        title: "Important: Privacy Mode Required",
+        description: "Make sure you've disabled privacy mode for your bot via BotFather, or else the bot will not be able to see messages in supergroups.",
+        variant: "default",
+        duration: 8000,
+      });
+    }
+  };
 
   const handleSubmitToken = async () => {
     if (!botToken.trim()) {
@@ -549,7 +575,7 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
                     </div>
                     <Switch
                       checked={respondInGroups}
-                      onCheckedChange={setRespondInGroups}
+                      onCheckedChange={handleGroupsToggle}
                     />
                   </div>
 
@@ -562,7 +588,7 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
                     </div>
                     <Switch
                       checked={respondInSupergroups}
-                      onCheckedChange={setRespondInSupergroups}
+                      onCheckedChange={handleSupergroupsToggle}
                     />
                   </div>
                 </div>

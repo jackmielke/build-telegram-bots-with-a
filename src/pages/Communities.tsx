@@ -388,17 +388,37 @@ const Communities = () => {
                       <CardHeader className="space-y-3">
                         <div className="flex items-start space-x-3">
                           <div className="w-16 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center flex-shrink-0">
-                            {community.cover_image_url ? (
+                            {community.cover_image_url && community.cover_image_url.trim() !== '' ? (
                               <img 
                                 src={community.cover_image_url} 
                                 alt={community.name}
                                 className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  const parent = e.currentTarget.parentElement;
+                                  if (parent) {
+                                    const icon = document.createElement('div');
+                                    icon.className = 'w-6 h-6 text-primary flex items-center justify-center';
+                                    icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+                                    parent.appendChild(icon);
+                                  }
+                                }}
                               />
-                            ) : community.agent_avatar_url ? (
+                            ) : community.agent_avatar_url && community.agent_avatar_url.trim() !== '' ? (
                               <img 
                                 src={community.agent_avatar_url} 
                                 alt={community.agent_name || community.name}
                                 className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  const parent = e.currentTarget.parentElement;
+                                  if (parent) {
+                                    const icon = document.createElement('div');
+                                    icon.className = 'w-6 h-6 text-primary flex items-center justify-center';
+                                    icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="14" y="3" rx="1"/><path d="M10 21V8a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H3"/></svg>';
+                                    parent.appendChild(icon);
+                                  }
+                                }}
                               />
                             ) : (
                               <Bot className="w-6 h-6 text-primary" />

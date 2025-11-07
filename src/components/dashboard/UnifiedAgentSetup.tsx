@@ -103,11 +103,30 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
         utcHours -= 24;
       }
       
-      return `${utcHours.toString().padStart(2, '0')}:${utcMinutes.toString().padStart(2, '0')}:00`;
+      // Round to nearest 15-minute interval to match cron schedule
+      // Cron runs at :00, :15, :30, :45
+      const totalMinutes = utcHours * 60 + utcMinutes;
+      const roundedMinutes = Math.round(totalMinutes / 15) * 15;
+      const finalHours = Math.floor(roundedMinutes / 60) % 24;
+      const finalMinutes = roundedMinutes % 60;
+      
+      return `${finalHours.toString().padStart(2, '0')}:${finalMinutes.toString().padStart(2, '0')}:00`;
     } catch (e) {
       console.error('Error converting to UTC:', e);
       return `${localTimeString}:00`;
     }
+  };
+  
+  // Generate time options in 15-minute intervals
+  const generateTimeOptions = () => {
+    const options = [];
+    for (let hour = 0; hour < 24; hour++) {
+      for (let minute of [0, 15, 30, 45]) {
+        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        options.push(timeString);
+      }
+    }
+    return options;
   };
   
   const [formData, setFormData] = useState({
@@ -626,15 +645,24 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
               
               <div className="space-y-2">
                 <Label htmlFor="daily_message_time">Send Time</Label>
-                <Input
-                  id="daily_message_time"
-                  type="time"
+                <Select
                   value={formData.displayTime}
-                  onChange={(e) => setFormData({ ...formData, displayTime: e.target.value })}
+                  onValueChange={(value) => setFormData({ ...formData, displayTime: value })}
                   disabled={!isAdmin}
-                />
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {generateTimeOptions().map((time) => (
+                      <SelectItem key={time} value={time}>
+                        {time}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <p className="text-xs text-muted-foreground">
-                  Time in {formData.timezone} when messages will be sent. The cron job checks hourly for scheduled messages.
+                  Time in {formData.timezone} when messages will be sent. Messages are checked every 15 minutes.
                 </p>
               </div>
             </>

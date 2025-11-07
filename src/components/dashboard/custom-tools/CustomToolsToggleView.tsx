@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Settings, TestTube, Clock, Trash2, Zap } from "lucide-react";
+import { Plus, Settings, TestTube, Clock, Trash2, Zap, Megaphone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SimplifiedCustomToolDialog } from "./SimplifiedCustomToolDialog";
 import { TestToolDialog } from "./TestToolDialog";
@@ -81,6 +81,85 @@ export function CustomToolsToggleView({ communityId, isAdmin }: CustomToolsToggl
     }
   });
 
+  const toggleBroadcastMutation = useMutation({
+    mutationFn: async (isEnabled: boolean) => {
+      const broadcastToolName = 'broadcast_message';
+      
+      if (isEnabled) {
+        const { data: existingTool } = await supabase
+          .from('custom_tools')
+          .select('id')
+          .eq('community_id', communityId)
+          .eq('name', broadcastToolName)
+          .single();
+
+        if (existingTool) {
+          const { error } = await supabase
+            .from('custom_tools')
+            .update({ is_enabled: true })
+            .eq('id', existingTool.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('custom_tools')
+            .insert({
+              community_id: communityId,
+              name: broadcastToolName,
+              display_name: 'Broadcast Message',
+              description: 'Send a message to all users who have had a conversation with the bot',
+              category: 'Communication',
+              endpoint_url: 'https://efdqqnubowgwsnwvlalp.supabase.co/functions/v1/telegram-broadcast',
+              http_method: 'POST',
+              auth_type: 'bearer',
+              auth_value: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmZHFxbnVib3dnd3Nud3ZsYWxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwMjkxMzEsImV4cCI6MjA2NTYwNTEzMX0.VaAOevdkwQmOxd9ksOtOhnODVCITDhmtAgyE456IxbM',
+              is_enabled: true,
+              parameters: {
+                message: {
+                  type: 'string',
+                  description: 'The message to broadcast to all users',
+                  required: true
+                },
+                include_opted_out: {
+                  type: 'boolean',
+                  description: 'Include users who opted out of notifications (default: false)',
+                  required: false
+                }
+              },
+              request_template: {
+                community_id: communityId,
+                message: '{{message}}',
+                filter: {
+                  include_opted_out: '{{include_opted_out}}'
+                }
+              }
+            });
+          if (error) throw error;
+        }
+      } else {
+        const { error } = await supabase
+          .from('custom_tools')
+          .update({ is_enabled: false })
+          .eq('community_id', communityId)
+          .eq('name', broadcastToolName);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['custom-tools', communityId] });
+      toast({ title: "Broadcast tool updated" });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update broadcast tool.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const broadcastTool = customTools?.find(t => t.name === 'broadcast_message');
+  const isBroadcastEnabled = broadcastTool?.is_enabled || false;
+
   const formatTimeAgo = (timestamp: string) => {
     const now = Date.now();
     const then = new Date(timestamp).getTime();
@@ -126,7 +205,30 @@ export function CustomToolsToggleView({ communityId, isAdmin }: CustomToolsToggl
         </Button>
       </div>
 
-      {!customTools || customTools.length === 0 ? (
+      {/* Built-in Broadcast Tool */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader className="py-3 px-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <Megaphone className="h-4 w-4 text-primary" />
+                <CardTitle className="text-sm font-medium">Broadcast Messaging</CardTitle>
+                <Badge variant="outline" className="text-xs bg-primary/10 shrink-0">Built-in</Badge>
+              </div>
+              <CardDescription className="text-xs">
+                Allow AI to send messages to all previous chat participants
+              </CardDescription>
+            </div>
+            <Switch
+              checked={isBroadcastEnabled}
+              onCheckedChange={(checked) => toggleBroadcastMutation.mutate(checked)}
+              disabled={!isAdmin || toggleBroadcastMutation.isPending}
+            />
+          </div>
+        </CardHeader>
+      </Card>
+
+      {!customTools || customTools.filter(t => t.name !== 'broadcast_message').length === 0 ? (
         <Card className="bg-muted/30">
           <CardContent className="py-8 text-center">
             <div className="mx-auto w-10 h-10 rounded-full bg-muted flex items-center justify-center mb-3">
@@ -147,7 +249,7 @@ export function CustomToolsToggleView({ communityId, isAdmin }: CustomToolsToggl
         </Card>
       ) : (
         <div className="space-y-2">
-          {customTools.map((tool) => (
+          {customTools.filter(t => t.name !== 'broadcast_message').map((tool) => (
             <Card key={tool.id} className={!tool.is_enabled ? 'opacity-60' : ''}>
               <CardHeader className="py-3 px-4">
                 <div className="flex items-center justify-between gap-3">

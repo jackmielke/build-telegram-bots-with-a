@@ -799,6 +799,45 @@ serve(async (req) => {
           communityId
         );
           
+          // For private chats, create/update chat session with notifications enabled by default
+          if (chatType === 'private') {
+            const { data: existingSession } = await supabase
+              .from('telegram_chat_sessions')
+              .select('id, proactive_outreach_enabled')
+              .eq('telegram_chat_id', chatId)
+              .eq('community_id', communityId)
+              .maybeSingle();
+            
+            if (!existingSession) {
+              // Create new session with notifications enabled by default
+              console.log('Creating new chat session with notifications enabled for private chat');
+              await supabase
+                .from('telegram_chat_sessions')
+                .insert({
+                  telegram_chat_id: chatId,
+                  telegram_user_id: telegramUserId,
+                  community_id: communityId,
+                  bot_id: communityId, // Using community_id as bot_id for now
+                  telegram_username: telegramUsername,
+                  telegram_first_name: firstName,
+                  telegram_last_name: lastName,
+                  proactive_outreach_enabled: true, // Enable by default for private chats
+                  is_active: true,
+                  last_message_at: new Date().toISOString()
+                });
+            } else {
+              // Update existing session's last message time
+              await supabase
+                .from('telegram_chat_sessions')
+                .update({ 
+                  last_message_at: new Date().toISOString(),
+                  is_active: true
+                })
+                .eq('telegram_chat_id', chatId)
+                .eq('community_id', communityId);
+            }
+          }
+          
           // Check if this is a profile claim verification code
           if (userMessage.startsWith('CLAIM-') || userMessage.startsWith('/start CLAIM-')) {
             const verificationCode = userMessage.replace('/start ', '').trim();

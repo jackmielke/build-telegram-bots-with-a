@@ -1257,6 +1257,54 @@ export type Database = {
         }
         Relationships: []
       }
+      product_roadmap: {
+        Row: {
+          category: string
+          completed_at: string | null
+          created_at: string
+          description: string
+          estimated_timeline: string | null
+          icon: string | null
+          id: string
+          order_index: number | null
+          priority: string
+          status: string
+          tags: string[] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          completed_at?: string | null
+          created_at?: string
+          description: string
+          estimated_timeline?: string | null
+          icon?: string | null
+          id?: string
+          order_index?: number | null
+          priority: string
+          status?: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string
+          estimated_timeline?: string | null
+          icon?: string | null
+          id?: string
+          order_index?: number | null
+          priority?: string
+          status?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profile_claim_requests: {
         Row: {
           auth_user_id: string

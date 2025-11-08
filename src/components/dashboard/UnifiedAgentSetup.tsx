@@ -14,6 +14,7 @@ import { Bot, Brain, MessageSquare, Upload, Loader2, Sparkles, Zap, Settings, Be
 import WorkflowBuilder from './WorkflowBuilder';
 import BotHealthIndicator from './BotHealthIndicator';
 import { CustomToolsToggleView } from './custom-tools/CustomToolsToggleView';
+import { RoadmapManager } from './RoadmapManager';
 import { Card as CustomCard, CardContent as CustomCardContent, CardDescription as CustomCardDescription, CardHeader as CustomCardHeader, CardTitle as CustomCardTitle } from "@/components/ui/card";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 
@@ -849,6 +850,22 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
             </Button>
           </CardContent>
         </Card>
+      )}
+
+      {/* PRODUCT ROADMAP MANAGEMENT - Super Admin Only */}
+      {isAdmin && (
+        <div className="mt-8 pt-8 border-t border-border/50">
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Platform Roadmap
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Manage VibeForge product features and development timeline
+            </p>
+          </div>
+          <RoadmapManager />
+        </div>
       )}
 
       {/* SAVE BUTTON */}

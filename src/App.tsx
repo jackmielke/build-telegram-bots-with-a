@@ -13,6 +13,7 @@ import ExploreCommunities from "./pages/ExploreCommunities";
 import CommunityDashboard from "./pages/CommunityDashboard";
 import UserProfile from "./pages/UserProfile";
 import TemplateMarketplace from "./pages/TemplateMarketplace";
+import ProductRoadmap from "./pages/ProductRoadmap";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +47,7 @@ const App = () => (
           <Route path="/communities" element={<Communities />} />
           <Route path="/explore" element={<ExploreCommunities />} />
           <Route path="/templates" element={<TemplateMarketplace />} />
+          <Route path="/roadmap" element={<ProductRoadmap />} />
           <Route path="/community/:communityId" element={<CommunityDashboard />} />
           <Route path="/user/:userId" element={<UserProfile />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

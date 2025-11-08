@@ -5,9 +5,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Zap, MessageSquare, BarChart3, Brain, Play } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, Zap, MessageSquare, BarChart3, Brain, Play, Sparkles, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import vibeLogo from '@/assets/vibe-logo.png';
+
+interface RoadmapItem {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  priority: string;
+  category: string;
+  icon: string;
+  estimated_timeline: string;
+}
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -15,6 +27,7 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [roadmapItems, setRoadmapItems] = useState<RoadmapItem[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -27,6 +40,21 @@ const Auth = () => {
       }
     };
     checkAuth();
+
+    // Fetch roadmap items
+    const fetchRoadmap = async () => {
+      const { data } = await supabase
+        .from('product_roadmap')
+        .select('*')
+        .in('status', ['completed', 'in_progress'])
+        .order('order_index')
+        .limit(6);
+      
+      if (data) {
+        setRoadmapItems(data);
+      }
+    };
+    fetchRoadmap();
   }, [navigate]);
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -70,10 +98,12 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background">
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
       
-      <div className="w-full max-w-5xl relative z-10 grid md:grid-cols-2 gap-8 items-center">
+      {/* Hero Section with Auth */}
+      <div className="w-full max-w-5xl relative z-10 mx-auto p-4 py-12">
+        <div className="grid md:grid-cols-2 gap-8 items-center mb-20">
         {/* Left side - Branding & Value Prop */}
         <div className="space-y-6 text-center md:text-left">
           <div className="inline-block">
@@ -212,6 +242,82 @@ const Auth = () => {
             </div>
           </CardContent>
         </Card>
+        </div>
+
+        {/* Product Roadmap Section */}
+        <div className="max-w-7xl mx-auto pb-20 relative z-10">
+          <div className="text-center mb-12 space-y-4">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-sm font-medium mb-4">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Product Roadmap
+            </div>
+            <h2 className="text-4xl md:text-5xl font-bold">
+              Building the Future of
+              <span className="block mt-2 bg-gradient-primary bg-clip-text text-transparent">
+                AI-Powered Communities
+              </span>
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              See what we're building right now and what's coming next
+            </p>
+          </div>
+
+          {/* Featured Roadmap Items */}
+          {roadmapItems.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {roadmapItems.map((item) => (
+                <Card 
+                  key={item.id} 
+                  className="p-6 hover:shadow-xl transition-all border-2 bg-card/50 backdrop-blur-sm"
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-3xl">{item.icon}</span>
+                        {item.status === 'completed' ? (
+                          <Badge variant="outline" className="gap-1 text-green-600 dark:text-green-400 border-green-500/20 bg-green-500/10">
+                            <CheckCircle2 className="h-3 w-3" />
+                            Live
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="gap-1 text-blue-600 dark:text-blue-400 border-blue-500/20 bg-blue-500/10">
+                            <Zap className="h-3 w-3" />
+                            Building
+                          </Badge>
+                        )}
+                      </div>
+                      {item.estimated_timeline && (
+                        <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded">
+                          {item.estimated_timeline}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-bold leading-tight">{item.title}</h3>
+                      <p className="text-sm text-muted-foreground line-clamp-3">
+                        {item.description}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* View Full Roadmap CTA */}
+          <div className="text-center">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => navigate('/roadmap')}
+              className="group hover:bg-primary/10 hover:border-primary"
+            >
+              View Full Roadmap
+              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );

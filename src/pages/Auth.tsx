@@ -251,11 +251,8 @@ const Auth = () => {
               <Sparkles className="h-4 w-4 text-primary" />
               Product Roadmap
             </div>
-            <h2 className="text-4xl md:text-5xl font-bold">
-              Building the Future of
-              <span className="block mt-2 bg-gradient-primary bg-clip-text text-transparent">
-                AI-Powered Communities
-              </span>
+            <h2 className="text-4xl md:text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+              Building the Future
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               See what we're building right now and what's coming next
@@ -272,24 +269,16 @@ const Auth = () => {
                 >
                   <div className="space-y-4">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-3xl">{item.icon}</span>
-                        {item.status === 'completed' ? (
-                          <Badge variant="outline" className="gap-1 text-green-600 dark:text-green-400 border-green-500/20 bg-green-500/10">
-                            <CheckCircle2 className="h-3 w-3" />
-                            Live
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="gap-1 text-blue-600 dark:text-blue-400 border-blue-500/20 bg-blue-500/10">
-                            <Zap className="h-3 w-3" />
-                            Building
-                          </Badge>
-                        )}
-                      </div>
-                      {item.estimated_timeline && (
-                        <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded">
-                          {item.estimated_timeline}
-                        </span>
+                      {item.status === 'completed' ? (
+                        <Badge variant="outline" className="gap-1 text-green-600 dark:text-green-400 border-green-500/20 bg-green-500/10">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Live
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="gap-1 text-blue-600 dark:text-blue-400 border-blue-500/20 bg-blue-500/10">
+                          <Zap className="h-3 w-3" />
+                          Building
+                        </Badge>
                       )}
                     </div>
 

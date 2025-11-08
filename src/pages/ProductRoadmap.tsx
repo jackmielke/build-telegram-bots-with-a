@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import Navbar from "@/components/Navbar";
-import { Sparkles, CheckCircle2, Clock, Pause, XCircle, ChevronRight } from "lucide-react";
+import { Sparkles, CheckCircle2, Clock, Pause, XCircle, ChevronRight, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { RoadmapManager } from "@/components/dashboard/RoadmapManager";
 
 interface RoadmapItem {
   id: string;
@@ -76,10 +78,25 @@ export default function ProductRoadmap() {
   const [loading, setLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     fetchRoadmap();
+    checkAdminStatus();
   }, []);
+
+  const checkAdminStatus = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+
+    setIsAdmin(data?.role === 'admin');
+  };
 
   const fetchRoadmap = async () => {
     try {
@@ -130,18 +147,30 @@ export default function ProductRoadmap() {
         <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:50px_50px]" />
         <div className="container mx-auto px-4 py-16 relative">
           <div className="max-w-4xl mx-auto text-center space-y-6">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-sm font-medium">
-              <Sparkles className="h-4 w-4 text-primary" />
-              Product Roadmap
+            <div className="flex items-center justify-center gap-4">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-sm font-medium">
+                <Sparkles className="h-4 w-4 text-primary" />
+                Product Roadmap
+              </div>
+              {isAdmin && (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Settings className="h-4 w-4 mr-2" />
+                      Manage
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <RoadmapManager />
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
-            <h1 className="text-5xl md:text-6xl font-bold tracking-tight">
-              Building the Future of
-              <span className="block mt-2 bg-gradient-primary bg-clip-text text-transparent">
-                AI-Powered Communities
-              </span>
+            <h1 className="text-5xl md:text-6xl font-bold tracking-tight bg-gradient-primary bg-clip-text text-transparent">
+              Building the Future
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Our vision for VibeForge—transforming how communities connect, automate, and grow through intelligent bot orchestration.
+              Our vision for Vibe AI—transforming how communities connect, automate, and grow through intelligent bot orchestration.
             </p>
           </div>
         </div>
@@ -271,18 +300,10 @@ function RoadmapCard({ item }: { item: RoadmapItem }) {
       <div className="space-y-4">
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-3xl">{item.icon}</span>
-            <Badge variant="outline" className={cn("gap-1", statusStyle.color)}>
-              <StatusIcon className="h-3 w-3" />
-              {statusStyle.label}
-            </Badge>
-          </div>
-          {item.estimated_timeline && (
-            <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded">
-              {item.estimated_timeline}
-            </span>
-          )}
+          <Badge variant="outline" className={cn("gap-1", statusStyle.color)}>
+            <StatusIcon className="h-3 w-3" />
+            {statusStyle.label}
+          </Badge>
         </div>
 
         {/* Title & Description */}
@@ -294,22 +315,24 @@ function RoadmapCard({ item }: { item: RoadmapItem }) {
         </div>
 
         {/* Tags */}
-        <div className="flex flex-wrap gap-1.5">
-          {item.tags.slice(0, 3).map((tag) => (
-            <Badge 
-              key={tag} 
-              variant="secondary" 
-              className="text-xs"
-            >
-              {tag}
-            </Badge>
-          ))}
-          {item.tags.length > 3 && (
-            <Badge variant="secondary" className="text-xs">
-              +{item.tags.length - 3}
-            </Badge>
-          )}
-        </div>
+        {item.tags && item.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {item.tags.slice(0, 3).map((tag) => (
+              <Badge 
+                key={tag} 
+                variant="secondary" 
+                className="text-xs"
+              >
+                {tag}
+              </Badge>
+            ))}
+            {item.tags.length > 3 && (
+              <Badge variant="secondary" className="text-xs">
+                +{item.tags.length - 3}
+              </Badge>
+            )}
+          </div>
+        )}
 
         {/* Category */}
         <div className="pt-2 border-t border-border/50">

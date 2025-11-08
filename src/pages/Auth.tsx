@@ -419,74 +419,135 @@ const Auth = () => {
         </div>
 
         {/* Product Roadmap Section */}
-        <div className="max-w-7xl mx-auto pb-20 relative z-10">
-          <div className="text-center mb-12 space-y-4">
-            <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-primary-glow to-primary bg-clip-text text-transparent">
-              What We're Building
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              See what we're building right now and what's coming next
-            </p>
-          </div>
+        <div className="max-w-7xl mx-auto pb-20 relative z-10 space-y-20">
+          {/* Live Features Section */}
+          {roadmapItems.filter(item => item.status === 'completed').length > 0 && (
+            <div>
+              <div className="text-center mb-12 space-y-4">
+                <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-green-600 via-green-500 to-green-600 dark:from-green-400 dark:via-green-300 dark:to-green-400 bg-clip-text text-transparent">
+                  Live Features
+                </h2>
+                <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                  Features that are live and ready to use right now
+                </p>
+              </div>
 
-          {/* Roadmap Items */}
-          {roadmapItems.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
-              {roadmapItems.map((item) => (
-                <Card 
-                  key={item.id} 
-                  className="p-6 hover:shadow-xl transition-all border-2 bg-card/50 backdrop-blur-sm h-full"
-                >
-                  <div className="space-y-4">
-                    <div className="flex items-start justify-between gap-3">
-                      {item.status === 'completed' ? (
-                        <Badge variant="outline" className="gap-1 text-green-600 dark:text-green-400 border-green-500/20 bg-green-500/10">
-                          <CheckCircle2 className="h-3 w-3" />
-                          Live
-                        </Badge>
-                      ) : item.status === 'in_progress' ? (
-                        <Badge variant="outline" className="gap-1 text-blue-600 dark:text-blue-400 border-blue-500/20 bg-blue-500/10">
-                          <Zap className="h-3 w-3" />
-                          Building
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="gap-1 text-purple-600 dark:text-purple-400 border-purple-500/20 bg-purple-500/10">
-                          <Sparkles className="h-3 w-3" />
-                          Planned
-                        </Badge>
-                      )}
-                    </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+                {roadmapItems
+                  .filter(item => item.status === 'completed')
+                  .map((item) => (
+                    <Card 
+                      key={item.id} 
+                      className="p-6 hover:shadow-xl transition-all border-2 bg-card/50 backdrop-blur-sm h-full"
+                    >
+                      <div className="space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <Badge variant="outline" className="gap-1 text-green-600 dark:text-green-400 border-green-500/20 bg-green-500/10">
+                            <CheckCircle2 className="h-3 w-3" />
+                            Live
+                          </Badge>
+                        </div>
 
-                    <div className="space-y-2">
-                      <h3 className="text-lg font-bold leading-tight">{item.title}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {item.description}
-                      </p>
-                    </div>
+                        <div className="space-y-2">
+                          <h3 className="text-lg font-bold leading-tight">{item.title}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {item.description}
+                          </p>
+                        </div>
 
-                    <div className="flex items-center gap-2 pt-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleVote(item.id, 'upvote')}
-                        className={`gap-1 transition-all ${userVotes[item.id] === 'upvote' ? 'bg-primary/10 border-primary' : ''}`}
-                      >
-                        <ThumbsUp className="h-3 w-3" />
-                        {item.upvotes || 0}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleVote(item.id, 'downvote')}
-                        className={`gap-1 transition-all ${userVotes[item.id] === 'downvote' ? 'bg-destructive/10 border-destructive' : ''}`}
-                      >
-                        <ThumbsDown className="h-3 w-3" />
-                        {item.downvotes || 0}
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+                        <div className="flex items-center gap-2 pt-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleVote(item.id, 'upvote')}
+                            className={`gap-1 transition-all ${userVotes[item.id] === 'upvote' ? 'bg-primary/10 border-primary' : ''}`}
+                          >
+                            <ThumbsUp className="h-3 w-3" />
+                            {item.upvotes || 0}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleVote(item.id, 'downvote')}
+                            className={`gap-1 transition-all ${userVotes[item.id] === 'downvote' ? 'bg-destructive/10 border-destructive' : ''}`}
+                          >
+                            <ThumbsDown className="h-3 w-3" />
+                            {item.downvotes || 0}
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* What We're Building Section */}
+          {roadmapItems.filter(item => item.status !== 'completed').length > 0 && (
+            <div>
+              <div className="text-center mb-12 space-y-4">
+                <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-primary-glow to-primary bg-clip-text text-transparent">
+                  What We're Building
+                </h2>
+                <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                  Features in progress and coming soon
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+                {roadmapItems
+                  .filter(item => item.status !== 'completed')
+                  .map((item) => (
+                    <Card 
+                      key={item.id} 
+                      className="p-6 hover:shadow-xl transition-all border-2 bg-card/50 backdrop-blur-sm h-full"
+                    >
+                      <div className="space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          {item.status === 'in_progress' ? (
+                            <Badge variant="outline" className="gap-1 text-blue-600 dark:text-blue-400 border-blue-500/20 bg-blue-500/10">
+                              <Zap className="h-3 w-3" />
+                              Building
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="gap-1 text-purple-600 dark:text-purple-400 border-purple-500/20 bg-purple-500/10">
+                              <Sparkles className="h-3 w-3" />
+                              Planned
+                            </Badge>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <h3 className="text-lg font-bold leading-tight">{item.title}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {item.description}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleVote(item.id, 'upvote')}
+                            className={`gap-1 transition-all ${userVotes[item.id] === 'upvote' ? 'bg-primary/10 border-primary' : ''}`}
+                          >
+                            <ThumbsUp className="h-3 w-3" />
+                            {item.upvotes || 0}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleVote(item.id, 'downvote')}
+                            className={`gap-1 transition-all ${userVotes[item.id] === 'downvote' ? 'bg-destructive/10 border-destructive' : ''}`}
+                          >
+                            <ThumbsDown className="h-3 w-3" />
+                            {item.downvotes || 0}
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+              </div>
             </div>
           )}
         </div>

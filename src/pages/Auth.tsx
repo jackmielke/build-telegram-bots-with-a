@@ -431,11 +431,11 @@ const Auth = () => {
 
           {/* Roadmap Items */}
           {roadmapItems.length > 0 && (
-            <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
               {roadmapItems.map((item) => (
                 <Card 
                   key={item.id} 
-                  className="p-6 hover:shadow-xl transition-all border-2 bg-card/50 backdrop-blur-sm break-inside-avoid mb-6"
+                  className="p-6 hover:shadow-xl transition-all border-2 bg-card/50 backdrop-blur-sm h-full"
                 >
                   <div className="space-y-4">
                     <div className="flex items-start justify-between gap-3">

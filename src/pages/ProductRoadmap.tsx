@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import Navbar from "@/components/Navbar";
-import { Sparkles, CheckCircle2, Clock, Pause, XCircle, ChevronRight, Settings } from "lucide-react";
+import { Sparkles, CheckCircle2, Clock, Pause, XCircle, ChevronRight, Settings, List, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { RoadmapManager } from "@/components/dashboard/RoadmapManager";
+import { SimpleRoadmapList } from "@/components/dashboard/roadmap/SimpleRoadmapList";
 
 interface RoadmapItem {
   id: string;
@@ -79,6 +80,7 @@ export default function ProductRoadmap() {
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   useEffect(() => {
     fetchRoadmap();
@@ -152,6 +154,24 @@ export default function ProductRoadmap() {
                 <Sparkles className="h-4 w-4 text-primary" />
                 Product Roadmap
               </div>
+              <div className="flex items-center gap-1 border rounded-lg p-1 bg-background">
+                <Button
+                  variant={viewMode === "grid" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("grid")}
+                  className="px-3"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "list" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("list")}
+                  className="px-3"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
               {isAdmin && (
                 <Dialog>
                   <DialogTrigger asChild>
@@ -176,79 +196,90 @@ export default function ProductRoadmap() {
         </div>
       </div>
 
-      {/* Stats Bar */}
-      <div className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-center gap-8 py-4 overflow-x-auto">
-            <StatusButton
-              label="All Features"
-              count={statusCounts.all}
-              active={selectedStatus === "all"}
-              onClick={() => setSelectedStatus("all")}
-            />
-            <StatusButton
-              label="Completed"
-              count={statusCounts.completed}
-              active={selectedStatus === "completed"}
-              onClick={() => setSelectedStatus("completed")}
-              className="text-green-600 dark:text-green-400"
-            />
-            <StatusButton
-              label="In Progress"
-              count={statusCounts.in_progress}
-              active={selectedStatus === "in_progress"}
-              onClick={() => setSelectedStatus("in_progress")}
-              className="text-blue-600 dark:text-blue-400"
-            />
-            <StatusButton
-              label="Planned"
-              count={statusCounts.planned}
-              active={selectedStatus === "planned"}
-              onClick={() => setSelectedStatus("planned")}
-              className="text-purple-600 dark:text-purple-400"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Category Filters */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-wrap gap-2 justify-center mb-12">
-          <Button
-            variant={selectedCategory === "all" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setSelectedCategory("all")}
-          >
-            All Categories
-          </Button>
-          {Object.entries(categoryLabels).map(([key, label]) => (
-            <Button
-              key={key}
-              variant={selectedCategory === key ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedCategory(key)}
-            >
-              {label}
-            </Button>
-          ))}
-        </div>
-
-        {/* Roadmap Grid */}
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredItems.map((item) => (
-              <RoadmapCard key={item.id} item={item} />
-            ))}
-          </div>
-
-          {filteredItems.length === 0 && (
-            <div className="text-center py-16">
-              <p className="text-muted-foreground text-lg">
-                No features match your filters
-              </p>
+      {/* Stats Bar - Only show in grid mode */}
+      {viewMode === "grid" && (
+        <div className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-center gap-8 py-4 overflow-x-auto">
+              <StatusButton
+                label="All Features"
+                count={statusCounts.all}
+                active={selectedStatus === "all"}
+                onClick={() => setSelectedStatus("all")}
+              />
+              <StatusButton
+                label="Completed"
+                count={statusCounts.completed}
+                active={selectedStatus === "completed"}
+                onClick={() => setSelectedStatus("completed")}
+                className="text-green-600 dark:text-green-400"
+              />
+              <StatusButton
+                label="In Progress"
+                count={statusCounts.in_progress}
+                active={selectedStatus === "in_progress"}
+                onClick={() => setSelectedStatus("in_progress")}
+                className="text-blue-600 dark:text-blue-400"
+              />
+              <StatusButton
+                label="Planned"
+                count={statusCounts.planned}
+                active={selectedStatus === "planned"}
+                onClick={() => setSelectedStatus("planned")}
+                className="text-purple-600 dark:text-purple-400"
+              />
             </div>
-          )}
+          </div>
         </div>
+      )}
+
+      {/* Main Content Area */}
+      <div className="container mx-auto px-4 py-8">
+        {viewMode === "list" ? (
+          <div className="max-w-4xl mx-auto">
+            <SimpleRoadmapList />
+          </div>
+        ) : (
+          <>
+            {/* Category Filters */}
+            <div className="flex flex-wrap gap-2 justify-center mb-12">
+              <Button
+                variant={selectedCategory === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedCategory("all")}
+              >
+                All Categories
+              </Button>
+              {Object.entries(categoryLabels).map(([key, label]) => (
+                <Button
+                  key={key}
+                  variant={selectedCategory === key ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedCategory(key)}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+
+            {/* Roadmap Grid */}
+            <div className="max-w-7xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredItems.map((item) => (
+                  <RoadmapCard key={item.id} item={item} />
+                ))}
+              </div>
+
+              {filteredItems.length === 0 && (
+                <div className="text-center py-16">
+                  <p className="text-muted-foreground text-lg">
+                    No features match your filters
+                  </p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

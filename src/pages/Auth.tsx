@@ -81,11 +81,68 @@ const Auth = () => {
   }, [navigate]);
 
   const handleVote = async (itemId: string, voteType: 'upvote' | 'downvote') => {
-    // Check if user already voted on this item
-    if (userVotes[itemId]) {
+    const existingVote = userVotes[itemId];
+    
+    // If clicking the same vote type, remove the vote (unvote)
+    if (existingVote === voteType) {
+      // Optimistic update - decrease the count
+      setRoadmapItems(items => {
+        const updated = items.map(item => {
+          if (item.id === itemId) {
+            return {
+              ...item,
+              upvotes: voteType === 'upvote' ? Math.max(0, (item.upvotes || 0) - 1) : item.upvotes,
+              downvotes: voteType === 'downvote' ? Math.max(0, (item.downvotes || 0) - 1) : item.downvotes,
+            };
+          }
+          return item;
+        });
+        
+        return updated.sort((a, b) => {
+          const aCompleted = a.status === 'completed' ? 1 : 0;
+          const bCompleted = b.status === 'completed' ? 1 : 0;
+          
+          if (aCompleted !== bCompleted) {
+            return aCompleted - bCompleted;
+          }
+          
+          const aVotes = (a.upvotes || 0) - (a.downvotes || 0);
+          const bVotes = (b.upvotes || 0) - (b.downvotes || 0);
+          return bVotes - aVotes;
+        });
+      });
+
+      // Remove vote from localStorage
+      const newVotes = { ...userVotes };
+      delete newVotes[itemId];
+      setUserVotes(newVotes);
+      localStorage.setItem('roadmap_votes', JSON.stringify(newVotes));
+
+      toast({
+        title: "Vote removed",
+        description: "Your vote has been removed.",
+      });
+
+      // Sync with server
+      try {
+        await fetch('https://efdqqnubowgwsnwvlalp.supabase.co/functions/v1/vote-roadmap', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ roadmapItemId: itemId, voteType, action: 'remove' }),
+        });
+      } catch (error) {
+        console.error('Failed to sync unvote with server:', error);
+      }
+      return;
+    }
+    
+    // If clicking different vote type, show error
+    if (existingVote && existingVote !== voteType) {
       toast({
         title: "Already voted",
-        description: "You've already voted on this feature.",
+        description: "Remove your current vote first to change it.",
         variant: "destructive",
       });
       return;
@@ -412,8 +469,7 @@ const Auth = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => handleVote(item.id, 'upvote')}
-                        disabled={!!userVotes[item.id]}
-                        className={`gap-1 ${userVotes[item.id] === 'upvote' ? 'bg-primary/10 border-primary' : ''}`}
+                        className={`gap-1 transition-all ${userVotes[item.id] === 'upvote' ? 'bg-primary/10 border-primary' : ''}`}
                       >
                         <ThumbsUp className="h-3 w-3" />
                         {item.upvotes || 0}
@@ -422,8 +478,7 @@ const Auth = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => handleVote(item.id, 'downvote')}
-                        disabled={!!userVotes[item.id]}
-                        className={`gap-1 ${userVotes[item.id] === 'downvote' ? 'bg-destructive/10 border-destructive' : ''}`}
+                        className={`gap-1 transition-all ${userVotes[item.id] === 'downvote' ? 'bg-destructive/10 border-destructive' : ''}`}
                       >
                         <ThumbsDown className="h-3 w-3" />
                         {item.downvotes || 0}

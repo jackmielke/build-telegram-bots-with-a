@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { roadmapItemId, voteType } = await req.json();
+    const { roadmapItemId, voteType, action } = await req.json();
 
     if (!roadmapItemId || !['upvote', 'downvote'].includes(voteType)) {
       return new Response(
@@ -40,10 +40,17 @@ serve(async (req) => {
       );
     }
 
-    // Update vote count
-    const updateData = voteType === 'upvote'
-      ? { upvotes: (currentItem.upvotes || 0) + 1 }
-      : { downvotes: (currentItem.downvotes || 0) + 1 };
+    // Update vote count based on action
+    let updateData;
+    if (action === 'remove') {
+      updateData = voteType === 'upvote'
+        ? { upvotes: Math.max(0, (currentItem.upvotes || 0) - 1) }
+        : { downvotes: Math.max(0, (currentItem.downvotes || 0) - 1) };
+    } else {
+      updateData = voteType === 'upvote'
+        ? { upvotes: (currentItem.upvotes || 0) + 1 }
+        : { downvotes: (currentItem.downvotes || 0) + 1 };
+    }
 
     const { data, error } = await supabase
       .from('product_roadmap')

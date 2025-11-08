@@ -46,20 +46,35 @@ const Auth = () => {
 
     // Fetch roadmap items
     const fetchRoadmap = async () => {
+      const statuses = ['completed', 'in_progress', 'planned'] as const;
       const { data, error } = await supabase
         .from('product_roadmap')
         .select('*')
-        .in('status', ['completed', 'in_progress', 'planned']);
+        .in('status', statuses as unknown as string[]);
       
-      if (error) {
-        console.error('Error fetching roadmap:', error);
-        return;
+      let items: any[] | null = data ?? null;
+
+      if (error || !data) {
+        console.error('Error fetching roadmap (direct):', error);
+        try {
+          const { data: fnData, error: fnError } = await supabase.functions.invoke('public-roadmap', {
+            body: { statuses },
+          });
+          if (fnError) {
+            console.error('Error fetching roadmap via edge function:', fnError);
+            return;
+          }
+          items = (fnData as any)?.items ?? [];
+        } catch (e) {
+          console.error('Unexpected error invoking public-roadmap:', e);
+          return;
+        }
       }
       
-      if (data) {
-        console.log('Fetched roadmap items:', data.length);
+      if (items) {
+        console.log('Fetched roadmap items:', items.length);
         // Sort: non-completed items first (by votes), then completed items (by votes)
-        const sorted = data.sort((a, b) => {
+        const sorted = items.sort((a, b) => {
           const aCompleted = a.status === 'completed' ? 1 : 0;
           const bCompleted = b.status === 'completed' ? 1 : 0;
           
@@ -74,7 +89,7 @@ const Auth = () => {
           return bVotes - aVotes;
         });
         
-        setRoadmapItems(sorted);
+        setRoadmapItems(sorted as any);
       }
     };
     fetchRoadmap();

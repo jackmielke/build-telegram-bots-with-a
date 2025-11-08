@@ -57,3 +57,6 @@ verify_jwt = true
 
 [functions.vote-roadmap]
 verify_jwt = false
+
+[functions.public-roadmap]
+verify_jwt = false

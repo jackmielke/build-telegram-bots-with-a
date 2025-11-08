@@ -91,6 +91,46 @@ const Auth = () => {
       return;
     }
 
+    // Optimistic update - update UI immediately
+    setRoadmapItems(items => {
+      const updated = items.map(item => {
+        if (item.id === itemId) {
+          return {
+            ...item,
+            upvotes: voteType === 'upvote' ? (item.upvotes || 0) + 1 : item.upvotes,
+            downvotes: voteType === 'downvote' ? (item.downvotes || 0) + 1 : item.downvotes,
+          };
+        }
+        return item;
+      });
+      
+      // Re-sort after optimistic update
+      return updated.sort((a, b) => {
+        const aCompleted = a.status === 'completed' ? 1 : 0;
+        const bCompleted = b.status === 'completed' ? 1 : 0;
+        
+        if (aCompleted !== bCompleted) {
+          return aCompleted - bCompleted;
+        }
+        
+        const aVotes = (a.upvotes || 0) - (a.downvotes || 0);
+        const bVotes = (b.upvotes || 0) - (b.downvotes || 0);
+        return bVotes - aVotes;
+      });
+    });
+
+    // Save vote to localStorage immediately
+    const newVotes = { ...userVotes, [itemId]: voteType };
+    setUserVotes(newVotes);
+    localStorage.setItem('roadmap_votes', JSON.stringify(newVotes));
+
+    // Show success toast immediately
+    toast({
+      title: "Vote recorded!",
+      description: `Thanks for your ${voteType === 'upvote' ? 'support' : 'feedback'}!`,
+    });
+
+    // Sync with server in background
     try {
       const response = await fetch('https://efdqqnubowgwsnwvlalp.supabase.co/functions/v1/vote-roadmap', {
         method: 'POST',
@@ -100,48 +140,23 @@ const Auth = () => {
         body: JSON.stringify({ roadmapItemId: itemId, voteType }),
       });
 
-      if (!response.ok) throw new Error('Failed to vote');
+      if (!response.ok) {
+        throw new Error('Failed to sync vote');
+      }
 
       const result = await response.json();
-
-      // Update local state and re-sort
-      setRoadmapItems(items => {
-        const updated = items.map(item =>
+      
+      // Update with actual server values
+      setRoadmapItems(items =>
+        items.map(item =>
           item.id === itemId
             ? { ...item, upvotes: result.upvotes, downvotes: result.downvotes }
             : item
-        );
-        
-        // Re-sort after vote update
-        return updated.sort((a, b) => {
-          const aCompleted = a.status === 'completed' ? 1 : 0;
-          const bCompleted = b.status === 'completed' ? 1 : 0;
-          
-          if (aCompleted !== bCompleted) {
-            return aCompleted - bCompleted;
-          }
-          
-          const aVotes = (a.upvotes || 0) - (a.downvotes || 0);
-          const bVotes = (b.upvotes || 0) - (b.downvotes || 0);
-          return bVotes - aVotes;
-        });
-      });
-
-      // Save vote to localStorage
-      const newVotes = { ...userVotes, [itemId]: voteType };
-      setUserVotes(newVotes);
-      localStorage.setItem('roadmap_votes', JSON.stringify(newVotes));
-
-      toast({
-        title: "Vote recorded!",
-        description: `Thanks for your ${voteType === 'upvote' ? 'support' : 'feedback'}!`,
-      });
+        )
+      );
     } catch (error) {
-      toast({
-        title: "Failed to vote",
-        description: "Please try again later.",
-        variant: "destructive",
-      });
+      console.error('Failed to sync vote with server:', error);
+      // Don't show error to user since optimistic update already happened
     }
   };
 

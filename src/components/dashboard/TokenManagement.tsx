@@ -3,10 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Coins, ExternalLink, Rocket } from "lucide-react";
+import { Coins, ExternalLink, Rocket, TrendingUp } from "lucide-react";
 import { TokenLaunchDialog } from "./TokenLaunchDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { TokenAnalyticsDashboard } from "./token-analytics/TokenAnalyticsDashboard";
 
 interface TokenManagementProps {
   communityId: string;
@@ -16,6 +18,8 @@ interface TokenManagementProps {
 
 export const TokenManagement = ({ communityId, communityName, coverImageUrl }: TokenManagementProps) => {
   const [showLaunchDialog, setShowLaunchDialog] = useState(false);
+  const [selectedToken, setSelectedToken] = useState<any>(null);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   const { data: tokens, isLoading, refetch } = useQuery({
     queryKey: ['bot-tokens', communityId],
@@ -130,6 +134,17 @@ export const TokenManagement = ({ communityId, communityName, coverImageUrl }: T
                         <Button
                           variant="outline"
                           size="sm"
+                          onClick={() => {
+                            setSelectedToken(token);
+                            setShowAnalytics(true);
+                          }}
+                        >
+                          <TrendingUp className="h-3 w-3 mr-1" />
+                          View Analytics
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => window.open(`https://basescan.org/tx/${token.transaction_hash}`, '_blank')}
                         >
                           <ExternalLink className="h-3 w-3 mr-1" />
@@ -170,6 +185,23 @@ export const TokenManagement = ({ communityId, communityName, coverImageUrl }: T
         communityName={communityName}
         coverImageUrl={coverImageUrl}
       />
+
+      <Dialog open={showAnalytics} onOpenChange={setShowAnalytics}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Token Analytics - {selectedToken?.token_name}</DialogTitle>
+          </DialogHeader>
+          {selectedToken && (
+            <TokenAnalyticsDashboard
+              tokenAddress={selectedToken.token_address}
+              tokenName={selectedToken.token_name}
+              tokenSymbol={selectedToken.token_symbol}
+              chainId={selectedToken.chain_id}
+              transactionHash={selectedToken.transaction_hash}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

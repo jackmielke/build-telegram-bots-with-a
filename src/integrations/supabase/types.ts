@@ -166,6 +166,71 @@ export type Database = {
           },
         ]
       }
+      bot_templates: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          difficulty_level: string | null
+          estimated_setup_time: number | null
+          example_interactions: string[] | null
+          id: string
+          is_featured: boolean | null
+          long_description: string | null
+          name: string
+          tags: string[] | null
+          template_config: Json
+          thumbnail_url: string | null
+          updated_at: string
+          use_count: number | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          difficulty_level?: string | null
+          estimated_setup_time?: number | null
+          example_interactions?: string[] | null
+          id?: string
+          is_featured?: boolean | null
+          long_description?: string | null
+          name: string
+          tags?: string[] | null
+          template_config?: Json
+          thumbnail_url?: string | null
+          updated_at?: string
+          use_count?: number | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          difficulty_level?: string | null
+          estimated_setup_time?: number | null
+          example_interactions?: string[] | null
+          id?: string
+          is_featured?: boolean | null
+          long_description?: string | null
+          name?: string
+          tags?: string[] | null
+          template_config?: Json
+          thumbnail_url?: string | null
+          updated_at?: string
+          use_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bot_tokens: {
         Row: {
           chain_id: number

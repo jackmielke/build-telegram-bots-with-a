@@ -46,9 +46,8 @@ const Auth = () => {
       const { data } = await supabase
         .from('product_roadmap')
         .select('*')
-        .in('status', ['completed', 'in_progress'])
-        .order('order_index')
-        .limit(6);
+        .in('status', ['completed', 'in_progress', 'planned'])
+        .order('order_index');
       
       if (data) {
         setRoadmapItems(data);
@@ -244,24 +243,34 @@ const Auth = () => {
         </Card>
         </div>
 
+        {/* Separator */}
+        <div className="w-full max-w-4xl mx-auto my-16">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border/50"></div>
+            </div>
+            <div className="relative flex justify-center">
+              <div className="bg-background px-6 py-2">
+                <Sparkles className="h-6 w-6 text-primary/60" />
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Product Roadmap Section */}
         <div className="max-w-7xl mx-auto pb-20 relative z-10">
           <div className="text-center mb-12 space-y-4">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-sm font-medium mb-4">
-              <Sparkles className="h-4 w-4 text-primary" />
-              Product Roadmap
-            </div>
-            <h2 className="text-4xl md:text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              Building the Future
+            <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-primary-glow to-primary bg-clip-text text-transparent">
+              What We're Building
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               See what we're building right now and what's coming next
             </p>
           </div>
 
-          {/* Featured Roadmap Items */}
+          {/* Roadmap Items */}
           {roadmapItems.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {roadmapItems.map((item) => (
                 <Card 
                   key={item.id} 
@@ -274,10 +283,15 @@ const Auth = () => {
                           <CheckCircle2 className="h-3 w-3" />
                           Live
                         </Badge>
-                      ) : (
+                      ) : item.status === 'in_progress' ? (
                         <Badge variant="outline" className="gap-1 text-blue-600 dark:text-blue-400 border-blue-500/20 bg-blue-500/10">
                           <Zap className="h-3 w-3" />
                           Building
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="gap-1 text-purple-600 dark:text-purple-400 border-purple-500/20 bg-purple-500/10">
+                          <Sparkles className="h-3 w-3" />
+                          Planned
                         </Badge>
                       )}
                     </div>
@@ -293,19 +307,6 @@ const Auth = () => {
               ))}
             </div>
           )}
-
-          {/* View Full Roadmap CTA */}
-          <div className="text-center">
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={() => navigate('/roadmap')}
-              className="group hover:bg-primary/10 hover:border-primary"
-            >
-              View Full Roadmap
-              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-            </Button>
-          </div>
         </div>
       </div>
     </div>

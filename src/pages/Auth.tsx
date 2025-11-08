@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Zap, MessageSquare, BarChart3, Brain, Play, Sparkles, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Loader2, Zap, MessageSquare, BarChart3, Brain, Play, Sparkles, ArrowRight, CheckCircle2, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import vibeLogo from '@/assets/vibe-logo.png';
 
@@ -19,6 +19,8 @@ interface RoadmapItem {
   category: string;
   icon: string;
   estimated_timeline: string;
+  upvotes: number;
+  downvotes: number;
 }
 
 const Auth = () => {
@@ -28,6 +30,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [roadmapItems, setRoadmapItems] = useState<RoadmapItem[]>([]);
+  const [userVotes, setUserVotes] = useState<Record<string, 'upvote' | 'downvote'>>({});
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -54,7 +57,64 @@ const Auth = () => {
       }
     };
     fetchRoadmap();
+
+    // Load user votes from localStorage
+    const savedVotes = localStorage.getItem('roadmap_votes');
+    if (savedVotes) {
+      setUserVotes(JSON.parse(savedVotes));
+    }
   }, [navigate]);
+
+  const handleVote = async (itemId: string, voteType: 'upvote' | 'downvote') => {
+    // Check if user already voted on this item
+    if (userVotes[itemId]) {
+      toast({
+        title: "Already voted",
+        description: "You've already voted on this feature.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch('https://efdqqnubowgwsnwvlalp.supabase.co/functions/v1/vote-roadmap', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ roadmapItemId: itemId, voteType }),
+      });
+
+      if (!response.ok) throw new Error('Failed to vote');
+
+      const result = await response.json();
+
+      // Update local state
+      setRoadmapItems(items =>
+        items.map(item =>
+          item.id === itemId
+            ? { ...item, upvotes: result.upvotes, downvotes: result.downvotes }
+            : item
+        )
+      );
+
+      // Save vote to localStorage
+      const newVotes = { ...userVotes, [itemId]: voteType };
+      setUserVotes(newVotes);
+      localStorage.setItem('roadmap_votes', JSON.stringify(newVotes));
+
+      toast({
+        title: "Vote recorded!",
+        description: `Thanks for your ${voteType === 'upvote' ? 'support' : 'feedback'}!`,
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to vote",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -301,6 +361,29 @@ const Auth = () => {
                       <p className="text-sm text-muted-foreground line-clamp-3">
                         {item.description}
                       </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleVote(item.id, 'upvote')}
+                        disabled={!!userVotes[item.id]}
+                        className={`gap-1 ${userVotes[item.id] === 'upvote' ? 'bg-primary/10 border-primary' : ''}`}
+                      >
+                        <ThumbsUp className="h-3 w-3" />
+                        {item.upvotes || 0}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleVote(item.id, 'downvote')}
+                        disabled={!!userVotes[item.id]}
+                        className={`gap-1 ${userVotes[item.id] === 'downvote' ? 'bg-destructive/10 border-destructive' : ''}`}
+                      >
+                        <ThumbsDown className="h-3 w-3" />
+                        {item.downvotes || 0}
+                      </Button>
                     </div>
                   </div>
                 </Card>

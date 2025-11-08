@@ -1263,6 +1263,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           description: string
+          downvotes: number | null
           estimated_timeline: string | null
           icon: string | null
           id: string
@@ -1272,12 +1273,14 @@ export type Database = {
           tags: string[] | null
           title: string
           updated_at: string
+          upvotes: number | null
         }
         Insert: {
           category: string
           completed_at?: string | null
           created_at?: string
           description: string
+          downvotes?: number | null
           estimated_timeline?: string | null
           icon?: string | null
           id?: string
@@ -1287,12 +1290,14 @@ export type Database = {
           tags?: string[] | null
           title: string
           updated_at?: string
+          upvotes?: number | null
         }
         Update: {
           category?: string
           completed_at?: string | null
           created_at?: string
           description?: string
+          downvotes?: number | null
           estimated_timeline?: string | null
           icon?: string | null
           id?: string
@@ -1302,6 +1307,7 @@ export type Database = {
           tags?: string[] | null
           title?: string
           updated_at?: string
+          upvotes?: number | null
         }
         Relationships: []
       }

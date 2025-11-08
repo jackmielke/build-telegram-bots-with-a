@@ -10,8 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Rocket, ExternalLink } from "lucide-react";
+import { Loader2, Rocket, ExternalLink, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useQueryClient } from "@tanstack/react-query";
 
 const formSchema = z.object({
   tokenName: z.string().min(1, "Token name is required"),
@@ -39,6 +40,7 @@ export const TokenLaunchDialog = ({
   coverImageUrl,
 }: TokenLaunchDialogProps) => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isLaunching, setIsLaunching] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState("");
@@ -97,7 +99,7 @@ export const TokenLaunchDialog = ({
       }
 
       setCurrentStep("Step 1/4: Uploading image to IPFS...");
-      setProgress(10);
+      setProgress(25);
 
       const { data, error } = await supabase.functions.invoke('launch-token', {
         body: {
@@ -128,13 +130,18 @@ export const TokenLaunchDialog = ({
         description: `${values.tokenName} has been deployed on Base`,
       });
 
-      // Refresh after 3 seconds
+      // Invalidate and refetch tokens to show the new one
+      await queryClient.invalidateQueries({ queryKey: ['bot-tokens', communityId] });
+
+      // Close after 3 seconds
       setTimeout(() => {
         onOpenChange(false);
         form.reset();
         setIsLaunching(false);
         setProgress(0);
         setCurrentStep("");
+        setTransactionHash(null);
+        setImagePreview(null);
       }, 3000);
 
     } catch (error: any) {
@@ -220,7 +227,7 @@ export const TokenLaunchDialog = ({
                 name="userAddress"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Your Wallet Address</FormLabel>
+                    <FormLabel>Your Wallet Address (Base Network)</FormLabel>
                     <FormControl>
                       <Input 
                         placeholder="0x..." 
@@ -228,7 +235,7 @@ export const TokenLaunchDialog = ({
                       />
                     </FormControl>
                     <FormDescription>
-                      Ethereum address that will own the token
+                      Base-compatible Ethereum address that will receive 35% of token supply
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -261,9 +268,21 @@ export const TokenLaunchDialog = ({
               </FormItem>
 
               <Alert>
-                <AlertDescription className="text-sm">
-                  🎉 <strong>Gasless Launch:</strong> Your platform sponsors the gas fees! 
-                  Token will be deployed on Base (chainId: 8453) using the Vibe Residency template.
+                <Info className="h-4 w-4" />
+                <AlertDescription className="text-sm space-y-2">
+                  <div>
+                    <strong>🎉 Gasless Launch:</strong> Your platform sponsors the gas fees!
+                  </div>
+                  <div className="pt-2 border-t">
+                    <strong>Token Distribution:</strong>
+                    <ul className="list-disc list-inside mt-1 space-y-1 text-xs">
+                      <li><strong>65%</strong> - Allocated by the Vibe Residency template (preset)</li>
+                      <li><strong>35%</strong> - Goes to your wallet address (beneficiary)</li>
+                    </ul>
+                  </div>
+                  <div className="pt-2 text-xs text-muted-foreground">
+                    Deploying on Base Network (chainId: 8453)
+                  </div>
                 </AlertDescription>
               </Alert>
 

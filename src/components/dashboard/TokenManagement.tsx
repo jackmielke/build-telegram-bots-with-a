@@ -17,7 +17,7 @@ interface TokenManagementProps {
 export const TokenManagement = ({ communityId, communityName, coverImageUrl }: TokenManagementProps) => {
   const [showLaunchDialog, setShowLaunchDialog] = useState(false);
 
-  const { data: tokens, isLoading } = useQuery({
+  const { data: tokens, isLoading, refetch } = useQuery({
     queryKey: ['bot-tokens', communityId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -29,6 +29,8 @@ export const TokenManagement = ({ communityId, communityName, coverImageUrl }: T
       if (error) throw error;
       return data;
     },
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
 
   const formatAddress = (address: string) => {
@@ -84,7 +86,7 @@ export const TokenManagement = ({ communityId, communityName, coverImageUrl }: T
                             className="w-16 h-16 rounded-lg object-cover"
                           />
                         )}
-                        <div className="space-y-2">
+                         <div className="space-y-2">
                           <div>
                             <h3 className="font-semibold text-lg">{token.token_name}</h3>
                             <p className="text-sm text-muted-foreground">
@@ -96,12 +98,30 @@ export const TokenManagement = ({ communityId, communityName, coverImageUrl }: T
                               {token.token_description}
                             </p>
                           )}
-                          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                            <span>Address: {formatAddress(token.token_address)}</span>
-                            <span>•</span>
-                            <span>Chain: Base ({token.chain_id})</span>
-                            <span>•</span>
-                            <span>Launched: {formatDate(token.created_at)}</span>
+                          <div className="space-y-1 text-xs">
+                            <div className="flex flex-wrap gap-2 text-muted-foreground">
+                              <span>Address: {formatAddress(token.token_address)}</span>
+                              <span>•</span>
+                              <span>Chain: Base ({token.chain_id})</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2 text-muted-foreground">
+                              <span>Launched: {formatDate(token.created_at)}</span>
+                            </div>
+                            {token.launch_metadata && (
+                              <div className="pt-1 border-t mt-2">
+                                <p className="text-xs font-medium text-foreground mb-1">Distribution:</p>
+                                <div className="space-y-0.5">
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="outline" className="text-xs">65%</Badge>
+                                    <span className="text-muted-foreground">Template Allocation</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="outline" className="text-xs">35%</Badge>
+                                    <span className="text-muted-foreground">Beneficiary ({formatAddress((token.launch_metadata as any)?.user_address || '')})</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>

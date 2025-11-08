@@ -49,11 +49,26 @@ const Auth = () => {
       const { data } = await supabase
         .from('product_roadmap')
         .select('*')
-        .in('status', ['completed', 'in_progress', 'planned'])
-        .order('order_index');
+        .in('status', ['completed', 'in_progress', 'planned']);
       
       if (data) {
-        setRoadmapItems(data);
+        // Sort: non-completed items first (by votes), then completed items (by votes)
+        const sorted = data.sort((a, b) => {
+          const aCompleted = a.status === 'completed' ? 1 : 0;
+          const bCompleted = b.status === 'completed' ? 1 : 0;
+          
+          // First sort by completion status
+          if (aCompleted !== bCompleted) {
+            return aCompleted - bCompleted;
+          }
+          
+          // Then sort by net votes (upvotes - downvotes)
+          const aVotes = (a.upvotes || 0) - (a.downvotes || 0);
+          const bVotes = (b.upvotes || 0) - (b.downvotes || 0);
+          return bVotes - aVotes;
+        });
+        
+        setRoadmapItems(sorted);
       }
     };
     fetchRoadmap();
@@ -89,14 +104,28 @@ const Auth = () => {
 
       const result = await response.json();
 
-      // Update local state
-      setRoadmapItems(items =>
-        items.map(item =>
+      // Update local state and re-sort
+      setRoadmapItems(items => {
+        const updated = items.map(item =>
           item.id === itemId
             ? { ...item, upvotes: result.upvotes, downvotes: result.downvotes }
             : item
-        )
-      );
+        );
+        
+        // Re-sort after vote update
+        return updated.sort((a, b) => {
+          const aCompleted = a.status === 'completed' ? 1 : 0;
+          const bCompleted = b.status === 'completed' ? 1 : 0;
+          
+          if (aCompleted !== bCompleted) {
+            return aCompleted - bCompleted;
+          }
+          
+          const aVotes = (a.upvotes || 0) - (a.downvotes || 0);
+          const bVotes = (b.upvotes || 0) - (b.downvotes || 0);
+          return bVotes - aVotes;
+        });
+      });
 
       // Save vote to localStorage
       const newVotes = { ...userVotes, [itemId]: voteType };

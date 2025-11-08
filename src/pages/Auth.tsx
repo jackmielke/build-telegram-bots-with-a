@@ -46,12 +46,18 @@ const Auth = () => {
 
     // Fetch roadmap items
     const fetchRoadmap = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('product_roadmap')
         .select('*')
         .in('status', ['completed', 'in_progress', 'planned']);
       
+      if (error) {
+        console.error('Error fetching roadmap:', error);
+        return;
+      }
+      
       if (data) {
+        console.log('Fetched roadmap items:', data.length);
         // Sort: non-completed items first (by votes), then completed items (by votes)
         const sorted = data.sort((a, b) => {
           const aCompleted = a.status === 'completed' ? 1 : 0;

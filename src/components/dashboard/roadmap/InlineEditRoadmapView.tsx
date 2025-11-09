@@ -43,6 +43,7 @@ const categoryOptions = [
 export function InlineEditRoadmapView() {
   const [editingField, setEditingField] = useState<{ id: string; field: string } | null>(null);
   const [tempValue, setTempValue] = useState<string>("");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const queryClient = useQueryClient();
 
   const { data: items = [], isLoading } = useQuery({
@@ -146,9 +147,21 @@ export function InlineEditRoadmapView() {
     return <div className="text-center py-8 text-muted-foreground">Loading...</div>;
   }
 
+  const filteredItems = items.filter(item => {
+    if (selectedStatus !== "all" && item.status !== selectedStatus) return false;
+    return true;
+  });
+
+  const statusCounts = {
+    all: items.length,
+    completed: items.filter(i => i.status === "completed").length,
+    in_progress: items.filter(i => i.status === "in_progress").length,
+    planned: items.filter(i => i.status === "planned").length,
+  };
+
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center mb-6">
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Roadmap Items</h2>
         <Button onClick={() => addMutation.mutate()} size="sm" className="gap-2">
           <Plus className="h-4 w-4" />
@@ -156,8 +169,46 @@ export function InlineEditRoadmapView() {
         </Button>
       </div>
 
+      {/* Status Filters */}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant={selectedStatus === "all" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setSelectedStatus("all")}
+        >
+          All ({statusCounts.all})
+        </Button>
+        <Button
+          variant={selectedStatus === "completed" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setSelectedStatus("completed")}
+          className={cn(selectedStatus === "completed" && "bg-green-600 hover:bg-green-700")}
+        >
+          <CheckCircle2 className="h-4 w-4 mr-1" />
+          Completed ({statusCounts.completed})
+        </Button>
+        <Button
+          variant={selectedStatus === "in_progress" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setSelectedStatus("in_progress")}
+          className={cn(selectedStatus === "in_progress" && "bg-blue-600 hover:bg-blue-700")}
+        >
+          <Clock className="h-4 w-4 mr-1" />
+          In Progress ({statusCounts.in_progress})
+        </Button>
+        <Button
+          variant={selectedStatus === "planned" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setSelectedStatus("planned")}
+          className={cn(selectedStatus === "planned" && "bg-purple-600 hover:bg-purple-700")}
+        >
+          <Sparkles className="h-4 w-4 mr-1" />
+          Planned ({statusCounts.planned})
+        </Button>
+      </div>
+
       <div className="space-y-2">
-        {items.map((item) => {
+        {filteredItems.map((item) => {
           const statusConfig = statusOptions.find(s => s.value === item.status);
           const StatusIcon = statusConfig?.icon || Sparkles;
 
@@ -281,29 +332,6 @@ export function InlineEditRoadmapView() {
                     </Badge>
                   )}
 
-                  {/* Category */}
-                  {editingField?.id === item.id && editingField?.field === 'category' ? (
-                    <select
-                      autoFocus
-                      value={tempValue}
-                      onChange={(e) => setTempValue(e.target.value)}
-                      onBlur={() => saveEdit(item.id, 'category')}
-                      className="bg-background border border-primary rounded px-2 py-1 focus:outline-none"
-                    >
-                      {categoryOptions.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <Badge
-                      variant="secondary"
-                      className="cursor-pointer hover:bg-muted"
-                      onClick={() => startEdit(item.id, 'category', item.category)}
-                    >
-                      {categoryOptions.find(c => c.value === item.category)?.label}
-                    </Badge>
-                  )}
-
                   {/* Timeline */}
                   {editingField?.id === item.id && editingField?.field === 'estimated_timeline' ? (
                     <input
@@ -362,6 +390,12 @@ export function InlineEditRoadmapView() {
           );
         })}
       </div>
+
+      {filteredItems.length === 0 && items.length > 0 && (
+        <div className="text-center py-12 text-muted-foreground">
+          No roadmap items match the selected filter.
+        </div>
+      )}
 
       {items.length === 0 && (
         <div className="text-center py-12 text-muted-foreground">

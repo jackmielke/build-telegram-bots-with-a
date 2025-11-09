@@ -296,10 +296,10 @@ const Auth = () => {
           <div className="space-y-3">
             <div className="text-sm font-semibold text-primary mb-2">VIBE AI</div>
             <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
-              Build Intelligent Telegram Bots & Communities
+              The Easiest Way to Build Telegram Bots in Minutes
             </h1>
             <p className="text-xl text-muted-foreground">
-              No code required. AI agents that learn, remember, and improve daily.
+              Create intelligent AI agents with memory, custom tools, and analytics—no code required.
             </p>
           </div>
 
@@ -445,17 +445,18 @@ const Auth = () => {
           {roadmapItems.filter(item => item.status === 'completed').length > 0 && (
             <div>
               <div className="text-center mb-12 space-y-4">
-                <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-green-600 via-green-500 to-green-600 dark:from-green-400 dark:via-green-300 dark:to-green-400 bg-clip-text text-transparent">
+                <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-accent to-primary-glow bg-clip-text text-transparent">
                   Live Features
                 </h2>
                 <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                  Features that are live and ready to use right now
+                  Powerful capabilities available right now
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
                 {roadmapItems
                   .filter(item => item.status === 'completed')
+                  .slice(0, 6)
                   .map((item) => (
                     <Card 
                       key={item.id} 
@@ -463,7 +464,7 @@ const Auth = () => {
                     >
                       <div className="space-y-4">
                         <div className="flex items-start justify-between gap-3">
-                          <Badge variant="outline" className="gap-1 text-green-600 dark:text-green-400 border-green-500/20 bg-green-500/10">
+                          <Badge variant="outline" className="gap-1 text-primary border-primary/20 bg-primary/10">
                             <CheckCircle2 className="h-3 w-3" />
                             Live
                           </Badge>

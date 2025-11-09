@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { RoadmapManager } from "@/components/dashboard/RoadmapManager";
 import { SimpleRoadmapList } from "@/components/dashboard/roadmap/SimpleRoadmapList";
+import { InlineEditRoadmapView } from "@/components/dashboard/roadmap/InlineEditRoadmapView";
 
 interface RoadmapItem {
   id: string;
@@ -80,7 +81,7 @@ export default function ProductRoadmap() {
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [isAdmin, setIsAdmin] = useState(false);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"inline" | "grid" | "list">("inline");
 
   useEffect(() => {
     fetchRoadmap();
@@ -156,10 +157,20 @@ export default function ProductRoadmap() {
               </div>
               <div className="flex items-center gap-1 border rounded-lg p-1 bg-background">
                 <Button
+                  variant={viewMode === "inline" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("inline")}
+                  className="px-3"
+                  title="Inline Edit"
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+                <Button
                   variant={viewMode === "grid" ? "secondary" : "ghost"}
                   size="sm"
                   onClick={() => setViewMode("grid")}
                   className="px-3"
+                  title="Grid View"
                 >
                   <LayoutGrid className="h-4 w-4" />
                 </Button>
@@ -168,6 +179,7 @@ export default function ProductRoadmap() {
                   size="sm"
                   onClick={() => setViewMode("list")}
                   className="px-3"
+                  title="List View"
                 >
                   <List className="h-4 w-4" />
                 </Button>
@@ -235,7 +247,11 @@ export default function ProductRoadmap() {
 
       {/* Main Content Area */}
       <div className="container mx-auto px-4 py-8">
-        {viewMode === "list" ? (
+        {viewMode === "inline" ? (
+          <div className="max-w-5xl mx-auto">
+            <InlineEditRoadmapView />
+          </div>
+        ) : viewMode === "list" ? (
           <div className="max-w-4xl mx-auto">
             <SimpleRoadmapList />
           </div>

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock, Sparkles, Pause, XCircle, Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, Clock, Sparkles, Pause, XCircle, Plus, Trash2, ThumbsUp, ThumbsDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -18,6 +18,8 @@ interface RoadmapItem {
   icon: string;
   tags: string[];
   order_index: number;
+  upvotes: number;
+  downvotes: number;
 }
 
 const statusOptions = [
@@ -354,36 +356,49 @@ export function InlineEditRoadmapView() {
                       {item.estimated_timeline}
                     </span>
                   )}
-                </div>
 
-                {/* Tags */}
-                <div>
-                  {editingField?.id === item.id && editingField?.field === 'tags' ? (
-                    <input
-                      autoFocus
-                      type="text"
-                      value={tempValue}
-                      onChange={(e) => setTempValue(e.target.value)}
-                      onBlur={() => saveEdit(item.id, 'tags')}
-                      placeholder="tag1, tag2, tag3"
-                      className="w-full bg-background border border-primary rounded px-2 py-1 focus:outline-none text-sm"
-                    />
-                  ) : (
-                    <div
-                      onClick={() => startEdit(item.id, 'tags', item.tags?.join(', ') || '')}
-                      className="flex flex-wrap gap-1 cursor-pointer hover:bg-muted/50 rounded px-2 py-1 -mx-2 transition-colors min-h-[32px]"
-                    >
-                      {item.tags && item.tags.length > 0 ? (
-                        item.tags.map((tag) => (
-                          <Badge key={tag} variant="outline" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))
-                      ) : (
-                        <span className="text-xs text-muted-foreground">Add tags...</span>
-                      )}
+                  {/* Upvotes/Downvotes */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 hover:bg-green-100 dark:hover:bg-green-900/20"
+                        onClick={() => updateMutation.mutate({ id: item.id, field: 'upvotes', value: item.upvotes + 1 })}
+                      >
+                        <ThumbsUp className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                      </Button>
+                      <span className="text-sm font-medium min-w-[20px] text-center">{item.upvotes || 0}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 hover:bg-muted"
+                        onClick={() => updateMutation.mutate({ id: item.id, field: 'upvotes', value: Math.max(0, item.upvotes - 1) })}
+                      >
+                        <span className="text-xs">−</span>
+                      </Button>
                     </div>
-                  )}
+
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 hover:bg-red-100 dark:hover:bg-red-900/20"
+                        onClick={() => updateMutation.mutate({ id: item.id, field: 'downvotes', value: item.downvotes + 1 })}
+                      >
+                        <ThumbsDown className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+                      </Button>
+                      <span className="text-sm font-medium min-w-[20px] text-center">{item.downvotes || 0}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 hover:bg-muted"
+                        onClick={() => updateMutation.mutate({ id: item.id, field: 'downvotes', value: Math.max(0, item.downvotes - 1) })}
+                      >
+                        <span className="text-xs">−</span>
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

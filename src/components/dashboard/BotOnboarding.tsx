@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Brain, Book, Shield, Sparkles, ArrowRight, ArrowLeft, Check, Zap, MessageSquare } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Brain, Book, Shield, Sparkles, ArrowRight, ArrowLeft, Check, Zap, MessageSquare, ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -22,6 +23,7 @@ interface BotOnboardingProps {
 const BotOnboarding = ({ open, onOpenChange, communityId, communityName, onComplete }: BotOnboardingProps) => {
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
+  const [showMoreTools, setShowMoreTools] = useState(false);
   const { toast } = useToast();
 
   // Step 1: System Prompt
@@ -291,74 +293,88 @@ const BotOnboarding = ({ open, onOpenChange, communityId, communityName, onCompl
               <CardContent className="pt-6 space-y-4">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Shield className="w-6 h-6 text-primary" />
+                    <Sparkles className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-lg">Bot Permissions</h3>
-                    <p className="text-sm text-muted-foreground">Configure what your bot can do</p>
+                    <h3 className="font-semibold text-lg">Bot Capabilities</h3>
+                    <p className="text-sm text-muted-foreground">Choose what your bot can do</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
-                    <div className="flex-1">
-                      <Label className="text-base font-medium">Respond in Group Chats</Label>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Allow bot to reply when mentioned in groups
-                      </p>
+                  {/* Core Tools - Always Visible */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-4 rounded-lg border border-primary/20 bg-primary/5">
+                      <div className="flex-1">
+                        <Label className="text-base font-medium">Save Memory</Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Allow bot to remember important information
+                        </p>
+                      </div>
+                      <Switch
+                        checked={permissions.saveMemory}
+                        onCheckedChange={(checked) => 
+                          setPermissions({ ...permissions, saveMemory: checked })
+                        }
+                      />
                     </div>
-                    <Switch
-                      checked={permissions.respondInGroups}
-                      onCheckedChange={(checked) => 
-                        setPermissions({ ...permissions, respondInGroups: checked })
-                      }
-                    />
+
+                    <div className="flex items-center justify-between p-4 rounded-lg border border-primary/20 bg-primary/5">
+                      <div className="flex-1">
+                        <Label className="text-base font-medium">Search Memory</Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Let bot search knowledge base to answer questions
+                        </p>
+                      </div>
+                      <Switch
+                        checked={permissions.searchMemory}
+                        onCheckedChange={(checked) => 
+                          setPermissions({ ...permissions, searchMemory: checked })
+                        }
+                      />
+                    </div>
                   </div>
 
-                  <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
-                    <div className="flex-1">
-                      <Label className="text-base font-medium">Search Memory</Label>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Let bot search knowledge base to answer questions
-                      </p>
-                    </div>
-                    <Switch
-                      checked={permissions.searchMemory}
-                      onCheckedChange={(checked) => 
-                        setPermissions({ ...permissions, searchMemory: checked })
-                      }
-                    />
-                  </div>
+                  {/* Additional Tools - Collapsible */}
+                  <Collapsible open={showMoreTools} onOpenChange={setShowMoreTools}>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" className="w-full justify-between">
+                        <span className="text-sm font-medium">View more tools</span>
+                        <ChevronDown className={`w-4 h-4 transition-transform ${showMoreTools ? 'rotate-180' : ''}`} />
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-3 pt-3">
+                      <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
+                        <div className="flex-1">
+                          <Label className="text-base font-medium">Respond in Group Chats</Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Allow bot to reply when mentioned in groups
+                          </p>
+                        </div>
+                        <Switch
+                          checked={permissions.respondInGroups}
+                          onCheckedChange={(checked) => 
+                            setPermissions({ ...permissions, respondInGroups: checked })
+                          }
+                        />
+                      </div>
 
-                  <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
-                    <div className="flex-1">
-                      <Label className="text-base font-medium">Save Memory</Label>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Allow bot to save important information for later
-                      </p>
-                    </div>
-                    <Switch
-                      checked={permissions.saveMemory}
-                      onCheckedChange={(checked) => 
-                        setPermissions({ ...permissions, saveMemory: checked })
-                      }
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
-                    <div className="flex-1">
-                      <Label className="text-base font-medium">Web Search</Label>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Enable bot to search the web for current information
-                      </p>
-                    </div>
-                    <Switch
-                      checked={permissions.webSearch}
-                      onCheckedChange={(checked) => 
-                        setPermissions({ ...permissions, webSearch: checked })
-                      }
-                    />
-                  </div>
+                      <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
+                        <div className="flex-1">
+                          <Label className="text-base font-medium">Web Search</Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Enable bot to search the web for current information
+                          </p>
+                        </div>
+                        <Switch
+                          checked={permissions.webSearch}
+                          onCheckedChange={(checked) => 
+                            setPermissions({ ...permissions, webSearch: checked })
+                          }
+                        />
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
                 </div>
               </CardContent>
             </Card>

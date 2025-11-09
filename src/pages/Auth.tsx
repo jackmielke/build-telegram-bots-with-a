@@ -296,10 +296,10 @@ const Auth = () => {
           <div className="space-y-3">
             <div className="text-sm font-semibold text-primary mb-2">VIBE AI</div>
             <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
-              Build Intelligent Telegram Bots and Communities
+              Build AI That Actually Understands You
             </h1>
             <p className="text-xl text-muted-foreground">
-              Modular AI that plugs into any tech stack and adds intelligence to every aspect of your life.
+              Create intelligent agents with memory, custom tools, and personalities—for Telegram and beyond.
             </p>
           </div>
 

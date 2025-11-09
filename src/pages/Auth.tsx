@@ -445,7 +445,7 @@ const Auth = () => {
           {roadmapItems.filter(item => item.status === 'completed').length > 0 && (
             <div>
               <div className="text-center mb-12 space-y-4">
-                <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-accent to-primary-glow bg-clip-text text-transparent">
+                <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
                   Live Features
                 </h2>
                 <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -456,7 +456,6 @@ const Auth = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
                 {roadmapItems
                   .filter(item => item.status === 'completed')
-                  .slice(0, 6)
                   .map((item) => (
                     <Card 
                       key={item.id} 

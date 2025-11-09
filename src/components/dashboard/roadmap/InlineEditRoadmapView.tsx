@@ -123,6 +123,24 @@ export function InlineEditRoadmapView() {
     },
   });
 
+  const voteMutation = useMutation({
+    mutationFn: async ({ roadmapItemId, voteType, action }: { roadmapItemId: string; voteType: 'upvote' | 'downvote'; action: 'add' | 'remove' }) => {
+      const { data, error } = await supabase.functions.invoke('vote-roadmap', {
+        body: { roadmapItemId, voteType, action }
+      });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roadmap-items'] });
+    },
+    onError: (error) => {
+      console.error('Vote error:', error);
+      toast.error('Failed to update vote');
+    },
+  });
+
   const startEdit = (id: string, field: string, currentValue: any) => {
     setEditingField({ id, field });
     setTempValue(typeof currentValue === 'object' ? JSON.stringify(currentValue) : String(currentValue));
@@ -364,7 +382,7 @@ export function InlineEditRoadmapView() {
                         variant="ghost"
                         size="sm"
                         className="h-7 w-7 p-0 hover:bg-green-100 dark:hover:bg-green-900/20"
-                        onClick={() => updateMutation.mutate({ id: item.id, field: 'upvotes', value: item.upvotes + 1 })}
+                        onClick={() => voteMutation.mutate({ roadmapItemId: item.id, voteType: 'upvote', action: 'add' })}
                       >
                         <ThumbsUp className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
                       </Button>
@@ -373,7 +391,7 @@ export function InlineEditRoadmapView() {
                         variant="ghost"
                         size="sm"
                         className="h-7 w-7 p-0 hover:bg-muted"
-                        onClick={() => updateMutation.mutate({ id: item.id, field: 'upvotes', value: Math.max(0, item.upvotes - 1) })}
+                        onClick={() => voteMutation.mutate({ roadmapItemId: item.id, voteType: 'upvote', action: 'remove' })}
                       >
                         <span className="text-xs">−</span>
                       </Button>
@@ -384,7 +402,7 @@ export function InlineEditRoadmapView() {
                         variant="ghost"
                         size="sm"
                         className="h-7 w-7 p-0 hover:bg-red-100 dark:hover:bg-red-900/20"
-                        onClick={() => updateMutation.mutate({ id: item.id, field: 'downvotes', value: item.downvotes + 1 })}
+                        onClick={() => voteMutation.mutate({ roadmapItemId: item.id, voteType: 'downvote', action: 'add' })}
                       >
                         <ThumbsDown className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
                       </Button>
@@ -393,7 +411,7 @@ export function InlineEditRoadmapView() {
                         variant="ghost"
                         size="sm"
                         className="h-7 w-7 p-0 hover:bg-muted"
-                        onClick={() => updateMutation.mutate({ id: item.id, field: 'downvotes', value: Math.max(0, item.downvotes - 1) })}
+                        onClick={() => voteMutation.mutate({ roadmapItemId: item.id, voteType: 'downvote', action: 'remove' })}
                       >
                         <span className="text-xs">−</span>
                       </Button>

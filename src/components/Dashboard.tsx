@@ -2,6 +2,8 @@ import React from 'react';
 import { Activity, Brain, Users, Zap, BarChart3, Settings, MessageSquare } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { InlineEditRoadmapView } from '@/components/dashboard/roadmap/InlineEditRoadmapView';
 import vibeLogo from '@/assets/vibe-logo.png';
 
 const Dashboard = () => {
@@ -68,6 +70,14 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Tabs */}
+      <Tabs defaultValue="features" className="w-full">
+        <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
+          <TabsTrigger value="features">Live Features</TabsTrigger>
+          <TabsTrigger value="roadmap">What We're Building</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="features" className="space-y-8 mt-8">
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         {stats.map((stat, index) => (
@@ -201,6 +211,14 @@ const Dashboard = () => {
           ))}
         </div>
       </div>
+        </TabsContent>
+
+        <TabsContent value="roadmap" className="mt-8">
+          <div className="max-w-5xl mx-auto">
+            <InlineEditRoadmapView />
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

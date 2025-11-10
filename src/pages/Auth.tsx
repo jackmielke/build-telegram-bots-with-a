@@ -249,7 +249,15 @@ const Auth = () => {
           email,
           password,
         });
-        if (error) throw error;
+        if (error) {
+          // Provide better messaging for login failures
+          if (error.message.includes('Invalid login credentials')) {
+            setError("There's no account with this email yet.");
+            setLoading(false);
+            return;
+          }
+          throw error;
+        }
         
         toast({
           title: "Welcome back!",
@@ -361,7 +369,24 @@ const Auth = () => {
           <CardContent className="space-y-6">
             {error && (
               <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription className="space-y-3">
+                  <div>{error}</div>
+                  {isLogin && error.includes("There's no account") && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setIsLogin(false);
+                        setError('');
+                      }}
+                      className="w-full"
+                    >
+                      Create an account instead
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  )}
+                </AlertDescription>
               </Alert>
             )}
 

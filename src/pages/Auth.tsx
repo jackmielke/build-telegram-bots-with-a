@@ -268,8 +268,9 @@ const Auth = () => {
         
         toast({
           title: "Account created!",
-          description: "Please check your email to verify your account.",
+          description: "You're all set! Redirecting to your dashboard...",
         });
+        navigate('/communities');
       }
     } catch (error: any) {
       setError(error.message);

@@ -5,29 +5,37 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Bot, ExternalLink, Loader2, Check, MessageSquare, Settings, Undo, Info, AlertCircle } from 'lucide-react';
+import { Bot, ExternalLink, Loader2, Check, Info, Sparkles, Search, Database, Globe, ArrowRight, Coins } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useNavigate } from 'react-router-dom';
+import { TokenLaunchDialog } from './TokenLaunchDialog';
 
 interface CreateBotWorkflowProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+type Step = 'setup' | 'creating' | 'success' | 'personality' | 'tools' | 'tokenize';
+
 export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps) => {
-  const [step, setStep] = useState<'setup' | 'creating' | 'success' | 'configure'>('setup');
+  const [step, setStep] = useState<Step>('setup');
   const [botToken, setBotToken] = useState('');
   const [creating, setCreating] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState('You are a helpful community assistant.');
   const [previousPrompt, setPreviousPrompt] = useState('');
   const [improvingPrompt, setImprovingPrompt] = useState(false);
-  const [introMessage, setIntroMessage] = useState("Hello! I'm here to help you and the community. Feel free to ask me anything!");
-  const [respondInPrivate, setRespondInPrivate] = useState(true);
-  const [respondInGroups, setRespondInGroups] = useState(false);
-  const [respondInSupergroups, setRespondInSupergroups] = useState(false);
+  
+  // Tool configuration
+  const [searchMemoryEnabled, setSearchMemoryEnabled] = useState(true);
+  const [addMemoryEnabled, setAddMemoryEnabled] = useState(true);
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
+  
+  // Tokenization
+  const [showTokenLaunch, setShowTokenLaunch] = useState(false);
+  const [wantsToken, setWantsToken] = useState<boolean | null>(null);
+  
   const [botDetails, setBotDetails] = useState<{
     name: string;
     username: string;
@@ -35,34 +43,9 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
     photoUrl: string | null;
     communityId: string;
   } | null>(null);
+  
   const { toast } = useToast();
   const navigate = useNavigate();
-
-  // Handler for group chat toggle with privacy mode warning
-  const handleGroupsToggle = (checked: boolean) => {
-    setRespondInGroups(checked);
-    if (checked) {
-      toast({
-        title: "Important: Privacy Mode Required",
-        description: "Make sure you've disabled privacy mode for your bot via BotFather, or else the bot will not be able to see messages in groups.",
-        variant: "default",
-        duration: 8000,
-      });
-    }
-  };
-
-  // Handler for supergroup toggle with privacy mode warning
-  const handleSupergroupsToggle = (checked: boolean) => {
-    setRespondInSupergroups(checked);
-    if (checked) {
-      toast({
-        title: "Important: Privacy Mode Required",
-        description: "Make sure you've disabled privacy mode for your bot via BotFather, or else the bot will not be able to see messages in supergroups.",
-        variant: "default",
-        duration: 8000,
-      });
-    }
-  };
 
   const handleSubmitToken = async () => {
     if (!botToken.trim()) {
@@ -286,9 +269,6 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
 
       // Set the system prompt from bot description
       setSystemPrompt(botDescription);
-      
-      // Set default intro message if none exists
-      setIntroMessage("Hello! I'm here to help you and the community. Feel free to ask me anything!");
 
       setStep('success');
 
@@ -347,15 +327,88 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
     }
   };
 
-  const handleUndoPrompt = () => {
-    if (previousPrompt) {
-      setSystemPrompt(previousPrompt);
-      setPreviousPrompt('');
+  const handleSavePersonality = async () => {
+    if (!botDetails) return;
+    
+    try {
+      setCreating(true);
+      
+      const { error } = await supabase
+        .from('communities')
+        .update({
+          agent_instructions: systemPrompt
+        })
+        .eq('id', botDetails.communityId);
+
+      if (error) throw error;
+
       toast({
-        title: "Prompt Restored",
-        description: "Reverted to previous version."
+        title: "Personality Saved!",
+        description: "Your bot's personality has been configured."
       });
+
+      setStep('tools');
+    } catch (error: any) {
+      toast({
+        title: "Save Failed",
+        description: error.message || "Failed to save personality.",
+        variant: "destructive"
+      });
+    } finally {
+      setCreating(false);
     }
+  };
+
+  const handleSaveTools = async () => {
+    if (!botDetails) return;
+    
+    try {
+      setCreating(true);
+      
+      const { error } = await supabase
+        .from('community_workflows')
+        .update({
+          configuration: {
+            search_chat_history: true,
+            search_memory: searchMemoryEnabled,
+            save_memory: addMemoryEnabled,
+            web_search: webSearchEnabled,
+            respond_in_groups: false,
+            respond_in_private: true
+          }
+        })
+        .eq('community_id', botDetails.communityId)
+        .eq('workflow_type', 'telegram_agent_tools');
+
+      if (error) throw error;
+
+      toast({
+        title: "Tools Configured!",
+        description: "Your bot's capabilities have been set up."
+      });
+
+      setStep('tokenize');
+    } catch (error: any) {
+      toast({
+        title: "Save Failed",
+        description: error.message || "Failed to save tools configuration.",
+        variant: "destructive"
+      });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleCompleteSetup = () => {
+    if (!botDetails) return;
+    
+    toast({
+      title: "Setup Complete! 🎉",
+      description: "Your bot is ready to use."
+    });
+
+    navigate(`/community/${botDetails.communityId}`);
+    handleClose();
   };
 
   const handleClose = () => {
@@ -365,413 +418,443 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
       setBotDetails(null);
       setSystemPrompt('You are a helpful community assistant.');
       setPreviousPrompt('');
-      setIntroMessage("Hello! I'm here to help you and the community. Feel free to ask me anything!");
-      setRespondInPrivate(true);
-      setRespondInGroups(false);
-      setRespondInSupergroups(false);
+      setSearchMemoryEnabled(true);
+      setAddMemoryEnabled(true);
+      setWebSearchEnabled(false);
+      setWantsToken(null);
+      setShowTokenLaunch(false);
       onOpenChange(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[550px]">
-        {step === 'setup' && (
-          <>
-            <DialogHeader className="text-center space-y-3 pb-2">
-              <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                <Bot className="w-7 h-7 text-primary" />
-              </div>
-              <DialogTitle className="text-2xl">
-                Create Your Telegram Bot
-              </DialogTitle>
-              <DialogDescription className="text-base">
-                Create your bot with BotFather, then paste the token below
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-5 py-2">
-              <div className="space-y-4">
-                <a 
-                  href="https://t.me/BotFather" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-primary hover:underline font-medium"
-                >
-                  Open BotFather
-                  <ExternalLink className="w-4 h-4" />
-                </a>
-
-                <Collapsible>
-                  <CollapsibleTrigger className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    <Info className="w-4 h-4" />
-                    Need help?
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-3 text-sm text-muted-foreground space-y-3 pl-6">
-                    <div className="space-y-2">
-                      <p className="font-medium text-foreground">
-                        ✨ Easiest way:
-                      </p>
-                      <p>
-                        Click <strong>"Open"</strong> in the bottom left of the BotFather chat to launch the Mini App, then create your bot there. It's the simplest method!
-                      </p>
-                    </div>
-                    
-                    <Collapsible>
-                      <CollapsibleTrigger className="flex items-center gap-2 text-sm hover:text-foreground transition-colors">
-                        <Info className="w-4 h-4" />
-                        If that didn't work, try this:
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="mt-2 space-y-2 pl-6">
-                        <p>
-                          Send <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/newbot</code> to @BotFather and follow the prompts to set your bot's name and username.
-                        </p>
-                        <p>
-                          You can also customize your bot's description and profile photo using <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/setdescription</code> and <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/setuserpic</code>.
-                        </p>
-                        <p>
-                          Once created, BotFather will give you an API token - paste it below.
-                        </p>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  </CollapsibleContent>
-                </Collapsible>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="bot_token" className="text-sm font-medium">Bot Token</Label>
-                <Input
-                  id="bot_token"
-                  value={botToken}
-                  onChange={(e) => setBotToken(e.target.value)}
-                  placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
-                  className="font-mono text-sm h-11"
-                />
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  The token should look like: <code className="font-mono bg-muted px-1 py-0.5 rounded">123456789:ABCdefGHI...</code>
-                </p>
-              </div>
-
-              <div className="flex justify-center pt-2">
-                <Button
-                  onClick={handleSubmitToken}
-                  disabled={creating || !botToken.trim()}
-                  className="gradient-primary"
-                  size="lg"
-                >
-                  Create Bot
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
-
-        {step === 'creating' && (
-          <>
-            <DialogHeader className="text-center space-y-3">
-              <DialogTitle className="text-2xl flex items-center justify-center gap-2">
-                <Loader2 className="w-6 h-6 text-primary animate-spin" />
-                Creating Your Bot...
-              </DialogTitle>
-            </DialogHeader>
-
-            <div className="py-12 text-center space-y-5">
-              <div className="flex justify-center">
-                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
-                  <Bot className="w-10 h-10 text-primary" />
+    <>
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="sm:max-w-[550px]">
+          {step === 'setup' && (
+            <>
+              <DialogHeader className="text-center space-y-3 pb-2">
+                <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Bot className="w-7 h-7 text-primary" />
                 </div>
-              </div>
-              <p className="text-base text-muted-foreground">
-                Setting up your bot and creating your community...
-              </p>
-            </div>
-          </>
-        )}
+                <DialogTitle className="text-2xl">
+                  Create Your Telegram Bot
+                </DialogTitle>
+                <DialogDescription className="text-base">
+                  Create your bot with BotFather, then paste the token below
+                </DialogDescription>
+              </DialogHeader>
 
-        {step === 'success' && botDetails && (
-          <>
-            <DialogHeader className="text-center space-y-3 pb-2">
-              <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                <Check className="w-7 h-7 text-primary" />
-              </div>
-              <DialogTitle className="text-2xl">
-                Bot Created Successfully!
-              </DialogTitle>
-            </DialogHeader>
+              <div className="space-y-5 py-2">
+                <div className="space-y-4">
+                  <a 
+                    href="https://t.me/BotFather" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-primary hover:underline font-medium"
+                  >
+                    Open BotFather
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
 
-            <div className="space-y-6 py-4">
-              <div className="flex flex-col items-center space-y-4">
-                {botDetails.photoUrl ? (
-                  <img 
-                    src={botDetails.photoUrl} 
-                    alt={botDetails.name}
-                    className="w-24 h-24 rounded-full object-cover border-2 border-primary/20"
+                  <Collapsible>
+                    <CollapsibleTrigger className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                      <Info className="w-4 h-4" />
+                      Need help?
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="mt-3 text-sm text-muted-foreground space-y-3 pl-6">
+                      <div className="space-y-2">
+                        <p className="font-medium text-foreground">
+                          ✨ Easiest way:
+                        </p>
+                        <p>
+                          Click <strong>"Open"</strong> in the bottom left of the BotFather chat to launch the Mini App, then create your bot there. It's the simplest method!
+                        </p>
+                      </div>
+                      
+                      <Collapsible>
+                        <CollapsibleTrigger className="flex items-center gap-2 text-sm hover:text-foreground transition-colors">
+                          <Info className="w-4 h-4" />
+                          If that didn't work, try this:
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="mt-2 space-y-2 pl-6">
+                          <p>
+                            Send <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">/newbot</code> to @BotFather and follow the prompts to set your bot's name and username.
+                          </p>
+                          <p>
+                            Once created, BotFather will give you an API token - paste it below.
+                          </p>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="bot_token" className="text-sm font-medium">Bot Token</Label>
+                  <Input
+                    id="bot_token"
+                    value={botToken}
+                    onChange={(e) => setBotToken(e.target.value)}
+                    placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
+                    className="font-mono text-sm h-11"
                   />
-                ) : (
-                  <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Bot className="w-12 h-12 text-primary" />
-                  </div>
-                )}
-                
-                <div className="text-center space-y-2">
-                  <h3 className="text-xl font-semibold">{botDetails.name}</h3>
-                  <p className="text-sm text-muted-foreground">@{botDetails.username}</p>
-                  <p className="text-sm text-muted-foreground max-w-md">
-                    {botDetails.description}
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    The token should look like: <code className="font-mono bg-muted px-1 py-0.5 rounded">123456789:ABCdefGHI...</code>
                   </p>
                 </div>
-              </div>
 
-              <div className="flex justify-center pt-2">
-                <Button 
-                  onClick={() => setStep('configure')} 
-                  size="lg" 
-                  className="gradient-primary hover:shadow-glow"
-                >
-                  Configure Bot
-                  <ExternalLink className="w-4 h-4 ml-2" />
-                </Button>
+                <div className="flex justify-center pt-2">
+                  <Button
+                    onClick={handleSubmitToken}
+                    disabled={creating || !botToken.trim()}
+                    className="gradient-primary"
+                    size="lg"
+                  >
+                    Create Bot
+                  </Button>
+                </div>
               </div>
-            </div>
-          </>
-        )}
-        {step === 'configure' && botDetails && (
-          <>
-            <DialogHeader className="text-center space-y-3 pb-2">
-              <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                <Settings className="w-7 h-7 text-primary" />
-              </div>
-              <DialogTitle className="text-2xl">
-                Configure Your Bot
-              </DialogTitle>
-              <DialogDescription className="text-base">
-                Set up how your bot responds and behaves
-              </DialogDescription>
-            </DialogHeader>
+            </>
+          )}
 
-            <ScrollArea className="max-h-[60vh] pr-4">
-              <div className="space-y-6 py-4">
-              {/* DM Settings */}
-              <div className="space-y-3">
-                <Label className="text-base font-semibold">Message Settings</Label>
-                <div className="p-4 bg-primary/5 rounded-lg border border-primary/20 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4 text-primary" />
-                      <div>
-                        <p className="text-sm font-medium">Direct Messages</p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={respondInPrivate}
-                      onCheckedChange={setRespondInPrivate}
-                    />
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm font-medium">Groups</p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={respondInGroups}
-                      onCheckedChange={handleGroupsToggle}
-                    />
-                  </div>
+          {step === 'creating' && (
+            <>
+              <DialogHeader className="text-center space-y-3">
+                <DialogTitle className="text-2xl flex items-center justify-center gap-2">
+                  <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                  Creating Your Bot...
+                </DialogTitle>
+              </DialogHeader>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm font-medium">Supergroups</p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={respondInSupergroups}
-                      onCheckedChange={handleSupergroupsToggle}
-                    />
+              <div className="py-12 text-center space-y-5">
+                <div className="flex justify-center">
+                  <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
+                    <Bot className="w-10 h-10 text-primary" />
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Choose where your bot should respond to messages
+                <p className="text-base text-muted-foreground">
+                  Setting up your bot and creating your community...
                 </p>
               </div>
+            </>
+          )}
 
-              {/* System Prompt */}
-              <div className="space-y-2">
-                <Label htmlFor="system_prompt" className="text-base font-semibold">
-                  System Prompt
-                </Label>
-                <Textarea
-                  id="system_prompt"
-                  value={systemPrompt}
-                  onChange={(e) => setSystemPrompt(e.target.value)}
-                  placeholder="Define how your bot should behave..."
-                  className="min-h-[120px]"
-                  disabled={improvingPrompt}
-                />
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleImprovePrompt}
-                    disabled={improvingPrompt || !systemPrompt.trim()}
+          {step === 'success' && botDetails && (
+            <>
+              <DialogHeader className="text-center space-y-3 pb-2">
+                <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Check className="w-7 h-7 text-primary" />
+                </div>
+                <DialogTitle className="text-2xl">
+                  Bot Created Successfully!
+                </DialogTitle>
+                <DialogDescription className="text-base">
+                  Now let's set up your bot's personality
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-6 py-4">
+                <div className="flex flex-col items-center space-y-4">
+                  {botDetails.photoUrl ? (
+                    <img 
+                      src={botDetails.photoUrl} 
+                      alt={botDetails.name}
+                      className="w-20 h-20 rounded-full object-cover border-2 border-primary/20"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Bot className="w-10 h-10 text-primary" />
+                    </div>
+                  )}
+                  
+                  <div className="text-center space-y-1">
+                    <h3 className="text-lg font-semibold">{botDetails.name}</h3>
+                    <p className="text-sm text-muted-foreground">@{botDetails.username}</p>
+                  </div>
+                </div>
+
+                <div className="flex justify-center pt-2">
+                  <Button 
+                    onClick={() => setStep('personality')} 
+                    size="lg" 
+                    className="gradient-primary"
                   >
-                    {improvingPrompt ? (
+                    Set Up Personality
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {step === 'personality' && botDetails && (
+            <>
+              <DialogHeader className="text-center space-y-3 pb-2">
+                <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Sparkles className="w-7 h-7 text-primary" />
+                </div>
+                <DialogTitle className="text-2xl">
+                  Set Your Bot's Personality
+                </DialogTitle>
+                <DialogDescription className="text-base">
+                  Define how your bot should think and respond
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-5 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="system_prompt" className="text-sm font-medium">
+                    System Prompt
+                  </Label>
+                  <Textarea
+                    id="system_prompt"
+                    value={systemPrompt}
+                    onChange={(e) => setSystemPrompt(e.target.value)}
+                    placeholder="Define how your bot should behave..."
+                    className="min-h-[140px]"
+                    disabled={improvingPrompt}
+                  />
+                  <div className="flex items-center gap-2 pt-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleImprovePrompt}
+                      disabled={improvingPrompt || !systemPrompt.trim()}
+                    >
+                      {improvingPrompt ? (
+                        <>
+                          <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                          Improving...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3 h-3 mr-1.5" />
+                          Improve with AI
+                        </>
+                      )}
+                    </Button>
+                    {previousPrompt && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSystemPrompt(previousPrompt);
+                          setPreviousPrompt('');
+                        }}
+                      >
+                        Undo
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    This defines your bot's personality, tone, and how it responds to users.
+                  </p>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setStep('success')}
+                    className="flex-1"
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    onClick={handleSavePersonality}
+                    disabled={creating || !systemPrompt.trim()}
+                    className="flex-1 gradient-primary"
+                  >
+                    {creating ? (
                       <>
-                        <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
-                        Improving...
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Saving...
                       </>
                     ) : (
                       <>
-                        <Bot className="w-3 h-3 mr-1.5" />
-                        Improve Prompt
+                        Next: Tools
+                        <ArrowRight className="w-4 h-4 ml-2" />
                       </>
                     )}
                   </Button>
-                  {previousPrompt && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleUndoPrompt}
-                    >
-                      <Undo className="w-3 h-3 mr-1.5" />
-                      Undo
-                    </Button>
-                  )}
-                  <p className="text-xs text-muted-foreground flex-1">
-                    This prompt defines your bot's personality and behavior.
-                  </p>
                 </div>
               </div>
+            </>
+          )}
 
-              {/* Intro Message */}
-              <div className="space-y-2">
-                <Label htmlFor="intro_message" className="text-base font-semibold">
-                  Intro Message
-                </Label>
-                <Textarea
-                  id="intro_message"
-                  value={introMessage}
-                  onChange={(e) => setIntroMessage(e.target.value)}
-                  placeholder="The first message users will see when they start chatting with your bot..."
-                  className="min-h-[80px]"
-                />
-                <p className="text-xs text-muted-foreground">
-                  This is the greeting message users see when they first interact with your bot.
+          {step === 'tools' && botDetails && (
+            <>
+              <DialogHeader className="text-center space-y-3 pb-2">
+                <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Database className="w-7 h-7 text-primary" />
+                </div>
+                <DialogTitle className="text-2xl">
+                  Configure Bot Tools
+                </DialogTitle>
+                <DialogDescription className="text-base">
+                  Choose what capabilities your bot should have
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-5 py-4">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg border border-primary/20">
+                    <div className="flex items-start gap-3">
+                      <Search className="w-5 h-5 text-primary mt-0.5" />
+                      <div>
+                        <p className="font-medium">Search Memory</p>
+                        <p className="text-xs text-muted-foreground">
+                          Search through saved conversations and information
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={searchMemoryEnabled}
+                      onCheckedChange={setSearchMemoryEnabled}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg border border-primary/20">
+                    <div className="flex items-start gap-3">
+                      <Database className="w-5 h-5 text-primary mt-0.5" />
+                      <div>
+                        <p className="font-medium">Add Memory</p>
+                        <p className="text-xs text-muted-foreground">
+                          Save new information from conversations
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={addMemoryEnabled}
+                      onCheckedChange={setAddMemoryEnabled}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border">
+                    <div className="flex items-start gap-3">
+                      <Globe className="w-5 h-5 text-muted-foreground mt-0.5" />
+                      <div>
+                        <p className="font-medium">Web Search</p>
+                        <p className="text-xs text-muted-foreground">
+                          Search the internet for current information
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={webSearchEnabled}
+                      onCheckedChange={setWebSearchEnabled}
+                    />
+                  </div>
+                </div>
+
+                <p className="text-xs text-muted-foreground text-center">
+                  You can add more tools and customize these settings later in the dashboard.
                 </p>
+
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setStep('personality')}
+                    className="flex-1"
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    onClick={handleSaveTools}
+                    disabled={creating}
+                    className="flex-1 gradient-primary"
+                  >
+                    {creating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        Next Step
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
+            </>
+          )}
 
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setStep('success')}
-                  className="flex-1"
-                  size="lg"
-                >
-                  Back
-                </Button>
-                <Button
-                  onClick={async () => {
-                    try {
-                      setCreating(true);
-                      
-                      // Update the community with the system prompt and intro message
-                      const { error: communityError } = await supabase
-                        .from('communities')
-                        .update({
-                          agent_instructions: systemPrompt,
-                          agent_intro_message: introMessage
-                        })
-                        .eq('id', botDetails.communityId);
+          {step === 'tokenize' && botDetails && (
+            <>
+              <DialogHeader className="text-center space-y-3 pb-2">
+                <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Coins className="w-7 h-7 text-primary" />
+                </div>
+                <DialogTitle className="text-2xl">
+                  Tokenize Your Bot?
+                </DialogTitle>
+                <DialogDescription className="text-base">
+                  Launch a token for your bot community (optional)
+                </DialogDescription>
+              </DialogHeader>
 
-                      if (communityError) throw communityError;
+              <div className="space-y-6 py-4">
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
+                  <p className="text-sm">
+                    <strong>What's this?</strong> You can create a token for your bot community on Base blockchain. This allows you to:
+                  </p>
+                  <ul className="text-sm space-y-1.5 list-disc list-inside text-muted-foreground">
+                    <li>Build community ownership and engagement</li>
+                    <li>Reward active members with tokens</li>
+                    <li>Create token-gated features</li>
+                  </ul>
+                  <p className="text-xs text-muted-foreground pt-2">
+                    Don't worry - you can always do this later from the settings page.
+                  </p>
+                </div>
 
-                      // Update workflow configuration with message settings
-                      const { error: workflowError } = await supabase
-                        .from('community_workflows')
-                        .update({
-                          configuration: {
-                            search_chat_history: true,
-                            search_memory: true,
-                            save_memory: true,
-                            web_search: false,
-                            respond_in_groups: respondInGroups,
-                            respond_in_supergroups: respondInSupergroups,
-                            respond_in_private: respondInPrivate
-                          }
-                        })
-                        .eq('community_id', botDetails.communityId)
-                        .eq('workflow_type', 'telegram_agent_tools');
-
-                      if (workflowError) throw workflowError;
-
-                      // Update telegram_integration workflow with chat type settings
-                      const { error: integrationError } = await supabase
-                        .from('community_workflows')
-                        .upsert({
-                          community_id: botDetails.communityId,
-                          workflow_type: 'telegram_integration',
-                          is_enabled: true,
-                          configuration: {
-                            chat_types: {
-                              private: respondInPrivate,
-                              group: respondInGroups,
-                              supergroup: respondInSupergroups
-                            }
-                          }
-                        }, {
-                          onConflict: 'community_id,workflow_type'
-                        });
-
-                      if (integrationError) throw integrationError;
-
-                      toast({
-                        title: "Bot Configured!",
-                        description: "Your bot is ready to use."
-                      });
-
-                      setTimeout(() => {
-                        navigate(`/community/${botDetails.communityId}`);
-                        onOpenChange(false);
-                      }, 1000);
-                    } catch (error: any) {
-                      toast({
-                        title: "Configuration Error",
-                        description: error.message || "Failed to save configuration.",
-                        variant: "destructive"
-                      });
-                    } finally {
-                      setCreating(false);
-                    }
-                  }}
-                  disabled={creating}
-                  className="flex-1 gradient-primary"
-                  size="lg"
-                >
-                  {creating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      Save & Continue
-                      <Check className="w-4 h-4 ml-2" />
-                    </>
-                  )}
-                </Button>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={handleCompleteSetup}
+                    className="flex-1"
+                    size="lg"
+                  >
+                    Skip for Now
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setWantsToken(true);
+                      setShowTokenLaunch(true);
+                    }}
+                    className="flex-1 gradient-primary"
+                    size="lg"
+                  >
+                    <Coins className="w-4 h-4 mr-2" />
+                    Launch Token
+                  </Button>
+                </div>
               </div>
-              </div>
-            </ScrollArea>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Token Launch Dialog */}
+      {botDetails && (
+        <TokenLaunchDialog
+          open={showTokenLaunch}
+          onOpenChange={(open) => {
+            setShowTokenLaunch(open);
+            if (!open && wantsToken) {
+              // User completed or cancelled token launch
+              handleCompleteSetup();
+            }
+          }}
+          communityId={botDetails.communityId}
+          communityName={botDetails.name}
+          coverImageUrl={botDetails.photoUrl}
+        />
+      )}
+    </>
   );
 };

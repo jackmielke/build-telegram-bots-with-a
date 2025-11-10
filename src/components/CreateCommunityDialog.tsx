@@ -122,15 +122,7 @@ const CreateCommunityDialog = ({
     }
   };
   const defaultTrigger = asCard ? <Card className="cursor-pointer hover:border-primary transition-all duration-300 border-dashed border-2 group hover:shadow-glow">
-      <CardContent className="flex flex-col items-center justify-center h-full min-h-[280px] p-6">
-        <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
-          <Plus className="w-8 h-8 text-primary" />
-        </div>
-        <h3 className="font-semibold text-lg mb-2 group-hover:text-primary transition-colors">Create Community</h3>
-        <p className="text-sm text-muted-foreground text-center">
-          Start your own community
-        </p>
-      </CardContent>
+      
     </Card> : <Button className="gradient-primary hover:shadow-glow transition-all duration-300">
       <Plus className="w-4 h-4 mr-2" />
       Create Community

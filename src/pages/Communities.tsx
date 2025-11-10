@@ -318,7 +318,7 @@ const Communities = () => {
             </DialogTitle>
             <DialogDescription className="text-center text-base pt-2">
               Get started by creating your first AI bot. You'll be able to customize its personality, 
-              connect it to Telegram, and start growing your community!
+              connect it to Telegram, deploy a token for it, and start growing your community!
             </DialogDescription>
           </DialogHeader>
           

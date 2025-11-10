@@ -108,7 +108,7 @@ export const TokenLaunchDialog = ({
           tokenSymbol: values.tokenSymbol,
           tokenDescription: values.tokenDescription,
           imageFile: imageData,
-          templateId: 'fecbd0f1-7a92-4671-9be6-30d5a14571e5', // Vibe Residency template
+          templateId: '2c280c25-7527-4de9-891a-783c488838f8', // Vibe Residency template
           userAddress: values.userAddress,
           chainId: 8453, // Base
           socialLinks: [],

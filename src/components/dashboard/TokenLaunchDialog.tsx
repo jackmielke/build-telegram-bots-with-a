@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Rocket, ExternalLink, Info } from "lucide-react";
+import { Loader2, Rocket, ExternalLink, Info, TrendingUp } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -45,6 +45,7 @@ export const TokenLaunchDialog = ({
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState("");
   const [transactionHash, setTransactionHash] = useState<string | null>(null);
+  const [tokenAddress, setTokenAddress] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
@@ -124,6 +125,7 @@ export const TokenLaunchDialog = ({
       setProgress(100);
       setCurrentStep("Token launched successfully! 🎉");
       setTransactionHash(data.transactionHash);
+      setTokenAddress(data.token_address);
 
       toast({
         title: "Token Launched! 🚀",
@@ -141,6 +143,7 @@ export const TokenLaunchDialog = ({
         setProgress(0);
         setCurrentStep("");
         setTransactionHash(null);
+        setTokenAddress(null);
         setImagePreview(null);
       }, 3000);
 
@@ -313,16 +316,29 @@ export const TokenLaunchDialog = ({
 
             {transactionHash && (
               <Alert className="bg-green-50 border-green-200">
-                <AlertDescription className="space-y-2">
+                <AlertDescription className="space-y-3">
                   <p className="font-medium text-green-900">Token successfully launched! 🎉</p>
-                  <Button
-                    variant="link"
-                    className="p-0 h-auto text-green-700"
-                    onClick={() => window.open(`https://basescan.org/tx/${transactionHash}`, '_blank')}
-                  >
-                    View on BaseScan
-                    <ExternalLink className="ml-1 h-3 w-3" />
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    {tokenAddress && (
+                      <Button
+                        size="sm"
+                        className="bg-green-700 hover:bg-green-800 text-white"
+                        onClick={() => window.open(`https://app.long.xyz/tokens/${tokenAddress}`, '_blank')}
+                      >
+                        <TrendingUp className="mr-2 h-4 w-4" />
+                        Trade on Long
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-green-700 text-green-700 hover:bg-green-50"
+                      onClick={() => window.open(`https://basescan.org/tx/${transactionHash}`, '_blank')}
+                    >
+                      View on BaseScan
+                      <ExternalLink className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
                 </AlertDescription>
               </Alert>
             )}

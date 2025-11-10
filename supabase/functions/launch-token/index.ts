@@ -209,6 +209,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         template_id: templateId,
+        debug: true, // Enable debug to get token_address in response
         metadata: {
           token_name: tokenName,
           token_symbol: tokenSymbol,
@@ -225,9 +226,22 @@ serve(async (req) => {
       throw new Error(`Failed to encode template: ${errorText}`);
     }
 
-    const { result: encodeResult } = await encodeResponse.json();
+    const encodeData = await encodeResponse.json();
+    const encodeResult = encodeData.result;
     console.log('Template encoded successfully');
-    console.log('Encode result:', JSON.stringify(encodeResult, null, 2));
+    console.log('Encode result (full):', JSON.stringify(encodeData, null, 2));
+    
+    // Extract token address from encode response
+    const tokenAddress = encodeResult?.token_address;
+    const encodedPayload = encodeResult?.encoded_payload;
+    
+    console.log('Extracted token_address:', tokenAddress);
+    console.log('Extracted encoded_payload length:', encodedPayload?.length);
+    
+    if (!tokenAddress || !encodedPayload) {
+      console.error('Missing data in auction response. Result object:', encodeResult);
+      throw new Error('Missing token_address or encoded_payload in response');
+    }
 
     // STEP 4: Broadcast sponsored transaction
     console.log('Step 4: Broadcasting sponsored transaction...');
@@ -238,7 +252,7 @@ serve(async (req) => {
         'X-API-KEY': LONG_API_KEY,
       },
       body: JSON.stringify({
-        encoded_payload: encodeResult.encoded_payload
+        encoded_payload: encodedPayload
       }),
     });
 
@@ -248,32 +262,20 @@ serve(async (req) => {
       throw new Error(`Failed to broadcast transaction: ${errorText}`);
     }
 
-    const { result: broadcastResult } = await broadcastResponse.json();
-    console.log('Transaction broadcasted:', broadcastResult.transaction_hash);
-    console.log('Broadcast result:', JSON.stringify(broadcastResult, null, 2));
+    const broadcastData = await broadcastResponse.json();
+    const broadcastResult = broadcastData.result;
+    const txHash = broadcastResult?.transaction_hash;
+    
+    if (!txHash) {
+      console.error('Missing transaction hash in sponsorship response:', broadcastData);
+      throw new Error('Missing transaction_hash in sponsorship response');
+    }
+    
+    console.log('Transaction broadcasted, hash:', txHash);
 
     // STEP 5: Store token info in database
     console.log('Step 5: Storing token in database...');
-    
-    // Extract token address - it might be in different places depending on the response
-    const tokenAddress = encodeResult.token_address || 
-                        encodeResult.tokenAddress || 
-                        broadcastResult.token_address ||
-                        broadcastResult.tokenAddress ||
-                        broadcastResult.contract_address;
-    
-    const hookAddress = encodeResult.hook_address || 
-                       encodeResult.hookAddress ||
-                       broadcastResult.hook_address ||
-                       broadcastResult.hookAddress;
-    
-    console.log('Extracted token_address:', tokenAddress);
-    console.log('Extracted hook_address:', hookAddress);
-    
-    if (!tokenAddress) {
-      console.warn('Token address missing in API response. Falling back to zero-address and marking as pending.');
-    }
-    const safeTokenAddress = tokenAddress || '0x0000000000000000000000000000000000000000';
+    console.log('Token address (pre-computed):', tokenAddress);
     
     const { data: tokenData, error: tokenError } = await supabaseClient
       .from('bot_tokens')
@@ -282,9 +284,9 @@ serve(async (req) => {
         token_name: tokenName,
         token_symbol: tokenSymbol,
         token_description: tokenDescription,
-        token_address: safeTokenAddress,
-        hook_address: hookAddress || '',
-        transaction_hash: broadcastResult.transaction_hash,
+        token_address: tokenAddress,
+        hook_address: encodeResult.hook_address || '',
+        transaction_hash: txHash,
         image_ipfs_hash: imageHash,
         metadata_ipfs_hash: metadataHash,
         chain_id: chainId,
@@ -297,8 +299,7 @@ serve(async (req) => {
           beneficiaries: finalBeneficiaries,
           user_address: userAddress,
           encode_result: encodeResult,
-          broadcast_result: broadcastResult,
-          token_address_pending: !tokenAddress
+          broadcast_result: broadcastResult
         },
         created_by: userData.id
       })
@@ -316,8 +317,9 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         token: tokenData,
-        transactionHash: broadcastResult.transaction_hash,
-        explorerUrl: `https://basescan.org/tx/${broadcastResult.transaction_hash}`
+        token_address: tokenAddress,
+        transactionHash: txHash,
+        explorerUrl: `https://basescan.org/tx/${txHash}`
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -132,6 +132,14 @@ export const TokenManagement = ({ communityId, communityName, coverImageUrl }: T
                       <div className="flex flex-col gap-2">
                         <Badge variant="secondary">Active</Badge>
                         <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => window.open(`https://long.xyz/base/${token.token_address}`, '_blank')}
+                        >
+                          <TrendingUp className="h-3 w-3 mr-1" />
+                          Trade on Long
+                        </Button>
+                        <Button
                           variant="outline"
                           size="sm"
                           onClick={() => {

@@ -824,7 +824,10 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
                   <Button
                     onClick={() => {
                       setWantsToken(true);
-                      setShowTokenLaunch(true);
+                      // Close this dialog before opening token launch
+                      onOpenChange(false);
+                      // Small delay to ensure dialog closes smoothly
+                      setTimeout(() => setShowTokenLaunch(true), 100);
                     }}
                     className="flex-1 gradient-primary"
                     size="lg"
@@ -839,20 +842,24 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
         </DialogContent>
       </Dialog>
 
-      {/* Token Launch Dialog */}
+      {/* Token Launch Dialog - Standalone when called from workflow */}
       {botDetails && (
         <TokenLaunchDialog
           open={showTokenLaunch}
           onOpenChange={(open) => {
             setShowTokenLaunch(open);
             if (!open && wantsToken) {
-              // User completed or cancelled token launch
+              // User completed or cancelled token launch - navigate to dashboard
               handleCompleteSetup();
+            } else if (!open && !wantsToken) {
+              // User closed without launching - go back to tokenize step
+              onOpenChange(true);
+              setStep('tokenize');
             }
           }}
           communityId={botDetails.communityId}
           communityName={botDetails.name}
-          coverImageUrl={botDetails.photoUrl}
+          coverImageUrl={botDetails.photoUrl || null}
         />
       )}
     </>

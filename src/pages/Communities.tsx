@@ -143,8 +143,9 @@ const Communities = () => {
 
       setCommunities(formattedCommunities as Community[]);
 
-      // Show welcome dialog if user has no communities
-      if (formattedCommunities.length === 0) {
+      // Show welcome dialog if user has no admin communities (no bots created)
+      const adminCommunities = formattedCommunities.filter(c => c.role === 'admin');
+      if (adminCommunities.length === 0) {
         setShowWelcomeDialog(true);
       }
 
@@ -398,6 +399,14 @@ const Communities = () => {
               >
                 <Plus className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">New Bot</span>
+              </Button>
+              <Button
+                onClick={() => setShowWelcomeDialog(true)}
+                variant="outline"
+                className="hover:bg-primary/10"
+              >
+                <Sparkles className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Test Onboarding</span>
               </Button>
               <Button
                 onClick={() => navigate('/explore')}

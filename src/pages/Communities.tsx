@@ -401,14 +401,6 @@ const Communities = () => {
                 <span className="hidden sm:inline">New Bot</span>
               </Button>
               <Button
-                onClick={() => setShowWelcomeDialog(true)}
-                variant="outline"
-                className="hover:bg-primary/10"
-              >
-                <Sparkles className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Test Onboarding</span>
-              </Button>
-              <Button
                 onClick={() => navigate('/explore')}
                 variant="outline"
                 className="hover:bg-primary/10"

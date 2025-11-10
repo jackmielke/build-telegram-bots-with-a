@@ -238,7 +238,7 @@ export const TokenLaunchDialog = ({
                       />
                     </FormControl>
                     <FormDescription>
-                      Base-compatible Ethereum address that will receive 35% of token supply
+                      Base-compatible Ethereum address that will receive 10% of token supply and 35% of gas fees
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -279,8 +279,14 @@ export const TokenLaunchDialog = ({
                   <div className="pt-2 border-t">
                     <strong>Token Distribution:</strong>
                     <ul className="list-disc list-inside mt-1 space-y-1 text-xs">
-                      <li><strong>65%</strong> - Allocated by the Vibe Residency template (preset)</li>
-                      <li><strong>35%</strong> - Goes to your wallet address (beneficiary)</li>
+                      <li><strong>90%</strong> - Allocated by the Vibe Residency template (preset)</li>
+                      <li><strong>10%</strong> - Goes to your wallet address (beneficiary)</li>
+                    </ul>
+                  </div>
+                  <div className="pt-2 border-t">
+                    <strong>Gas Fees:</strong>
+                    <ul className="list-disc list-inside mt-1 space-y-1 text-xs">
+                      <li><strong>35%</strong> - Goes to your wallet address from trading fees</li>
                     </ul>
                   </div>
                   <div className="pt-2 text-xs text-muted-foreground">

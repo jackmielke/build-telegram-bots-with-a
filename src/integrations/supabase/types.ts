@@ -1929,6 +1929,20 @@ export type Database = {
       }
       get_current_user_from_context: { Args: never; Returns: string }
       get_user_id_from_auth: { Args: { auth_user_id: string }; Returns: string }
+      get_user_public_profile: {
+        Args: { user_id_param: string }
+        Returns: {
+          avatar_url: string
+          bio: string
+          created_at: string
+          headline: string
+          id: string
+          interests_skills: string[]
+          name: string
+          profile_picture_url: string
+          username: string
+        }[]
+      }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_community_admin: {
         Args: { community_id_param: string; user_auth_id: string }

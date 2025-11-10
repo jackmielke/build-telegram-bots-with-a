@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Loader2, Users, Crown, Shield, Plus, LogOut, Heart, Sparkles, Compass, Bot, Mic, Phone, PhoneOff, Activity } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useConversation } from '@11labs/react';
@@ -31,6 +32,7 @@ const Communities = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [showCreateBotWorkflow, setShowCreateBotWorkflow] = useState(false);
+  const [showWelcomeDialog, setShowWelcomeDialog] = useState(false);
   const [activeVoiceCall, setActiveVoiceCall] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -140,6 +142,11 @@ const Communities = () => {
       });
 
       setCommunities(formattedCommunities as Community[]);
+
+      // Show welcome dialog if user has no communities
+      if (formattedCommunities.length === 0) {
+        setShowWelcomeDialog(true);
+      }
 
       // Fetch top 10 most recently active communities
       const { data: activeData, error: activeError } = await supabase
@@ -296,6 +303,80 @@ const Communities = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Welcome Dialog for First-Time Users */}
+      <Dialog open={showWelcomeDialog} onOpenChange={setShowWelcomeDialog}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <div className="mx-auto mb-4">
+              <div className="w-20 h-20 rounded-full gradient-primary flex items-center justify-center shadow-glow">
+                <Sparkles className="w-10 h-10 text-primary-foreground" />
+              </div>
+            </div>
+            <DialogTitle className="text-2xl text-center">
+              Welcome to Vibe AI! 🎉
+            </DialogTitle>
+            <DialogDescription className="text-center text-base pt-2">
+              Get started by creating your first AI bot. You'll be able to customize its personality, 
+              connect it to Telegram, and start building your community right away!
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-6 space-y-4">
+            <div className="grid grid-cols-1 gap-4">
+              <div className="flex items-start space-x-3 p-4 rounded-lg bg-muted/50">
+                <Bot className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-medium mb-1">Create Custom AI Agents</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Build AI bots with unique personalities and capabilities
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-3 p-4 rounded-lg bg-muted/50">
+                <Users className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-medium mb-1">Build Your Community</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Grow and manage your community with powerful admin tools
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-3 p-4 rounded-lg bg-muted/50">
+                <Mic className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-medium mb-1">Voice & Chat Interactions</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Enable voice calls and natural conversations with your bot
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowWelcomeDialog(false)}
+              className="w-full sm:w-auto"
+            >
+              I'll explore first
+            </Button>
+            <Button
+              onClick={() => {
+                setShowWelcomeDialog(false);
+                setShowCreateBotWorkflow(true);
+              }}
+              className="gradient-primary w-full sm:w-auto"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              Create My First Bot
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Create Bot Workflow Dialog */}
       <CreateBotWorkflow 
         open={showCreateBotWorkflow}

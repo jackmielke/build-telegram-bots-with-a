@@ -134,7 +134,7 @@ export const TokenManagement = ({ communityId, communityName, coverImageUrl }: T
                         <Button
                           variant="default"
                           size="sm"
-                          onClick={() => window.open(`https://long.xyz/base/${token.token_address}`, '_blank')}
+                          onClick={() => window.open(`https://app.long.xyz/tokens/${token.token_address}`, '_blank')}
                         >
                           <TrendingUp className="h-3 w-3 mr-1" />
                           Trade on Long

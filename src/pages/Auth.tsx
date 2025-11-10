@@ -312,15 +312,32 @@ const Auth = () => {
             </p>
           </div>
 
-          <Button
-            onClick={() => window.open('https://www.loom.com/share/39454b410c664fb2a185c766dadbbe38?sid=822920ef-b54e-4909-861c-0b8675e7aeba', '_blank')}
-            variant="outline"
-            size="lg"
-            className="hover:bg-primary/10 hover:border-primary"
-          >
-            <Play className="w-4 h-4 mr-2" />
-            Watch Demo
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              onClick={() => {
+                document.getElementById('auth-form')?.scrollIntoView({ 
+                  behavior: 'smooth', 
+                  block: 'center' 
+                });
+              }}
+              variant="hero"
+              size="lg"
+              className="group"
+            >
+              Get Started
+              <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+            </Button>
+            
+            <Button
+              onClick={() => window.open('https://www.loom.com/share/39454b410c664fb2a185c766dadbbe38?sid=822920ef-b54e-4909-861c-0b8675e7aeba', '_blank')}
+              variant="outline"
+              size="lg"
+              className="hover:bg-primary/10 hover:border-primary"
+            >
+              <Play className="w-4 h-4 mr-2" />
+              Watch Demo
+            </Button>
+          </div>
 
           <div className="space-y-4 pt-4">
             <div className="flex items-start gap-3">
@@ -356,7 +373,7 @@ const Auth = () => {
         </div>
 
         {/* Right side - Auth Form */}
-        <Card className="shadow-elevated border-border/50">
+        <Card id="auth-form" className="shadow-elevated border-border/50 scroll-mt-8">
           <CardHeader className="text-center space-y-2">
             <CardTitle className="text-2xl font-bold">
               {isLogin ? 'Welcome Back' : 'Get Started'}

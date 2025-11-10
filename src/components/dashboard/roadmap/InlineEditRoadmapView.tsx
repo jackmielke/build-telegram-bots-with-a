@@ -310,8 +310,11 @@ export function InlineEditRoadmapView() {
                     <select
                       autoFocus
                       value={tempValue}
-                      onChange={(e) => setTempValue(e.target.value)}
-                      onBlur={() => saveEdit(item.id, 'status')}
+                      onChange={(e) => {
+                        setTempValue(e.target.value);
+                        updateMutation.mutate({ id: item.id, field: 'status', value: e.target.value });
+                        setEditingField(null);
+                      }}
                       className="bg-background border border-primary rounded px-2 py-1 focus:outline-none"
                     >
                       {statusOptions.map(opt => (
@@ -334,8 +337,11 @@ export function InlineEditRoadmapView() {
                     <select
                       autoFocus
                       value={tempValue}
-                      onChange={(e) => setTempValue(e.target.value)}
-                      onBlur={() => saveEdit(item.id, 'priority')}
+                      onChange={(e) => {
+                        setTempValue(e.target.value);
+                        updateMutation.mutate({ id: item.id, field: 'priority', value: e.target.value });
+                        setEditingField(null);
+                      }}
                       className="bg-background border border-primary rounded px-2 py-1 focus:outline-none capitalize"
                     >
                       {priorityOptions.map(opt => (

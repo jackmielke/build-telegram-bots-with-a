@@ -66,3 +66,6 @@ verify_jwt = true
 
 [functions.check-video-status]
 verify_jwt = true
+
+[functions.list-community-members]
+verify_jwt = true

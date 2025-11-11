@@ -45,63 +45,21 @@ const MembersManagement = ({ communityId, isAdmin }: MembersManagementProps) => 
 
   const fetchMembers = async () => {
     try {
-      // Fetch community members with user details
-      const { data: membersData, error: membersError } = await supabase
-        .from('community_members')
-        .select(`
-          id,
-          role,
-          joined_at,
-          user_id,
-          users!community_members_user_id_fkey (
-            id,
-            name,
-            email,
-            avatar_url,
-            is_claimed,
-            telegram_user_id
-          )
-        `)
-        .eq('community_id', communityId)
-        .order('joined_at', { ascending: true });
+      const { data, error } = await supabase.functions.invoke('list-community-members', {
+        body: { communityId },
+      });
 
-      if (membersError) throw membersError;
-
-      // Fetch telegram sessions for this community
-      const { data: sessionsData, error: sessionsError } = await supabase
-        .from('telegram_chat_sessions')
-        .select('telegram_user_id, is_active, proactive_outreach_enabled')
-        .eq('community_id', communityId);
-
-      if (sessionsError) {
-        console.error('Error fetching telegram sessions:', sessionsError);
+      if (error) throw error;
+      if (!data || !Array.isArray(data.members)) {
+        throw new Error('Invalid response from list-community-members');
       }
 
-      // Create a map of telegram_user_id to session data
-      const sessionsMap = new Map(
-        (sessionsData || []).map(session => [
-          session.telegram_user_id,
-          {
-            is_active: session.is_active,
-            proactive_outreach_enabled: session.proactive_outreach_enabled
-          }
-        ])
-      );
-
-      // Merge the data
-      const enrichedMembers = (membersData || []).map(member => ({
-        ...member,
-        telegram_session: member.users.telegram_user_id 
-          ? sessionsMap.get(member.users.telegram_user_id) || null
-          : null
-      }));
-
-      setMembers(enrichedMembers);
+      setMembers(data.members);
     } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to load members",
-        variant: "destructive"
+        description: error.message || "Failed to load members",
+        variant: "destructive",
       });
     } finally {
       setLoadingMembers(false);

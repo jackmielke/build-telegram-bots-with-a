@@ -97,18 +97,29 @@ serve(async (req) => {
     // 2) Fetch user details
     let usersMap = new Map<string, any>();
     if (userIds.length) {
-      const { data: usersRows, error: usersErr } = await supabaseAdmin
-        .from("users")
-        .select("id, name, email, avatar_url, is_claimed, telegram_user_id")
-        .in("id", userIds);
-      if (usersErr) {
-        console.error("usersErr", usersErr);
-        return new Response(JSON.stringify({ error: usersErr.message }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      const chunkSize = 100;
+      const chunks: string[][] = [];
+      for (let i = 0; i < userIds.length; i += chunkSize) {
+        chunks.push(userIds.slice(i, i + chunkSize));
       }
-      usersMap = new Map((usersRows || []).map((u: any) => [u.id, u]));
+
+      let usersRowsAll: any[] = [];
+      for (const idsChunk of chunks) {
+        const { data: usersRows, error: usersErr } = await supabaseAdmin
+          .from("users")
+          .select("id, name, email, avatar_url, is_claimed, telegram_user_id")
+          .in("id", idsChunk);
+        if (usersErr) {
+          console.error("usersErr", usersErr);
+          return new Response(JSON.stringify({ error: usersErr.message }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        usersRowsAll = usersRowsAll.concat(usersRows || []);
+      }
+
+      usersMap = new Map((usersRowsAll || []).map((u: any) => [u.id, u]));
     }
 
     // 3) Fetch telegram chat sessions for DM eligibility

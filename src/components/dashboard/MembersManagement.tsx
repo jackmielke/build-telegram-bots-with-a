@@ -70,12 +70,22 @@ const MembersManagement = ({ communityId, isAdmin }: MembersManagementProps) => 
 
       let usersMap = new Map<string, any>();
       if (userIds.length) {
-        const { data: usersRows, error: usersErr } = await supabase
-          .from('users')
-          .select('id, name, email, avatar_url, is_claimed, telegram_user_id')
-          .in('id', userIds);
-        if (usersErr) throw usersErr;
-        usersMap = new Map((usersRows || []).map(u => [u.id, u]));
+        const chunkSize = 100;
+        const chunks: string[][] = [];
+        for (let i = 0; i < userIds.length; i += chunkSize) {
+          chunks.push(userIds.slice(i, i + chunkSize));
+        }
+
+        let usersRowsAll: any[] = [];
+        for (const idsChunk of chunks) {
+          const { data: usersRows, error: usersErr } = await supabase
+            .from('users')
+            .select('id, name, email, avatar_url, is_claimed, telegram_user_id')
+            .in('id', idsChunk);
+          if (usersErr) throw usersErr;
+          usersRowsAll = usersRowsAll.concat(usersRows || []);
+        }
+        usersMap = new Map((usersRowsAll || []).map(u => [u.id, u]));
       }
 
       const { data: sessionsRows, error: sessionsErr } = await supabase

@@ -45,21 +45,65 @@ const MembersManagement = ({ communityId, isAdmin }: MembersManagementProps) => 
 
   const fetchMembers = async () => {
     try {
+      // Primary: fast, secure server-side join via Edge Function
       const { data, error } = await supabase.functions.invoke('list-community-members', {
         body: { communityId },
       });
 
-      if (error) throw error;
-      if (!data || !Array.isArray(data.members)) {
-        throw new Error('Invalid response from list-community-members');
+      if (!error && data && Array.isArray(data.members)) {
+        setMembers(data.members);
+        return;
       }
 
-      setMembers(data.members);
+      // Fallback: client-side 2-step fetch to avoid PostgREST join timeouts
+      console.warn('Edge function unavailable, falling back to client-side merge:', error?.message);
+
+      const { data: membersRows, error: membersErr } = await supabase
+        .from('community_members')
+        .select('id, role, joined_at, user_id')
+        .eq('community_id', communityId)
+        .order('joined_at', { ascending: true });
+
+      if (membersErr) throw membersErr;
+
+      const userIds = Array.from(new Set((membersRows || []).map(m => m.user_id))).filter(Boolean) as string[];
+
+      let usersMap = new Map<string, any>();
+      if (userIds.length) {
+        const { data: usersRows, error: usersErr } = await supabase
+          .from('users')
+          .select('id, name, email, avatar_url, is_claimed, telegram_user_id')
+          .in('id', userIds);
+        if (usersErr) throw usersErr;
+        usersMap = new Map((usersRows || []).map(u => [u.id, u]));
+      }
+
+      const { data: sessionsRows, error: sessionsErr } = await supabase
+        .from('telegram_chat_sessions')
+        .select('telegram_user_id, is_active, proactive_outreach_enabled')
+        .eq('community_id', communityId);
+      if (sessionsErr) {
+        console.error('Error fetching telegram sessions (fallback):', sessionsErr);
+      }
+      const sessionsMap = new Map(
+        (sessionsRows || []).map(session => [
+          session.telegram_user_id,
+          { is_active: session.is_active, proactive_outreach_enabled: session.proactive_outreach_enabled },
+        ])
+      );
+
+      const enrichedMembers = (membersRows || []).map((m: any) => {
+        const u = usersMap.get(m.user_id) || null;
+        const telegram_session = u?.telegram_user_id ? sessionsMap.get(u.telegram_user_id) || null : null;
+        return { id: m.id, role: m.role, joined_at: m.joined_at, users: u, telegram_session };
+      });
+
+      setMembers(enrichedMembers);
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to load members",
-        variant: "destructive",
+        title: 'Error',
+        description: error.message || 'Failed to load members',
+        variant: 'destructive',
       });
     } finally {
       setLoadingMembers(false);

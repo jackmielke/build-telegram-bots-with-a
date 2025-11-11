@@ -60,3 +60,9 @@ verify_jwt = false
 
 [functions.public-roadmap]
 verify_jwt = false
+
+[functions.generate-bot-video]
+verify_jwt = true
+
+[functions.check-video-status]
+verify_jwt = true

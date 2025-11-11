@@ -309,6 +309,81 @@ export type Database = {
           },
         ]
       }
+      bot_videos: {
+        Row: {
+          community_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          duration: number | null
+          error_message: string | null
+          generation_metadata: Json | null
+          id: string
+          model: string
+          prompt: string
+          resolution: string | null
+          source_image_url: string | null
+          status: string
+          thumbnail_url: string | null
+          updated_at: string
+          video_type: string
+          video_url: string | null
+        }
+        Insert: {
+          community_id: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          duration?: number | null
+          error_message?: string | null
+          generation_metadata?: Json | null
+          id?: string
+          model?: string
+          prompt: string
+          resolution?: string | null
+          source_image_url?: string | null
+          status?: string
+          thumbnail_url?: string | null
+          updated_at?: string
+          video_type?: string
+          video_url?: string | null
+        }
+        Update: {
+          community_id?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          duration?: number | null
+          error_message?: string | null
+          generation_metadata?: Json | null
+          id?: string
+          model?: string
+          prompt?: string
+          resolution?: string | null
+          source_image_url?: string | null
+          status?: string
+          thumbnail_url?: string | null
+          updated_at?: string
+          video_type?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bot_videos_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bot_videos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       characters: {
         Row: {
           community_id: string | null

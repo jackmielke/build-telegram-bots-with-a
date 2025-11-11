@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Loader2, ArrowLeft, Home, MessageSquare, Bot, Brain, Settings, Check, Menu, Users, Send, Zap } from 'lucide-react';
+import { Loader2, ArrowLeft, Home, MessageSquare, Bot, Brain, Settings, Check, Menu, Users, Send, Zap, Video } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -18,6 +18,7 @@ import MembersManagement from '@/components/dashboard/MembersManagement';
 import CommunitySettings from '@/components/dashboard/CommunitySettings';
 import TelegramUsersManagement from '@/components/dashboard/TelegramUsersManagement';
 import { CustomToolsManager } from '@/components/dashboard/CustomToolsManager';
+import { BotVideoGallery } from '@/components/dashboard/BotVideoGallery';
 
 interface Community {
   id: string;
@@ -154,6 +155,7 @@ const CommunityDashboard = () => {
     { value: 'conversations', icon: MessageSquare, label: 'Conversations' },
     { value: 'agent', icon: Bot, label: 'Agent' },
     { value: 'memory', icon: Brain, label: 'Memory' },
+    { value: 'videos', icon: Video, label: 'Videos' },
     { value: 'members', icon: Users, label: 'Members' },
     { value: 'settings', icon: Settings, label: 'Settings' },
   ];
@@ -264,7 +266,7 @@ const CommunityDashboard = () => {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }} className="space-y-6">
           {/* Desktop Tabs - Hidden on Mobile */}
-          <TabsList className="hidden sm:grid w-full grid-cols-6 gap-2 bg-card/50 p-2 h-auto">
+          <TabsList className="hidden sm:grid w-full grid-cols-7 gap-2 bg-card/50 p-2 h-auto">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -308,6 +310,10 @@ const CommunityDashboard = () => {
 
           <TabsContent value="memory" className="space-y-6">
             <MemoryManagement communityId={community.id} isAdmin={isAdmin} />
+          </TabsContent>
+
+          <TabsContent value="videos" className="space-y-6">
+            <BotVideoGallery communityId={community.id} />
           </TabsContent>
 
           <TabsContent value="members" className="space-y-6">

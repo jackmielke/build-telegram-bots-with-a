@@ -46,9 +46,24 @@ export const VideoCreationDialog = ({ open, onOpenChange, communityId, onVideoCr
       pollVideoStatus(data.videoId);
     } catch (error: any) {
       console.error("Error generating video:", error);
-      toast.error(error.message || "Failed to generate video");
+      
+      // Extract error message from the response
+      const errorMessage = error.message || "Failed to generate video";
+      
+      // Show user-friendly error for API unavailability
+      if (errorMessage.includes("temporarily unavailable") || 
+          errorMessage.includes("not responding") ||
+          errorMessage.includes("timeout")) {
+        toast.error("Video service is temporarily down. Please try again later.", {
+          duration: 5000,
+        });
+        setStatus("Service temporarily unavailable. The Higgsfield API may be experiencing downtime.");
+      } else {
+        toast.error(errorMessage, { duration: 5000 });
+        setStatus("");
+      }
+      
       setIsGenerating(false);
-      setStatus("");
     }
   };
 
@@ -144,7 +159,11 @@ export const VideoCreationDialog = ({ open, onOpenChange, communityId, onVideoCr
             </div>
 
             {status && (
-              <div className="p-3 bg-muted rounded-md text-sm flex items-center gap-2">
+              <div className={`p-3 rounded-md text-sm flex items-center gap-2 ${
+                status.includes("unavailable") || status.includes("failed")
+                  ? "bg-destructive/10 text-destructive border border-destructive/20"
+                  : "bg-muted"
+              }`}>
                 {isGenerating && <Loader2 className="h-4 w-4 animate-spin" />}
                 {status}
               </div>

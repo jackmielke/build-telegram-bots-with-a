@@ -65,26 +65,54 @@ serve(async (req) => {
 
     console.log("Generating video with prompt:", finalPrompt);
 
-    // Call Higgsfield API to generate video
-    const higgsResponse = await fetch("https://api.higgsfield.ai/api/v1/video-generations", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${HIGGSFIELD_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        prompt: finalPrompt,
-        model: "higgsfield/realistic-vision-v5", // Free model
-        duration: 5, // 5 seconds
-        resolution: "1080p",
-        ...(sourceImageUrl && { image_url: sourceImageUrl }),
-      }),
-    });
+    // Call Higgsfield API to generate video with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+    let higgsResponse;
+    try {
+      higgsResponse = await fetch("https://api.higgsfield.ai/api/v1/video-generations", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${HIGGSFIELD_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: finalPrompt,
+          model: "higgsfield/realistic-vision-v5", // Free model
+          duration: 5, // 5 seconds
+          resolution: "1080p",
+          ...(sourceImageUrl && { image_url: sourceImageUrl }),
+        }),
+        signal: controller.signal,
+      });
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        console.error("Higgsfield API timeout");
+        throw new Error("Higgsfield API is not responding. The service may be temporarily unavailable. Please try again in a few minutes.");
+      }
+      throw new Error(`Failed to connect to Higgsfield API: ${fetchError.message}`);
+    }
+    
+    clearTimeout(timeoutId);
 
     if (!higgsResponse.ok) {
       const errorText = await higgsResponse.text();
-      console.error("Higgsfield API error:", errorText);
-      throw new Error(`Higgsfield API error: ${higgsResponse.status} - ${errorText}`);
+      console.error("Higgsfield API error:", higgsResponse.status, errorText);
+      
+      // Check for specific error codes
+      if (higgsResponse.status === 522 || higgsResponse.status === 503 || higgsResponse.status === 504) {
+        throw new Error("Higgsfield API is temporarily unavailable (server timeout). Please try again in a few minutes.");
+      }
+      if (higgsResponse.status === 429) {
+        throw new Error("Higgsfield API rate limit exceeded. Please wait a moment and try again.");
+      }
+      if (higgsResponse.status === 401 || higgsResponse.status === 403) {
+        throw new Error("Higgsfield API authentication failed. Please check your API key configuration.");
+      }
+      
+      throw new Error(`Higgsfield API error (${higgsResponse.status}): Service unavailable`);
     }
 
     const higgsData = await higgsResponse.json();

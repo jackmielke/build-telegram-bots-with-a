@@ -57,9 +57,84 @@ serve(async (req) => {
     }
 
     // Check status with Higgsfield API
-    const jobId = videoRecord.generation_metadata?.id;
+    let jobId = videoRecord.generation_metadata?.id;
+
+    // If job hasn't been created yet (e.g., provider downtime), try to bootstrap it now
+    if (!jobId && (videoRecord.status === "queued" || videoRecord.status === "processing")) {
+      try {
+        console.log("Bootstrapping Higgsfield job for queued video:", videoRecord.id);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+        const createResp = await fetch("https://api.higgsfield.ai/api/v1/video-generations", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${HIGGSFIELD_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt: videoRecord.prompt,
+            model: videoRecord.model || "higgsfield/realistic-vision-v5",
+            duration: videoRecord.duration || 5,
+            resolution: videoRecord.resolution || "1080p",
+            ...(videoRecord.source_image_url && { image_url: videoRecord.source_image_url }),
+          }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        if (createResp.ok) {
+          const created = await createResp.json();
+          jobId = created.id;
+          const { error: upErr } = await supabase
+            .from("bot_videos")
+            .update({ status: "processing", generation_metadata: created })
+            .eq("id", videoId);
+          if (upErr) console.error("Failed to update video after job creation:", upErr);
+        } else {
+          const errText = await createResp.text();
+          console.error("Higgsfield create error:", createResp.status, errText);
+          if ([522,503,504].includes(createResp.status)) {
+            // Keep queued and return current state to avoid 500s
+            return new Response(
+              JSON.stringify({
+                videoId: videoRecord.id,
+                status: videoRecord.status || "queued",
+                videoUrl: videoRecord.video_url,
+                thumbnailUrl: videoRecord.thumbnail_url,
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          // For other errors, surface a message but avoid crashing client
+          return new Response(
+            JSON.stringify({
+              videoId: videoRecord.id,
+              status: videoRecord.status || "queued",
+              errorMessage: `Provider error (${createResp.status}) starting job`,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      } catch (e: any) {
+        console.error("Error bootstrapping job:", e?.message || e);
+        // Keep queued status and return gracefully
+        return new Response(
+          JSON.stringify({
+            videoId: videoRecord.id,
+            status: videoRecord.status || "queued",
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     if (!jobId) {
-      throw new Error("No job ID found in video record");
+      // Still no jobId; return current DB status instead of throwing
+      return new Response(
+        JSON.stringify({
+          videoId: videoRecord.id,
+          status: videoRecord.status || "queued",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     console.log("Checking Higgsfield status for job:", jobId);
@@ -73,8 +148,27 @@ serve(async (req) => {
 
     if (!higgsResponse.ok) {
       const errorText = await higgsResponse.text();
-      console.error("Higgsfield API error:", errorText);
-      throw new Error(`Higgsfield API error: ${higgsResponse.status}`);
+      console.error("Higgsfield API error (status check):", higgsResponse.status, errorText);
+      if ([522,503,504].includes(higgsResponse.status)) {
+        // Provider temporarily unavailable; return current known state
+        return new Response(
+          JSON.stringify({
+            videoId: videoRecord.id,
+            status: videoRecord.status || "processing",
+            videoUrl: videoRecord.video_url,
+            thumbnailUrl: videoRecord.thumbnail_url,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          videoId: videoRecord.id,
+          status: videoRecord.status || "processing",
+          errorMessage: `Provider error (${higgsResponse.status}) while checking status`,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const higgsData = await higgsResponse.json();

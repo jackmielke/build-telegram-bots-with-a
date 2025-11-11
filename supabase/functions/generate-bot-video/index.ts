@@ -88,11 +88,54 @@ serve(async (req) => {
       });
     } catch (fetchError: any) {
       clearTimeout(timeoutId);
-      if (fetchError.name === 'AbortError') {
-        console.error("Higgsfield API timeout");
-        throw new Error("Higgsfield API is not responding. The service may be temporarily unavailable. Please try again in a few minutes.");
+      console.error("Higgsfield API fetch error:", fetchError?.name, fetchError?.message);
+
+      // On timeout or network failure, enqueue the job instead of failing hard
+      const authHeader = req.headers.get("Authorization");
+      const token = authHeader?.replace("Bearer ", "");
+      const { data: { user } } = await supabase.auth.getUser(token);
+      if (!user) throw new Error("User not authenticated");
+
+      const { data: userRecord } = await supabase
+        .from("users")
+        .select("id")
+        .eq("auth_user_id", user.id)
+        .single();
+
+      const { data: videoRecord, error: insertError } = await supabase
+        .from("bot_videos")
+        .insert({
+          community_id: communityId,
+          video_type: videoType,
+          prompt: finalPrompt,
+          source_image_url: sourceImageUrl,
+          model: "higgsfield/realistic-vision-v5",
+          status: "queued",
+          resolution: "1080p",
+          duration: 5,
+          generation_metadata: { provider_error: fetchError?.name || "FetchError", provider_message: fetchError?.message },
+          created_by: userRecord?.id,
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error("Database insert error (queued):", insertError);
+        throw insertError;
       }
-      throw new Error(`Failed to connect to Higgsfield API: ${fetchError.message}`);
+
+      console.log("Queued video job created due to fetch error:", videoRecord.id);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          videoId: videoRecord.id,
+          jobId: null,
+          status: "queued",
+          message: "Video provider is not responding. Your job has been queued and will start automatically when available.",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
     
     clearTimeout(timeoutId);
@@ -101,9 +144,55 @@ serve(async (req) => {
       const errorText = await higgsResponse.text();
       console.error("Higgsfield API error:", higgsResponse.status, errorText);
       
-      // Check for specific error codes
+      // Graceful degradation: if provider is unavailable, enqueue job instead of failing
       if (higgsResponse.status === 522 || higgsResponse.status === 503 || higgsResponse.status === 504) {
-        throw new Error("Higgsfield API is temporarily unavailable (server timeout). Please try again in a few minutes.");
+        console.warn("Provider unavailable; creating queued video job");
+
+        const authHeader = req.headers.get("Authorization");
+        const token = authHeader?.replace("Bearer ", "");
+        const { data: { user } } = await supabase.auth.getUser(token);
+        if (!user) throw new Error("User not authenticated");
+
+        const { data: userRecord } = await supabase
+          .from("users")
+          .select("id")
+          .eq("auth_user_id", user.id)
+          .single();
+
+        const { data: videoRecord, error: insertError } = await supabase
+          .from("bot_videos")
+          .insert({
+            community_id: communityId,
+            video_type: videoType,
+            prompt: finalPrompt,
+            source_image_url: sourceImageUrl,
+            model: "higgsfield/realistic-vision-v5",
+            status: "queued",
+            resolution: "1080p",
+            duration: 5,
+            generation_metadata: { provider_status: higgsResponse.status, provider_error: errorText },
+            created_by: userRecord?.id,
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error("Database insert error (queued):", insertError);
+          throw insertError;
+        }
+
+        console.log("Queued video job created:", videoRecord.id);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            videoId: videoRecord.id,
+            jobId: null,
+            status: "queued",
+            message: "Video provider is temporarily unavailable. Your job has been queued and will start automatically when available.",
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
       if (higgsResponse.status === 429) {
         throw new Error("Higgsfield API rate limit exceeded. Please wait a moment and try again.");

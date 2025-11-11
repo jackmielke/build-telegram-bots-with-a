@@ -1957,6 +1957,10 @@ export type Database = {
         Args: { target_community_id: string }
         Returns: boolean
       }
+      can_view_community_user: {
+        Args: { target_user_id: string; viewer_auth_id: string }
+        Returns: boolean
+      }
       check_community_membership: {
         Args: { _auth_user_id: string; _community_id: string }
         Returns: boolean

@@ -1021,8 +1021,8 @@ serve(async (req) => {
             console.log('✅ Stored message with thread name:', threadName);
           }
 
-          // Check for auto-intro generation if this is a supergroup with topics
-          if (chatType === 'supergroup' && messageThreadId && insertedMessage && threadName) {
+          // Check for auto-intro storage if this is a supergroup with topics
+          if (chatType === 'supergroup' && messageThreadId && insertedMessage && threadName && userId) {
             // Check if auto-intro generation is enabled and this is an intros thread
             const autoIntroConfig = workflowStatus.configuration?.auto_intro_generation;
             if (autoIntroConfig?.enabled) {
@@ -1032,38 +1032,22 @@ serve(async (req) => {
               );
               
               if (isIntroThread && userMessage.length > 50) {
-                console.log('🎯 Auto-generating intro for message in thread:', threadName);
+                console.log('🎯 Storing raw intro message for user in thread:', threadName);
                 
-                // Call generate-intro edge function
+                // Store raw intro text word-for-word directly to user's bio
                 try {
-                  const introResponse = await fetch(
-                    `${supabaseUrl}/functions/v1/generate-intro`,
-                    {
-                      method: 'POST',
-                      headers: {
-                        'Authorization': `Bearer ${supabaseKey}`,
-                        'Content-Type': 'application/json'
-                      },
-                      body: JSON.stringify({
-                        conversationId: conversationId,
-                        communityId: communityId,
-                        singleMessage: userMessage, // Generate intro from this single message
-                        userId: userId // Pass userId to save bio
-                      })
-                    }
-                  );
+                  const { error: bioError } = await supabase
+                    .from('users')
+                    .update({ bio: userMessage })
+                    .eq('id', userId);
                   
-                  if (introResponse.ok) {
-                    const introData = await introResponse.json();
-                    const generatedIntro = introData.intro;
-                    
-                    // Save intro to user's bio field (intro is already saved by generate-intro)
-                    console.log('✅ Auto-generated intro saved to user bio via generate-intro function');
+                  if (bioError) {
+                    console.error('❌ Error saving intro to bio:', bioError);
                   } else {
-                    console.error('❌ Error generating intro:', await introResponse.text());
+                    console.log('✅ Raw intro saved word-for-word to user bio');
                   }
                 } catch (introError) {
-                  console.error('❌ Error in auto-intro generation:', introError);
+                  console.error('❌ Error in auto-intro storage:', introError);
                 }
               }
             }

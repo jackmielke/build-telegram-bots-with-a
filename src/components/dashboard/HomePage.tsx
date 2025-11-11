@@ -117,6 +117,19 @@ const HomePage = ({
   };
   const fetchMemories = async () => {
     try {
+      // Try the faster edge function first
+      const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke('get-memories', {
+        body: { community_id: community.id }
+      });
+      
+      if (!edgeFunctionError && edgeFunctionData?.memories) {
+        setMemories(edgeFunctionData.memories);
+        return;
+      }
+      
+      console.warn('Edge function failed, falling back to direct query:', edgeFunctionError);
+      
+      // Fallback to direct query with limited results
       const {
         data,
         error

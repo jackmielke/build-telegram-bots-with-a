@@ -69,3 +69,6 @@ verify_jwt = true
 
 [functions.list-community-members]
 verify_jwt = true
+
+[functions.get-memories]
+verify_jwt = true

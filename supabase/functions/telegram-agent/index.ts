@@ -145,6 +145,18 @@ const AGENT_TOOLS = [
         required: ["name"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "claim_profile",
+      description: "Generate a profile claim link for the user to claim and edit their profile on bot-builder.app. Use this when user wants to edit their profile, update their bio, add information about themselves, or claim ownership of their profile.",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: []
+      }
+    }
   }
 ];
 
@@ -551,6 +563,34 @@ The vibe has been recorded on the leaderboard! 🏆`;
           console.error('Error submitting vibe:', error);
           return `Failed to submit vibe: ${error instanceof Error ? error.message : 'Unknown error'}`;
         }
+      }
+
+      case "claim_profile": {
+        console.log(`🔗 Generating profile claim link for user: ${userId}`);
+        
+        if (!userId) {
+          return "Unable to generate claim link: User not found.";
+        }
+
+        // Generate unique verification code
+        const verificationCode = crypto.randomUUID();
+
+        // Insert claim request with 24 hour expiration
+        const { error: claimError } = await supabase
+          .from('profile_claim_requests')
+          .insert({
+            user_id: userId,
+            verification_code: verificationCode,
+            expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+          });
+
+        if (claimError) {
+          console.error('Error creating claim request:', claimError);
+          return `Failed to generate claim link: ${claimError.message}`;
+        }
+
+        const claimUrl = `https://bot-builder.app/profile/${userId}?code=${verificationCode}`;
+        return `🔗 Click here to claim and edit your profile:\n${claimUrl}\n\nThis link expires in 24 hours.`;
       }
 
       default:

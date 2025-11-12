@@ -13,6 +13,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus, X, Lightbulb, Sparkles, Copy, Check, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -45,6 +52,7 @@ export function SimplifiedCustomToolDialog({
   const [toolName, setToolName] = useState("");
   const [description, setDescription] = useState("");
   const [apiUrl, setApiUrl] = useState("");
+  const [httpMethod, setHttpMethod] = useState<"GET" | "POST">("POST");
   const [authToken, setAuthToken] = useState("");
   const [parameters, setParameters] = useState<Array<{ name: string; description: string }>>([]);
 
@@ -53,6 +61,7 @@ export function SimplifiedCustomToolDialog({
       setToolName(editingTool.display_name || "");
       setDescription(editingTool.description || "");
       setApiUrl(editingTool.endpoint_url || "");
+      setHttpMethod(editingTool.http_method || "POST");
       setAuthToken(editingTool.auth_value || "");
       
       const params = editingTool.parameters || {};
@@ -73,6 +82,7 @@ export function SimplifiedCustomToolDialog({
     setToolName("");
     setDescription("");
     setApiUrl("");
+    setHttpMethod("POST");
     setAuthToken("");
     setParameters([]);
     setCurrentTab('dream');
@@ -178,7 +188,7 @@ export function SimplifiedCustomToolDialog({
         display_name: toolName,
         description: description || `Call ${toolName} API with provided parameters`,
         endpoint_url: apiUrl,
-        http_method: "POST",
+        http_method: httpMethod,
         auth_type: authToken ? "bearer" : "none",
         auth_value: authToken || null,
         category: "custom",
@@ -394,6 +404,22 @@ export function SimplifiedCustomToolDialog({
                     </div>
 
                     <div className="space-y-2">
+                      <Label htmlFor="http-method">HTTP Method *</Label>
+                      <Select value={httpMethod} onValueChange={(value: "GET" | "POST") => setHttpMethod(value)}>
+                        <SelectTrigger id="http-method">
+                          <SelectValue placeholder="Select HTTP method" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="GET">GET - Retrieve data</SelectItem>
+                          <SelectItem value="POST">POST - Send data</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        GET for reading data, POST for creating/updating
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
                       <Label htmlFor="auth-token">Auth Token / API Key (optional)</Label>
                       <Input
                         id="auth-token"
@@ -492,6 +518,22 @@ export function SimplifiedCustomToolDialog({
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="manual-http-method">HTTP Method *</Label>
+                  <Select value={httpMethod} onValueChange={(value: "GET" | "POST") => setHttpMethod(value)}>
+                    <SelectTrigger id="manual-http-method">
+                      <SelectValue placeholder="Select HTTP method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="GET">GET - Retrieve data</SelectItem>
+                      <SelectItem value="POST">POST - Send data</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    GET for reading data, POST for creating/updating
+                  </p>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="manual-auth-token">Auth Token (optional)</Label>
                   <Input
                     id="manual-auth-token"
@@ -566,6 +608,22 @@ export function SimplifiedCustomToolDialog({
                 value={apiUrl}
                 onChange={(e) => setApiUrl(e.target.value)}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-http-method">HTTP Method *</Label>
+              <Select value={httpMethod} onValueChange={(value: "GET" | "POST") => setHttpMethod(value)}>
+                <SelectTrigger id="edit-http-method">
+                  <SelectValue placeholder="Select HTTP method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="GET">GET - Retrieve data</SelectItem>
+                  <SelectItem value="POST">POST - Send data</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                GET for reading data, POST for creating/updating
+              </p>
             </div>
 
             <div className="space-y-2">

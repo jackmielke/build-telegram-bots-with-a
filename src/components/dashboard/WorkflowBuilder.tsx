@@ -405,11 +405,19 @@ Please create this chatbot interface now!`;
       // Get current workflow configuration
       const workflow = workflows.find(w => w.type === workflowType);
       const currentConfig = workflow?.configuration || {};
-      const agentTools = currentConfig.agent_tools || {};
       
-      // Update the specific tool
+      // Explicitly preserve all existing agent tools
+      const existingAgentTools = currentConfig.agent_tools || {};
+      
+      // Update ONLY the specific tool, preserving all others
       const newAgentTools = {
-        ...agentTools,
+        web_search: existingAgentTools.web_search || false,
+        search_memory: existingAgentTools.search_memory || false,
+        search_chat_history: existingAgentTools.search_chat_history || false,
+        save_memory: existingAgentTools.save_memory || false,
+        search_profiles: existingAgentTools.search_profiles || false,
+        scrape_webpage: existingAgentTools.scrape_webpage || false,
+        broadcast_message: existingAgentTools.broadcast_message || false,
         [toolName]: !currentEnabled
       };
 

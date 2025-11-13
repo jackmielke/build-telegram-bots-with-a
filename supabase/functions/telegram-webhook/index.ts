@@ -688,8 +688,8 @@ serve(async (req) => {
               });
             }
 
-            // Get frontend URL from environment
-            const frontendUrl = Deno.env.get('FRONTEND_URL') || 'http://localhost:8080';
+            // Get frontend URL - use the production URL
+            const frontendUrl = 'https://efdqqnubowgwsnwvlalp.supabase.co';
             const claimUrl = `${frontendUrl}/claim/${verificationCode}`;
 
             const claimMsg = `🎯 *Claim Your Profile*\n\n` +

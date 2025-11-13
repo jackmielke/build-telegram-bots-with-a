@@ -17,9 +17,9 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { token } = await req.json();
+    const { token: claimToken } = await req.json();
 
-    if (!token) {
+    if (!claimToken) {
       return new Response(
         JSON.stringify({ error: 'Missing token' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -30,7 +30,7 @@ serve(async (req) => {
     const { data: magicToken, error: tokenError } = await supabase
       .from('magic_link_tokens')
       .select('*')
-      .eq('token', token)
+      .eq('token', claimToken)
       .eq('used', false)
       .single();
 
@@ -116,21 +116,29 @@ serve(async (req) => {
     await supabase
       .from('magic_link_tokens')
       .update({ used: true })
-      .eq('token', token);
+      .eq('token', claimToken);
 
-    // Generate session for auto-login
-    const { data: sessionData, error: sessionError } = await supabase.auth.admin.generateLink({
+    // Generate a magic link token for auto-login
+    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
       email,
+      options: {
+        redirectTo: 'https://bot-builder.app/profile'
+      }
     });
 
-    if (sessionError || !sessionData) {
-      console.error('Error generating session:', sessionError);
+    if (linkError || !linkData) {
+      console.error('Error generating link:', linkError);
       return new Response(
-        JSON.stringify({ error: 'Failed to generate session' }),
+        JSON.stringify({ error: 'Failed to generate login link' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Extract the token from the generated link
+    const urlParams = new URL(linkData.properties.action_link);
+    const authToken = urlParams.searchParams.get('token');
+    const tokenHash = urlParams.searchParams.get('token_hash');
 
     return new Response(
       JSON.stringify({ 
@@ -138,9 +146,11 @@ serve(async (req) => {
         user: {
           id: user.id,
           name: user.name,
-          auth_user_id: authData.user.id
+          auth_user_id: authData.user.id,
+          email: email
         },
-        session_url: sessionData.properties.action_link,
+        auth_token: authToken,
+        token_hash: tokenHash,
         community_id: magicToken.community_id
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

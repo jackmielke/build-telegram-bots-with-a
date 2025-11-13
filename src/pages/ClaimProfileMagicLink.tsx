@@ -53,24 +53,37 @@ export default function ClaimProfileMagicLink() {
         return;
       }
 
-      // Use the session URL to log in
-      if (data.session_url) {
-        window.location.href = data.session_url;
-      } else {
+      // Use the auth token to verify and establish session
+      if (data.auth_token && data.token_hash && data.user.email) {
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          email: data.user.email,
+          token: data.auth_token,
+          type: 'magiclink',
+          options: {
+            redirectTo: 'https://bot-builder.app/profile'
+          }
+        });
+
+        if (verifyError) {
+          console.error('Verify error:', verifyError);
+          setStatus('error');
+          setErrorMessage('Failed to authenticate');
+          return;
+        }
+
         setStatus('success');
         toast({
           title: "Success! 🎉",
           description: "Your profile has been claimed successfully!",
         });
 
-        // Redirect to community or dashboard after 2 seconds
+        // Redirect to profile page after 1 second
         setTimeout(() => {
-          if (data.community_id) {
-            navigate(`/community/${data.community_id}`);
-          } else {
-            navigate('/');
-          }
-        }, 2000);
+          navigate('/profile');
+        }, 1000);
+      } else {
+        setStatus('error');
+        setErrorMessage('Invalid authentication data received');
       }
 
     } catch (error) {

@@ -1,90 +1,115 @@
-# Profile & Intro System Architecture
+# Profile & Intro System - Complete Implementation
 
-## Current Implementation (New Profile-Centric System)
+This diagram shows the complete profile and intro generation system with magic link authentication and backfill capabilities.
+
+## Current Implementation
 
 ```mermaid
-graph LR
-    subgraph "Telegram Auto-Claim Flow"
-        TG1[Telegram User] -->|/start| TW1[telegram-webhook]
-        TW1 -->|provision user| PTU1[provision-telegram-user]
-        PTU1 -->|create/update| U1[(users table)]
-        U1 -->|is_claimed=true| U1
-        U1 -->|auth_user_id=generated| U1
-        PTU1 -->|add to| CM1[(community_members)]
+flowchart TB
+    subgraph telegram[Telegram Auto-Claim Flow]
+        T1[User clicks /start in bot]
+        T2[Bot generates magic link token]
+        T3[Bot sends 2 messages:<br/>1. Welcome<br/>2. Magic link to bot-builder.app]
+        T4[User clicks link → /claim page]
+        T5[validate-magic-link validates token]
+        T6[Creates Supabase auth user if needed]
+        T7[Auto-login with OTP]
+        T8[Redirect to /profile page]
+        
+        T1 --> T2 --> T3 --> T4 --> T5 --> T6 --> T7 --> T8
     end
     
-    subgraph "Intro Generation & Storage"
-        TG2[User in #intros] -->|sends message| TW2[telegram-webhook]
-        TW2 -->|detects intro channel| GI[generate-intro]
-        GI -->|calls| LAI[Lovable AI Gateway]
-        LAI -->|returns intro text| GI
-        GI -->|saves to| U2[(users.bio field)]
-        U2 -.->|linked by| U2TG[telegram_user_id]
+    subgraph intro[Intro Generation & Storage]
+        I1[User posts intro in Telegram 'Intros' topic]
+        I2[Message stored in messages table]
+        I3[Admin clicks 'Backfill Profiles' button]
+        I4[backfill-intros edge function]
+        I5[Finds all intro messages from users without bios]
+        I6[Calls generate-intro for each message]
+        I7[AI formats intro text]
+        I8[Bio saved to users.bio field]
+        
+        I1 --> I2
+        I3 --> I4 --> I5 --> I6 --> I7 --> I8
     end
     
-    subgraph "Web Login & Profile Management"
-        WU[Web User] -->|login/claim| AUTH[Supabase Auth]
-        AUTH -->|auth_user_id| U3[(users table)]
-        U3 -->|view/edit| PROF[Profile Page]
-        PROF -->|update intro/bio| U3
+    subgraph web[Web Profile Management]
+        W1[User on /profile page]
+        W2[Edit name, bio, profile photo]
+        W3[Upload to avatars bucket]
+        W4[Save to users table]
+        W5[Profile updated! ✓]
+        
+        W1 --> W2 --> W3 --> W4 --> W5
     end
     
-    subgraph "Conversations Tab Testing"
-        ADMIN[Admin] -->|views| CONV[Conversations Tab]
-        CONV -->|displays messages| MSG[(messages)]
-        MSG -->|"Generate Intro" button| GI2[generate-intro]
-        GI2 -->|saves to| U4[(users.bio)]
-        CONV -->|"View Profile" button| VP[UserProfile Page]
-        VP -->|shows bio| U4
+    T8 -.-> W1
+    I8 -.-> W1
+    
+    subgraph admin[Admin Dashboard]
+        A1[Bot Setup page]
+        A2[Profile Backfill section]
+        A3[Click 'Backfill Profiles' button]
+        A4[Shows success toast with stats]
+        
+        A1 --> A2 --> A3 --> A4
     end
     
-    style U1 fill:#4ade80
-    style U2 fill:#4ade80
-    style U3 fill:#4ade80
-    style U4 fill:#4ade80
-    style PTU1 fill:#60a5fa
-    style GI fill:#60a5fa
-    style GI2 fill:#60a5fa
+    A3 -.-> I4
 ```
 
-## Database Schema Changes
+## Database Schema
 
 ```mermaid
 erDiagram
+    USERS ||--o{ MESSAGES : sends
+    USERS ||--o{ COMMUNITY_MEMBERS : belongs_to
+    USERS ||--o{ MAGIC_LINK_TOKENS : has
+    
     USERS {
         uuid id PK
-        uuid auth_user_id FK
-        bigint telegram_user_id UK
-        text telegram_username
+        uuid auth_user_id "Supabase auth link"
         text name
-        text bio "Generated intro + custom bio"
-        boolean is_claimed "Auto true on /start"
-        timestamp created_at
+        text bio "Direct storage - no separate intros table!"
+        text avatar_url
+        text profile_picture_url
+        bigint telegram_user_id
+        text telegram_username
+        boolean is_claimed "true after magic link claim"
+        text[] interests_skills
+        text headline
     }
     
     MESSAGES {
         uuid id PK
         uuid sender_id FK
         text content
-        text conversation_id
-        text topic_name "e.g. 'intros'"
-        jsonb metadata
+        text topic_name "Filter: 'Intros'"
+        uuid community_id FK
+        timestamp created_at
     }
     
     COMMUNITY_MEMBERS {
-        uuid id PK
         uuid user_id FK
         uuid community_id FK
-        text role
     }
     
-    USERS ||--o{ MESSAGES : sends
-    USERS ||--o{ COMMUNITY_MEMBERS : belongs_to
+    MAGIC_LINK_TOKENS {
+        uuid id PK
+        text token "Unique auth token"
+        uuid user_id FK
+        uuid community_id FK
+        timestamp expires_at "24 hours"
+        boolean used
+    }
 ```
 
 ## Key Features
 
-1. **Auto-Claiming**: `/start` command automatically creates claimed profile with generated auth credentials
-2. **Intro Storage**: Intros stored directly on `users.bio` field (not in memories table)
-3. **Testing UI**: Conversations tab has "Generate Intro" button + "View Profile" link
-4. **Cross-Platform**: Same profile works across Telegram, web apps, and external integrations
+- **Magic Link Auth**: Users click `/start` → get magic link → instantly authenticated on web app
+- **Profile Page**: Clean, simple interface to edit name, bio, and profile photo
+- **Direct Bio Storage**: Intros go straight into `users.bio` (no separate intro messages table)
+- **Backfill Tool**: Admin button to import all existing intro messages from Telegram into profiles
+- **Batch Processing**: Backfill processes all intros with 50ms delay between calls
+- **Cross-Platform**: Same profile data accessible in Telegram bot and web app
+- **Avatar Storage**: Profile photos stored in Supabase `avatars` bucket

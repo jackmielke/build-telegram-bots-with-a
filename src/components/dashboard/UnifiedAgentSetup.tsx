@@ -10,11 +10,12 @@ import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Bot, Brain, MessageSquare, Upload, Loader2, Sparkles, Zap, Settings, Bell, Users, Megaphone } from 'lucide-react';
+import { Bot, Brain, MessageSquare, Upload, Loader2, Sparkles, Zap, Settings, Bell, Users, Megaphone, UserPlus } from 'lucide-react';
 import WorkflowBuilder from './WorkflowBuilder';
 import BotHealthIndicator from './BotHealthIndicator';
 import { CustomToolsToggleView } from './custom-tools/CustomToolsToggleView';
 import { RoadmapManager } from './RoadmapManager';
+import { ProfileBackfillSection } from './ProfileBackfillSection';
 import { Card as CustomCard, CardContent as CustomCardContent, CardDescription as CustomCardDescription, CardHeader as CustomCardHeader, CardTitle as CustomCardTitle } from "@/components/ui/card";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 
@@ -480,6 +481,11 @@ const UnifiedAgentSetup = ({ community, isAdmin, onUpdate }: UnifiedAgentSetupPr
         <CardContent className="space-y-6">
           {/* Broadcast Tool - Separate Section */}
           <BroadcastToolSection communityId={community.id} isAdmin={isAdmin} />
+          
+          {/* Profile Backfill Section */}
+          <div className="pt-4 border-t border-border">
+            <ProfileBackfillSection communityId={community.id} />
+          </div>
           
           {/* Custom Tools Section */}
           <div className="pt-4 border-t border-border">

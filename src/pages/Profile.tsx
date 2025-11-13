@@ -1,15 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, Upload, CheckCircle2 } from "lucide-react";
-import Navbar from "@/components/Navbar";
+import { Loader2, Upload, BadgeCheck } from "lucide-react";
 
 interface UserProfile {
   id: string;
@@ -28,6 +26,15 @@ export default function Profile() {
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+    }
+  }, [bio]);
 
   useEffect(() => {
     loadProfile();
@@ -165,105 +172,100 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="container max-w-2xl mx-auto py-8 px-4">
-        <Card className="border-border/50 shadow-lg">
-          <CardHeader className="text-center space-y-4">
-            <div className="flex items-center justify-center">
-              <CheckCircle2 className="h-16 w-16 text-green-500 mr-3" />
-              <div>
-                <CardTitle className="text-3xl">Profile Claimed! 🎉</CardTitle>
-                <CardDescription className="text-lg mt-2">
-                  Welcome! You can now edit your profile
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
+      <div className="container max-w-xl mx-auto py-12 px-4">
+        {/* Header with verification badge */}
+        <div className="flex items-center justify-center gap-2 mb-8">
+          <h1 className="text-2xl font-semibold text-foreground">Verified</h1>
+          <BadgeCheck className="h-6 w-6 text-primary fill-primary/20" />
+        </div>
+
+        {/* Avatar Section */}
+        <div className="flex flex-col items-center mb-10">
+          <div className="relative group">
+            <Avatar className="h-28 w-28 ring-2 ring-border">
+              <AvatarImage src={avatarUrl || undefined} />
+              <AvatarFallback className="text-2xl bg-muted">
+                {name.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            
+            <Label 
+              htmlFor="photo-upload" 
+              className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-full cursor-pointer"
+            >
+              {uploadingImage ? (
+                <Loader2 className="h-6 w-6 text-white animate-spin" />
+              ) : (
+                <Upload className="h-6 w-6 text-white" />
+              )}
+              <input
+                id="photo-upload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageUpload}
+              />
+            </Label>
+          </div>
+        </div>
+
+        {/* Form Fields */}
+        <div className="space-y-6 mb-8">
+          <div className="space-y-2">
+            <Label htmlFor="name" className="text-sm font-medium text-muted-foreground">
+              Name
+            </Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Your name"
+              className="border-border/50 focus:border-primary"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="bio" className="text-sm font-medium text-muted-foreground">
+              Bio
+            </Label>
+            <Textarea
+              ref={textareaRef}
+              id="bio"
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="Tell us about yourself..."
+              className="border-border/50 focus:border-primary resize-none min-h-[100px] overflow-hidden"
+            />
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-col gap-3">
+          <Button 
+            onClick={handleSave} 
+            disabled={saving}
+            size="lg"
+            className="w-full"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Save Changes'
+            )}
+          </Button>
           
-          <CardContent className="space-y-6">
-            <div className="flex flex-col items-center space-y-4">
-              <Avatar className="h-32 w-32">
-                <AvatarImage src={avatarUrl || undefined} />
-                <AvatarFallback className="text-2xl">
-                  {name.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              
-              <Label htmlFor="photo-upload" className="cursor-pointer">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  disabled={uploadingImage}
-                  onClick={() => document.getElementById('photo-upload')?.click()}
-                >
-                  {uploadingImage ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Change Photo
-                    </>
-                  )}
-                </Button>
-                <input
-                  id="photo-upload"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageUpload}
-                />
-              </Label>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="name">Display Name</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="bio">Bio</Label>
-              <Textarea
-                id="bio"
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                placeholder="Tell us about yourself..."
-                rows={4}
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <Button 
-                onClick={handleSave} 
-                disabled={saving}
-                className="flex-1"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  'Save Changes'
-                )}
-              </Button>
-              
-              <Button 
-                onClick={() => navigate('/communities')}
-                variant="outline"
-              >
-                Go to Dashboard
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+          <Button 
+            onClick={() => navigate('/communities')}
+            variant="ghost"
+            size="lg"
+            className="w-full"
+          >
+            Go to Dashboard
+          </Button>
+        </div>
       </div>
     </div>
   );

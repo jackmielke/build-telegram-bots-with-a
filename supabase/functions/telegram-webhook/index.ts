@@ -597,6 +597,66 @@ serve(async (req) => {
                 }
               });
             
+            // ===== SECOND MESSAGE: Generate and send magic link =====
+            try {
+              const { data: magicLinkData, error: magicLinkError } = await supabase.functions.invoke('generate-magic-link', {
+                body: {
+                  telegram_user_id: telegramUserId,
+                  community_id: communityId
+                }
+              });
+
+              if (!magicLinkError && magicLinkData?.magic_link) {
+                const magicLinkMessage = `🔗 **Unlock Web Features**\n\nClick here to claim your profile and access the web dashboard:\n\n👉 ${magicLinkData.magic_link}\n\n_This link will expire in 24 hours._`;
+                
+                // Send the magic link message
+                await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    chat_id: chatId,
+                    text: magicLinkMessage,
+                    parse_mode: 'Markdown'
+                  })
+                });
+
+                // Log the magic link message
+                await supabase
+                  .from('messages')
+                  .insert({
+                    content: magicLinkMessage,
+                    chat_type: 'telegram_bot',
+                    conversation_id: conversationId,
+                    community_id: communityId,
+                    sender_id: null,
+                    sent_by: 'ai',
+                    metadata: {
+                      telegram_chat_id: chatId,
+                      chat_type_detail: chatType,
+                      is_magic_link: true
+                    }
+                  });
+                
+                console.log('✅ Magic link sent:', magicLinkData.magic_link);
+              } else if (magicLinkData?.already_claimed) {
+                // Profile already claimed, send a different message
+                const claimedMessage = `✅ Your profile is already claimed! You can access the web dashboard at:\n\nhttps://bot-builder.app`;
+                
+                await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    chat_id: chatId,
+                    text: claimedMessage,
+                    parse_mode: 'Markdown'
+                  })
+                });
+              }
+            } catch (magicLinkErr) {
+              console.error('Error generating magic link:', magicLinkErr);
+              // Don't fail the entire request if magic link generation fails
+            }
+            
             return new Response(JSON.stringify({ 
               ok: true, 
               message: 'Start command processed',

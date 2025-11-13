@@ -607,6 +607,112 @@ serve(async (req) => {
             });
           }
 
+          // CHECK FOR /claim COMMAND
+          if (userMessage.trim() === '/claim') {
+            console.log('Detected /claim command');
+            const botToken = await getBotToken(supabase, communityId);
+            if (!botToken) {
+              return new Response(JSON.stringify({ ok: true, message: 'Bot token not configured' }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 200
+              });
+            }
+
+            // Find user by telegram_user_id
+            const { data: userData } = await supabase
+              .from('users')
+              .select('id, name, is_claimed')
+              .eq('telegram_user_id', telegramUserId)
+              .maybeSingle();
+
+            if (!userData) {
+              const errorMsg = `❌ No profile found for your account. Please use /start first to create your profile.`;
+              await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: chatId,
+                  text: errorMsg,
+                  parse_mode: 'Markdown'
+                })
+              });
+              return new Response(JSON.stringify({ ok: true, message: 'Profile not found' }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 200
+              });
+            }
+
+            if (userData.is_claimed) {
+              const alreadyClaimedMsg = `✅ Your profile is already claimed!\n\nYou can manage it at: ${Deno.env.get('SUPABASE_URL')?.replace('https://', 'https://').replace('.supabase.co', '.supabase.co')}/user/${userData.id}`;
+              await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: chatId,
+                  text: alreadyClaimedMsg,
+                  parse_mode: 'Markdown'
+                })
+              });
+              return new Response(JSON.stringify({ ok: true, message: 'Already claimed' }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 200
+              });
+            }
+
+            // Generate verification code
+            const verificationCode = `${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+
+            // Create claim request (no auth_user_id yet - will be set when they log in)
+            const { error: claimError } = await supabase
+              .from('profile_claim_requests')
+              .insert({
+                user_profile_id: userData.id,
+                verification_code: verificationCode,
+                auth_user_id: '00000000-0000-0000-0000-000000000000' // Placeholder, will be updated on claim page
+              });
+
+            if (claimError) {
+              console.error('Error creating claim request:', claimError);
+              const errorMsg = `❌ Failed to generate claim link. Please try again.`;
+              await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: chatId,
+                  text: errorMsg
+                })
+              });
+              return new Response(JSON.stringify({ ok: true, message: 'Claim request failed' }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 200
+              });
+            }
+
+            // Get frontend URL from environment
+            const frontendUrl = Deno.env.get('FRONTEND_URL') || 'http://localhost:8080';
+            const claimUrl = `${frontendUrl}/claim/${verificationCode}`;
+
+            const claimMsg = `🎯 *Claim Your Profile*\n\n` +
+              `Click the link below to claim your profile:\n\n` +
+              `${claimUrl}\n\n` +
+              `You'll be able to edit your bio, add a profile photo, and more!`;
+
+            await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: chatId,
+                text: claimMsg,
+                parse_mode: 'Markdown'
+              })
+            });
+
+            return new Response(JSON.stringify({ ok: true, message: 'Claim link sent' }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200
+            });
+          }
+
           // CHECK FOR /help COMMAND
           if (userMessage.trim() === '/help') {
             console.log('Detected /help command');
@@ -621,6 +727,7 @@ serve(async (req) => {
             const helpText = `🤖 *Available Commands*\n\n` +
               `/start - Start the bot\n` +
               `/help - Show this help message\n` +
+              `/claim - Claim your profile and edit your info\n` +
               `/status - Check your notification status\n` +
               `/notifications on - Enable daily notifications\n` +
               `/notifications off - Disable daily notifications`;

@@ -3,6 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { useToast } from '@/hooks/use-toast';
@@ -16,6 +19,10 @@ const ClaimProfile = () => {
   const [status, setStatus] = useState<'checking' | 'valid' | 'invalid' | 'claimed' | 'error'>('checking');
   const [profileData, setProfileData] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [showAuthForm, setShowAuthForm] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
 
   useEffect(() => {
     checkVerificationCode();
@@ -83,10 +90,96 @@ const ClaimProfile = () => {
     }
   };
 
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/claim/${code}`
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        // Get the user's profile ID
+        const { data: userData } = await supabase
+          .from('users')
+          .select('*')
+          .eq('auth_user_id', data.user.id)
+          .single();
+
+        setCurrentUser(userData);
+        setShowAuthForm(false);
+        
+        toast({
+          title: "Account created!",
+          description: "Now claiming your profile...",
+        });
+
+        // Auto-claim after signup
+        setTimeout(() => handleClaimProfile(), 500);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Sign up failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        // Get the user's profile ID
+        const { data: userData } = await supabase
+          .from('users')
+          .select('*')
+          .eq('auth_user_id', data.user.id)
+          .single();
+
+        setCurrentUser(userData);
+        setShowAuthForm(false);
+        
+        toast({
+          title: "Signed in!",
+          description: "Now claiming your profile...",
+        });
+
+        // Auto-claim after signin
+        setTimeout(() => handleClaimProfile(), 500);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Sign in failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
   const handleClaimProfile = async () => {
     if (!currentUser) {
-      // Redirect to auth with return path
-      navigate(`/auth?returnTo=/claim/${code}`);
+      setShowAuthForm(true);
       return;
     }
 
@@ -153,7 +246,7 @@ const ClaimProfile = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="pt-24 px-6 max-w-2xl mx-auto pb-12">
-        {status === 'valid' && profileData && (
+        {status === 'valid' && profileData && !showAuthForm && (
           <Card className="gradient-card border-border/50">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -202,14 +295,128 @@ const ClaimProfile = () => {
                 className="w-full"
               >
                 {claiming && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {currentUser ? 'Claim Profile' : 'Sign In to Claim'}
+                {currentUser ? 'Claim Profile' : 'Continue'}
               </Button>
+            </CardContent>
+          </Card>
+        )}
 
-              {!currentUser && (
-                <p className="text-xs text-center text-muted-foreground">
-                  You'll be redirected to sign in or create an account
-                </p>
-              )}
+        {status === 'valid' && profileData && showAuthForm && (
+          <Card className="gradient-card border-border/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle2 className="w-6 h-6 text-primary" />
+                Create Account or Sign In
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="p-4 bg-muted/50 rounded-lg mb-4">
+                <p className="text-sm text-muted-foreground mb-2">Claiming profile for:</p>
+                <div className="flex items-center gap-3">
+                  {profileData.avatar_url && (
+                    <img 
+                      src={profileData.avatar_url} 
+                      alt={profileData.name} 
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                  )}
+                  <div>
+                    <p className="font-semibold text-sm">{profileData.name}</p>
+                    {profileData.username && (
+                      <p className="text-xs text-muted-foreground">@{profileData.username}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <Tabs defaultValue="signup" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                  <TabsTrigger value="signin">Sign In</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="signup" className="space-y-4 mt-4">
+                  <form onSubmit={handleSignUp} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-email">Email</Label>
+                      <Input
+                        id="signup-email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-password">Password</Label>
+                      <Input
+                        id="signup-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        minLength={6}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Must be at least 6 characters
+                      </p>
+                    </div>
+                    <Button 
+                      type="submit" 
+                      className="w-full"
+                      disabled={authLoading}
+                    >
+                      {authLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      Create Account & Claim Profile
+                    </Button>
+                  </form>
+                </TabsContent>
+                
+                <TabsContent value="signin" className="space-y-4 mt-4">
+                  <form onSubmit={handleSignIn} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signin-email">Email</Label>
+                      <Input
+                        id="signin-email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signin-password">Password</Label>
+                      <Input
+                        id="signin-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <Button 
+                      type="submit" 
+                      className="w-full"
+                      disabled={authLoading}
+                    >
+                      {authLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      Sign In & Claim Profile
+                    </Button>
+                  </form>
+                </TabsContent>
+              </Tabs>
+
+              <Button 
+                variant="ghost" 
+                onClick={() => setShowAuthForm(false)}
+                className="w-full"
+              >
+                Back
+              </Button>
             </CardContent>
           </Card>
         )}

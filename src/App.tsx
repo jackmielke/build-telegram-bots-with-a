@@ -14,6 +14,7 @@ import CommunityDashboard from "./pages/CommunityDashboard";
 import UserProfile from "./pages/UserProfile";
 import ClaimProfile from "./pages/ClaimProfile";
 import ClaimProfileMagicLink from "./pages/ClaimProfileMagicLink";
+import Profile from "./pages/Profile";
 import TemplateMarketplace from "./pages/TemplateMarketplace";
 import ProductRoadmap from "./pages/ProductRoadmap";
 import NotFound from "./pages/NotFound";
@@ -54,6 +55,7 @@ const App = () => (
           <Route path="/user/:userId" element={<UserProfile />} />
           <Route path="/claim/:code" element={<ClaimProfile />} />
           <Route path="/claim" element={<ClaimProfileMagicLink />} />
+          <Route path="/profile" element={<Profile />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

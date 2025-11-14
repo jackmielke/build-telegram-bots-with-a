@@ -73,17 +73,17 @@ Deno.serve(async (req) => {
         // Current time in minutes
         const currentMinutes = currentHour * 60 + currentMinute;
         
-        // Check if we're within ±7 minutes of the scheduled time (14 minute window)
-        // This ensures we catch the message even if cron runs slightly off schedule
-        const timeDiff = Math.abs(currentMinutes - scheduledMinutes);
+        // Exact minute match required to prevent duplicate sends
+        // Only send when current UTC minute equals the scheduled UTC minute
+        const isExactMinuteMatch = currentMinutes === scheduledMinutes;
         
-        if (timeDiff > 7) {
+        if (!isExactMinuteMatch) {
           const timezone = communityDetails.timezone || 'UTC';
-          console.log(`⏭️ Skipping ${community.community_name} (${timezone}) - scheduled for ${scheduledUTCTime} UTC, current time is ${currentTime} UTC (diff: ${timeDiff} min)`);
+          console.log(`⏭️ Skipping ${community.community_name} (${timezone}) - scheduled for ${scheduledUTCTime} UTC, current time is ${currentTime} UTC (exact minute match required)`);
           continue;
         }
         
-        console.log(`✅ Time match for ${community.community_name} - sending daily messages (within ${timeDiff} min window)`);
+        console.log(`✅ Exact time match for ${community.community_name} - sending daily messages`);
       }
       
       console.log(`\n📡 Processing community: ${community.community_name}`);

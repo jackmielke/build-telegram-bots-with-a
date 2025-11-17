@@ -332,31 +332,7 @@ export function InlineEditRoadmapView() {
                     </Badge>
                   )}
 
-                  {/* Priority */}
-                  {editingField?.id === item.id && editingField?.field === 'priority' ? (
-                    <select
-                      autoFocus
-                      value={tempValue}
-                      onChange={(e) => {
-                        setTempValue(e.target.value);
-                        updateMutation.mutate({ id: item.id, field: 'priority', value: e.target.value });
-                        setEditingField(null);
-                      }}
-                      className="bg-background border border-primary rounded px-2 py-1 focus:outline-none capitalize"
-                    >
-                      {priorityOptions.map(opt => (
-                        <option key={opt} value={opt} className="capitalize">{opt}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <Badge
-                      variant="secondary"
-                      className="capitalize cursor-pointer hover:bg-muted"
-                      onClick={() => startEdit(item.id, 'priority', item.priority)}
-                    >
-                      {item.priority}
-                    </Badge>
-                  )}
+                  {/* Priority - hidden from display */}
 
                   {/* Timeline */}
                   {editingField?.id === item.id && editingField?.field === 'estimated_timeline' ? (

@@ -1850,6 +1850,9 @@ export type Database = {
           wallet_address: string | null
           wallet_connected_at: string | null
           wallet_provider: string | null
+          world_id_nullifier_hash: string | null
+          world_id_verified: boolean | null
+          world_id_verified_at: string | null
         }
         Insert: {
           auth_user_id?: string | null
@@ -1880,6 +1883,9 @@ export type Database = {
           wallet_address?: string | null
           wallet_connected_at?: string | null
           wallet_provider?: string | null
+          world_id_nullifier_hash?: string | null
+          world_id_verified?: boolean | null
+          world_id_verified_at?: string | null
         }
         Update: {
           auth_user_id?: string | null
@@ -1910,6 +1916,9 @@ export type Database = {
           wallet_address?: string | null
           wallet_connected_at?: string | null
           wallet_provider?: string | null
+          world_id_nullifier_hash?: string | null
+          world_id_verified?: boolean | null
+          world_id_verified_at?: string | null
         }
         Relationships: []
       }

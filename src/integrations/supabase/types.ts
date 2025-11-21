@@ -1847,6 +1847,9 @@ export type Database = {
           updated_at: string
           username: string | null
           vibecoin_balance: number
+          wallet_address: string | null
+          wallet_connected_at: string | null
+          wallet_provider: string | null
         }
         Insert: {
           auth_user_id?: string | null
@@ -1874,6 +1877,9 @@ export type Database = {
           updated_at?: string
           username?: string | null
           vibecoin_balance?: number
+          wallet_address?: string | null
+          wallet_connected_at?: string | null
+          wallet_provider?: string | null
         }
         Update: {
           auth_user_id?: string | null
@@ -1901,6 +1907,9 @@ export type Database = {
           updated_at?: string
           username?: string | null
           vibecoin_balance?: number
+          wallet_address?: string | null
+          wallet_connected_at?: string | null
+          wallet_provider?: string | null
         }
         Relationships: []
       }

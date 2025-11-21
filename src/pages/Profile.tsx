@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Upload, BadgeCheck } from "lucide-react";
+import { WalletConnectionDialog } from "@/components/WalletConnectionDialog";
 
 interface UserProfile {
   id: string;
@@ -237,6 +238,11 @@ export default function Profile() {
               className="border-border/50 focus:border-primary resize-none min-h-[100px] overflow-hidden"
             />
           </div>
+        </div>
+
+        {/* Wallet Connection */}
+        <div className="mb-6">
+          <WalletConnectionDialog />
         </div>
 
         {/* Action Buttons */}

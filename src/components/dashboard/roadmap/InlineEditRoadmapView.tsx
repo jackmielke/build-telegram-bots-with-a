@@ -1,11 +1,39 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock, Sparkles, Pause, XCircle, Plus, Trash2, ThumbsUp, ThumbsDown } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  CheckCircle2,
+  Clock,
+  Sparkles,
+  Pause,
+  XCircle,
+  Trash2,
+  ThumbsUp,
+  ThumbsDown,
+  GripVertical,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { AddFeatureDialog } from './AddFeatureDialog';
 
 interface RoadmapItem {
   id: string;
@@ -44,8 +72,8 @@ const categoryOptions = [
 
 export function InlineEditRoadmapView() {
   const [editingField, setEditingField] = useState<{ id: string; field: string } | null>(null);
-  const [tempValue, setTempValue] = useState<string>("");
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [tempValue, setTempValue] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const queryClient = useQueryClient();
 
   const { data: items = [], isLoading } = useQuery({
@@ -54,8 +82,9 @@ export function InlineEditRoadmapView() {
       const { data, error } = await supabase
         .from('product_roadmap')
         .select('*')
-        .order('order_index');
-      
+        .order('created_at', { ascending: false })
+        .order('order_index', { ascending: true });
+
       if (error) throw error;
       return data as RoadmapItem[];
     },
@@ -67,7 +96,7 @@ export function InlineEditRoadmapView() {
         .from('product_roadmap')
         .update({ [field]: value })
         .eq('id', id);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -82,11 +111,8 @@ export function InlineEditRoadmapView() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('product_roadmap')
-        .delete()
-        .eq('id', id);
-      
+      const { error } = await supabase.from('product_roadmap').delete().eq('id', id);
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -98,37 +124,36 @@ export function InlineEditRoadmapView() {
     },
   });
 
-  const addMutation = useMutation({
-    mutationFn: async () => {
-      const maxOrder = Math.max(...items.map(i => i.order_index), 0);
-      const { error } = await supabase
-        .from('product_roadmap')
-        .insert({
-          title: 'New Feature',
-          description: 'Add description...',
-          status: 'planned',
-          priority: 'medium',
-          category: 'foundation',
-          estimated_timeline: 'TBD',
-          icon: '✨',
-          tags: [],
-          order_index: maxOrder + 1,
-        });
-      
-      if (error) throw error;
+  const reorderMutation = useMutation({
+    mutationFn: async (reorderedItems: RoadmapItem[]) => {
+      const updates = reorderedItems.map((item, index) =>
+        supabase.from('product_roadmap').update({ order_index: index }).eq('id', item.id)
+      );
+      await Promise.all(updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roadmap-items'] });
-      toast.success('Added new feature');
+      toast.success('Order updated');
+    },
+    onError: (error: any) => {
+      toast.error('Failed to update order: ' + error.message);
     },
   });
 
   const voteMutation = useMutation({
-    mutationFn: async ({ roadmapItemId, voteType, action }: { roadmapItemId: string; voteType: 'upvote' | 'downvote'; action: 'add' | 'remove' }) => {
+    mutationFn: async ({
+      roadmapItemId,
+      voteType,
+      action,
+    }: {
+      roadmapItemId: string;
+      voteType: 'upvote' | 'downvote';
+      action: 'add' | 'remove';
+    }) => {
       const { data, error } = await supabase.functions.invoke('vote-roadmap', {
-        body: { roadmapItemId, voteType, action }
+        body: { roadmapItemId, voteType, action },
       });
-      
+
       if (error) throw error;
       return data;
     },
@@ -148,263 +173,132 @@ export function InlineEditRoadmapView() {
 
   const saveEdit = async (id: string, field: string) => {
     let value: any = tempValue;
-    
+
     if (field === 'tags') {
-      value = tempValue.split(',').map(t => t.trim()).filter(Boolean);
+      value = tempValue
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean);
     }
-    
+
     await updateMutation.mutateAsync({ id, field, value });
     setEditingField(null);
-    setTempValue("");
+    setTempValue('');
   };
 
   const cancelEdit = () => {
     setEditingField(null);
-    setTempValue("");
+    setTempValue('');
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !items) return;
+
+    const oldIndex = items.findIndex((i) => i.id === active.id);
+    const newIndex = items.findIndex((i) => i.id === over.id);
+
+    const reordered = arrayMove(items, oldIndex, newIndex);
+
+    // Optimistic update
+    queryClient.setQueryData(['roadmap-items'], reordered);
+
+    // Batch update database
+    reorderMutation.mutate(reordered);
   };
 
   if (isLoading) {
     return <div className="text-center py-8 text-muted-foreground">Loading...</div>;
   }
 
-  const filteredItems = items.filter(item => {
-    if (selectedStatus !== "all" && item.status !== selectedStatus) return false;
+  const filteredItems = items.filter((item) => {
+    if (selectedStatus !== 'all' && item.status !== selectedStatus) return false;
     return true;
   });
 
   const statusCounts = {
     all: items.length,
-    completed: items.filter(i => i.status === "completed").length,
-    in_progress: items.filter(i => i.status === "in_progress").length,
-    planned: items.filter(i => i.status === "planned").length,
+    completed: items.filter((i) => i.status === 'completed').length,
+    in_progress: items.filter((i) => i.status === 'in_progress').length,
+    planned: items.filter((i) => i.status === 'planned').length,
   };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Roadmap Items</h2>
-        <Button onClick={() => addMutation.mutate()} size="sm" className="gap-2">
-          <Plus className="h-4 w-4" />
-          Add Feature
-        </Button>
+        <AddFeatureDialog />
       </div>
 
       {/* Status Filters */}
       <div className="flex flex-wrap gap-2">
         <Button
-          variant={selectedStatus === "all" ? "default" : "outline"}
+          variant={selectedStatus === 'all' ? 'default' : 'outline'}
           size="sm"
-          onClick={() => setSelectedStatus("all")}
+          onClick={() => setSelectedStatus('all')}
         >
           All ({statusCounts.all})
         </Button>
         <Button
-          variant={selectedStatus === "completed" ? "default" : "outline"}
+          variant={selectedStatus === 'completed' ? 'default' : 'outline'}
           size="sm"
-          onClick={() => setSelectedStatus("completed")}
-          className={cn(selectedStatus === "completed" && "bg-green-600 hover:bg-green-700")}
+          onClick={() => setSelectedStatus('completed')}
+          className={cn(selectedStatus === 'completed' && 'bg-green-600 hover:bg-green-700')}
         >
           <CheckCircle2 className="h-4 w-4 mr-1" />
           Completed ({statusCounts.completed})
         </Button>
         <Button
-          variant={selectedStatus === "in_progress" ? "default" : "outline"}
+          variant={selectedStatus === 'in_progress' ? 'default' : 'outline'}
           size="sm"
-          onClick={() => setSelectedStatus("in_progress")}
-          className={cn(selectedStatus === "in_progress" && "bg-blue-600 hover:bg-blue-700")}
+          onClick={() => setSelectedStatus('in_progress')}
+          className={cn(selectedStatus === 'in_progress' && 'bg-blue-600 hover:bg-blue-700')}
         >
           <Clock className="h-4 w-4 mr-1" />
           In Progress ({statusCounts.in_progress})
         </Button>
         <Button
-          variant={selectedStatus === "planned" ? "default" : "outline"}
+          variant={selectedStatus === 'planned' ? 'default' : 'outline'}
           size="sm"
-          onClick={() => setSelectedStatus("planned")}
-          className={cn(selectedStatus === "planned" && "bg-purple-600 hover:bg-purple-700")}
+          onClick={() => setSelectedStatus('planned')}
+          className={cn(selectedStatus === 'planned' && 'bg-purple-600 hover:bg-purple-700')}
         >
           <Sparkles className="h-4 w-4 mr-1" />
           Planned ({statusCounts.planned})
         </Button>
       </div>
 
-      <div className="space-y-2">
-        {filteredItems.map((item) => {
-          const statusConfig = statusOptions.find(s => s.value === item.status);
-          const StatusIcon = statusConfig?.icon || Sparkles;
-
-          return (
-            <div
-              key={item.id}
-              className={cn(
-                "group relative p-4 rounded-lg border border-border/50 bg-card/50",
-                "hover:bg-card hover:border-border hover:shadow-md transition-all duration-200"
-              )}
-            >
-              {/* Delete button - shows on hover */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={() => {
-                  if (confirm('Delete this feature?')) {
-                    deleteMutation.mutate(item.id);
-                  }
-                }}
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-
-              <div className="space-y-3 pr-8">
-                {/* Title */}
-                <div>
-                  {editingField?.id === item.id && editingField?.field === 'title' ? (
-                    <input
-                      autoFocus
-                      type="text"
-                      value={tempValue}
-                      onChange={(e) => setTempValue(e.target.value)}
-                      onBlur={() => saveEdit(item.id, 'title')}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') saveEdit(item.id, 'title');
-                        if (e.key === 'Escape') cancelEdit();
-                      }}
-                      className="w-full text-xl font-bold bg-background border border-primary rounded px-2 py-1 focus:outline-none"
-                    />
-                  ) : (
-                    <h3
-                      onClick={() => startEdit(item.id, 'title', item.title)}
-                      className="text-xl font-bold cursor-text hover:bg-muted/50 rounded px-2 py-1 -mx-2 transition-colors"
-                    >
-                      {item.title}
-                    </h3>
-                  )}
-                </div>
-
-                {/* Description */}
-                <div>
-                  {editingField?.id === item.id && editingField?.field === 'description' ? (
-                    <textarea
-                      autoFocus
-                      value={tempValue}
-                      onChange={(e) => setTempValue(e.target.value)}
-                      onBlur={() => saveEdit(item.id, 'description')}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Escape') cancelEdit();
-                      }}
-                      className="w-full bg-background border border-primary rounded px-2 py-1 focus:outline-none min-h-[60px]"
-                    />
-                  ) : (
-                    <p
-                      onClick={() => startEdit(item.id, 'description', item.description)}
-                      className="text-muted-foreground cursor-text hover:bg-muted/50 rounded px-2 py-1 -mx-2 transition-colors"
-                    >
-                      {item.description}
-                    </p>
-                  )}
-                </div>
-
-                {/* Metadata row */}
-                <div className="flex flex-wrap gap-3 items-center text-sm">
-                  {/* Status */}
-                  {editingField?.id === item.id && editingField?.field === 'status' ? (
-                    <select
-                      autoFocus
-                      value={tempValue}
-                      onChange={(e) => {
-                        setTempValue(e.target.value);
-                        updateMutation.mutate({ id: item.id, field: 'status', value: e.target.value });
-                        setEditingField(null);
-                      }}
-                      className="bg-background border border-primary rounded px-2 py-1 focus:outline-none"
-                    >
-                      {statusOptions.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <Badge
-                      variant="outline"
-                      className={cn("gap-1 cursor-pointer hover:bg-muted", statusConfig?.color)}
-                      onClick={() => startEdit(item.id, 'status', item.status)}
-                    >
-                      <StatusIcon className="h-3 w-3" />
-                      {statusConfig?.label}
-                    </Badge>
-                  )}
-
-                  {/* Priority - hidden from display */}
-
-                  {/* Timeline */}
-                  {editingField?.id === item.id && editingField?.field === 'estimated_timeline' ? (
-                    <input
-                      autoFocus
-                      type="text"
-                      value={tempValue}
-                      onChange={(e) => setTempValue(e.target.value)}
-                      onBlur={() => saveEdit(item.id, 'estimated_timeline')}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') saveEdit(item.id, 'estimated_timeline');
-                        if (e.key === 'Escape') cancelEdit();
-                      }}
-                      className="bg-background border border-primary rounded px-2 py-1 focus:outline-none"
-                    />
-                  ) : (
-                    <span
-                      onClick={() => startEdit(item.id, 'estimated_timeline', item.estimated_timeline)}
-                      className="text-muted-foreground cursor-pointer hover:bg-muted rounded px-2 py-1 transition-colors"
-                    >
-                      {item.estimated_timeline}
-                    </span>
-                  )}
-
-                  {/* Upvotes/Downvotes */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0 hover:bg-green-100 dark:hover:bg-green-900/20"
-                        onClick={() => voteMutation.mutate({ roadmapItemId: item.id, voteType: 'upvote', action: 'add' })}
-                      >
-                        <ThumbsUp className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
-                      </Button>
-                      <span className="text-sm font-medium min-w-[20px] text-center">{item.upvotes || 0}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0 hover:bg-muted"
-                        onClick={() => voteMutation.mutate({ roadmapItemId: item.id, voteType: 'upvote', action: 'remove' })}
-                      >
-                        <span className="text-xs">−</span>
-                      </Button>
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0 hover:bg-red-100 dark:hover:bg-red-900/20"
-                        onClick={() => voteMutation.mutate({ roadmapItemId: item.id, voteType: 'downvote', action: 'add' })}
-                      >
-                        <ThumbsDown className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
-                      </Button>
-                      <span className="text-sm font-medium min-w-[20px] text-center">{item.downvotes || 0}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0 hover:bg-muted"
-                        onClick={() => voteMutation.mutate({ roadmapItemId: item.id, voteType: 'downvote', action: 'remove' })}
-                      >
-                        <span className="text-xs">−</span>
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {/* Roadmap Items with Drag and Drop */}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={filteredItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-2">
+            {filteredItems.map((item) => (
+              <SortableRoadmapItem
+                key={item.id}
+                item={item}
+                editingField={editingField}
+                tempValue={tempValue}
+                startEdit={startEdit}
+                saveEdit={saveEdit}
+                cancelEdit={cancelEdit}
+                setTempValue={setTempValue}
+                updateMutation={updateMutation}
+                deleteMutation={deleteMutation}
+                voteMutation={voteMutation}
+                setEditingField={setEditingField}
+                statusOptions={statusOptions}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
 
       {filteredItems.length === 0 && items.length > 0 && (
         <div className="text-center py-12 text-muted-foreground">
@@ -417,6 +311,240 @@ export function InlineEditRoadmapView() {
           No roadmap items yet. Click "Add Feature" to create one.
         </div>
       )}
+    </div>
+  );
+}
+
+interface SortableRoadmapItemProps {
+  item: RoadmapItem;
+  editingField: { id: string; field: string } | null;
+  tempValue: string;
+  startEdit: (id: string, field: string, value: any) => void;
+  saveEdit: (id: string, field: string) => void;
+  cancelEdit: () => void;
+  setTempValue: (value: string) => void;
+  updateMutation: any;
+  deleteMutation: any;
+  voteMutation: any;
+  setEditingField: (field: { id: string; field: string } | null) => void;
+  statusOptions: Array<{ value: string; label: string; icon: any; color: string }>;
+}
+
+function SortableRoadmapItem({
+  item,
+  editingField,
+  tempValue,
+  startEdit,
+  saveEdit,
+  cancelEdit,
+  setTempValue,
+  updateMutation,
+  deleteMutation,
+  voteMutation,
+  setEditingField,
+  statusOptions,
+}: SortableRoadmapItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const statusConfig = statusOptions.find((s) => s.value === item.status);
+  const StatusIcon = statusConfig?.icon || Sparkles;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        'group relative p-4 rounded-lg border border-border/50 bg-card/50',
+        'hover:bg-card hover:border-border hover:shadow-md transition-all duration-200',
+        'flex gap-3'
+      )}
+    >
+      {/* Drag Handle */}
+      <button
+        {...attributes}
+        {...listeners}
+        className="mt-1 cursor-grab active:cursor-grabbing opacity-30 hover:opacity-100 transition-opacity flex-shrink-0"
+        aria-label="Drag to reorder"
+      >
+        <GripVertical className="h-5 w-5 text-muted-foreground" />
+      </button>
+
+      {/* Delete button - shows on hover */}
+      <Button
+        variant="ghost"
+        size="sm"
+        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+        onClick={() => {
+          if (confirm('Delete this feature?')) {
+            deleteMutation.mutate(item.id);
+          }
+        }}
+      >
+        <Trash2 className="h-4 w-4 text-destructive" />
+      </Button>
+
+      {/* Content */}
+      <div className="space-y-3 pr-8 flex-1">
+        {/* Title */}
+        <div>
+          {editingField?.id === item.id && editingField?.field === 'title' ? (
+            <input
+              autoFocus
+              type="text"
+              value={tempValue}
+              onChange={(e) => setTempValue(e.target.value)}
+              onBlur={() => saveEdit(item.id, 'title')}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveEdit(item.id, 'title');
+                if (e.key === 'Escape') cancelEdit();
+              }}
+              className="w-full text-xl font-bold bg-background border border-primary rounded px-2 py-1 focus:outline-none"
+            />
+          ) : (
+            <h3
+              onClick={() => startEdit(item.id, 'title', item.title)}
+              className="text-xl font-bold cursor-text hover:bg-muted/50 rounded px-2 py-1 -mx-2 transition-colors"
+            >
+              {item.title}
+            </h3>
+          )}
+        </div>
+
+        {/* Description */}
+        <div>
+          {editingField?.id === item.id && editingField?.field === 'description' ? (
+            <textarea
+              autoFocus
+              value={tempValue}
+              onChange={(e) => setTempValue(e.target.value)}
+              onBlur={() => saveEdit(item.id, 'description')}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') cancelEdit();
+              }}
+              className="w-full bg-background border border-primary rounded px-2 py-1 focus:outline-none min-h-[60px]"
+            />
+          ) : (
+            <p
+              onClick={() => startEdit(item.id, 'description', item.description)}
+              className="text-muted-foreground cursor-text hover:bg-muted/50 rounded px-2 py-1 -mx-2 transition-colors"
+            >
+              {item.description}
+            </p>
+          )}
+        </div>
+
+        {/* Metadata row */}
+        <div className="flex flex-wrap gap-3 items-center text-sm">
+          {/* Status */}
+          {editingField?.id === item.id && editingField?.field === 'status' ? (
+            <select
+              autoFocus
+              value={tempValue}
+              onChange={(e) => {
+                setTempValue(e.target.value);
+                updateMutation.mutate({ id: item.id, field: 'status', value: e.target.value });
+                setEditingField(null);
+              }}
+              className="bg-background border border-primary rounded px-2 py-1 focus:outline-none"
+            >
+              {statusOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <Badge
+              variant="outline"
+              className={cn('gap-1 cursor-pointer hover:bg-muted', statusConfig?.color)}
+              onClick={() => startEdit(item.id, 'status', item.status)}
+            >
+              <StatusIcon className="h-3 w-3" />
+              {statusConfig?.label}
+            </Badge>
+          )}
+
+          {/* Timeline */}
+          {editingField?.id === item.id && editingField?.field === 'estimated_timeline' ? (
+            <input
+              autoFocus
+              type="text"
+              value={tempValue}
+              onChange={(e) => setTempValue(e.target.value)}
+              onBlur={() => saveEdit(item.id, 'estimated_timeline')}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveEdit(item.id, 'estimated_timeline');
+                if (e.key === 'Escape') cancelEdit();
+              }}
+              className="bg-background border border-primary rounded px-2 py-1 focus:outline-none"
+            />
+          ) : (
+            <span
+              onClick={() => startEdit(item.id, 'estimated_timeline', item.estimated_timeline)}
+              className="text-muted-foreground cursor-pointer hover:bg-muted rounded px-2 py-1 transition-colors"
+            >
+              {item.estimated_timeline}
+            </span>
+          )}
+
+          {/* Upvotes/Downvotes */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 hover:bg-green-100 dark:hover:bg-green-900/20"
+                onClick={() => voteMutation.mutate({ roadmapItemId: item.id, voteType: 'upvote', action: 'add' })}
+              >
+                <ThumbsUp className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+              </Button>
+              <span className="text-sm font-medium min-w-[20px] text-center">{item.upvotes || 0}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 hover:bg-muted"
+                onClick={() =>
+                  voteMutation.mutate({ roadmapItemId: item.id, voteType: 'upvote', action: 'remove' })
+                }
+              >
+                <span className="text-xs">−</span>
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 hover:bg-red-100 dark:hover:bg-red-900/20"
+                onClick={() =>
+                  voteMutation.mutate({ roadmapItemId: item.id, voteType: 'downvote', action: 'add' })
+                }
+              >
+                <ThumbsDown className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+              </Button>
+              <span className="text-sm font-medium min-w-[20px] text-center">{item.downvotes || 0}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 hover:bg-muted"
+                onClick={() =>
+                  voteMutation.mutate({ roadmapItemId: item.id, voteType: 'downvote', action: 'remove' })
+                }
+              >
+                <span className="text-xs">−</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

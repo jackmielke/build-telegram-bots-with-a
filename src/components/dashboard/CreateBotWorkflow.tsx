@@ -7,17 +7,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Bot, ExternalLink, Loader2, Check, Info, Sparkles, Search, Database, Globe, ArrowRight, Coins } from 'lucide-react';
+import { Bot, ExternalLink, Loader2, Check, Info, Sparkles, Search, Database, Globe, ArrowRight } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useNavigate } from 'react-router-dom';
-import { TokenLaunchDialog } from './TokenLaunchDialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface CreateBotWorkflowProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-type Step = 'setup' | 'creating' | 'success' | 'personality' | 'tools' | 'tokenize';
+type Step = 'setup' | 'creating' | 'success' | 'personality' | 'tools';
 
 export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps) => {
   const [step, setStep] = useState<Step>('setup');
@@ -27,14 +27,10 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
   const [previousPrompt, setPreviousPrompt] = useState('');
   const [improvingPrompt, setImprovingPrompt] = useState(false);
   
-  // Tool configuration
+  // Tool configuration - memory tools enabled by default for agent mode
   const [searchMemoryEnabled, setSearchMemoryEnabled] = useState(true);
   const [addMemoryEnabled, setAddMemoryEnabled] = useState(true);
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
-  
-  // Tokenization
-  const [showTokenLaunch, setShowTokenLaunch] = useState(false);
-  const [wantsToken, setWantsToken] = useState<boolean | null>(null);
   
   const [botDetails, setBotDetails] = useState<{
     name: string;
@@ -383,11 +379,13 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
       if (error) throw error;
 
       toast({
-        title: "Tools Configured!",
-        description: "Your bot's capabilities have been set up."
+        title: "Bot Setup Complete! 🎉",
+        description: "Your bot is ready to use in agent mode."
       });
 
-      setStep('tokenize');
+      // Navigate to dashboard
+      navigate(`/community/${botDetails.communityId}`);
+      handleClose();
     } catch (error: any) {
       toast({
         title: "Save Failed",
@@ -421,8 +419,6 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
       setSearchMemoryEnabled(true);
       setAddMemoryEnabled(true);
       setWebSearchEnabled(false);
-      setWantsToken(null);
-      setShowTokenLaunch(false);
       onOpenChange(false);
     }
   };
@@ -694,64 +690,95 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
                   Configure Bot Tools
                 </DialogTitle>
                 <DialogDescription className="text-base">
-                  Choose what capabilities your bot should have
+                  Your bot will run in agent mode with these capabilities
                 </DialogDescription>
               </DialogHeader>
 
               <div className="space-y-5 py-4">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg border border-primary/20">
-                    <div className="flex items-start gap-3">
-                      <Search className="w-5 h-5 text-primary mt-0.5" />
-                      <div>
-                        <p className="font-medium">Search Memory</p>
-                        <p className="text-xs text-muted-foreground">
-                          Search through saved conversations and information
-                        </p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={searchMemoryEnabled}
-                      onCheckedChange={setSearchMemoryEnabled}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg border border-primary/20">
-                    <div className="flex items-start gap-3">
-                      <Database className="w-5 h-5 text-primary mt-0.5" />
-                      <div>
-                        <p className="font-medium">Add Memory</p>
-                        <p className="text-xs text-muted-foreground">
-                          Save new information from conversations
-                        </p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={addMemoryEnabled}
-                      onCheckedChange={setAddMemoryEnabled}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border">
-                    <div className="flex items-start gap-3">
-                      <Globe className="w-5 h-5 text-muted-foreground mt-0.5" />
-                      <div>
-                        <p className="font-medium">Web Search</p>
-                        <p className="text-xs text-muted-foreground">
-                          Search the internet for current information
-                        </p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={webSearchEnabled}
-                      onCheckedChange={setWebSearchEnabled}
-                    />
-                  </div>
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground">
+                    <strong className="text-foreground">Agent Mode:</strong> Memory tools are enabled by default so your bot can learn from conversations and recall information.
+                  </p>
                 </div>
 
-                <p className="text-xs text-muted-foreground text-center">
-                  You can add more tools and customize these settings later in the dashboard.
-                </p>
+                <ScrollArea className="h-[280px] pr-4">
+                  <div className="space-y-3">
+                    {/* Core Memory Tools - Enabled by default */}
+                    <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg border border-primary/20">
+                      <div className="flex items-start gap-3 flex-1">
+                        <Search className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">Search Memory</p>
+                            <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">Core</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Search through saved conversations and information
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={searchMemoryEnabled}
+                        onCheckedChange={setSearchMemoryEnabled}
+                        className="ml-3 flex-shrink-0"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg border border-primary/20">
+                      <div className="flex items-start gap-3 flex-1">
+                        <Database className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">Add Memory</p>
+                            <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">Core</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Save new information from conversations
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={addMemoryEnabled}
+                        onCheckedChange={setAddMemoryEnabled}
+                        className="ml-3 flex-shrink-0"
+                      />
+                    </div>
+
+                    {/* Optional Tools */}
+                    <div className="pt-2 pb-1">
+                      <p className="text-xs font-medium text-muted-foreground px-1">Optional Tools</p>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border">
+                      <div className="flex items-start gap-3 flex-1">
+                        <Globe className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="font-medium">Web Search</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Search the internet for current information
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={webSearchEnabled}
+                        onCheckedChange={setWebSearchEnabled}
+                        className="ml-3 flex-shrink-0"
+                      />
+                    </div>
+
+                    <div className="p-4 bg-muted/20 rounded-lg border border-dashed">
+                      <div className="flex items-start gap-3">
+                        <Info className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm">Custom Tools</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Add custom API integrations and workflows from the dashboard after setup
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </ScrollArea>
 
                 <div className="flex gap-3 pt-2">
                   <Button
@@ -769,12 +796,12 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
                     {creating ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Saving...
+                        Completing...
                       </>
                     ) : (
                       <>
-                        Next Step
-                        <ArrowRight className="w-4 h-4 ml-2" />
+                        Complete Setup
+                        <Check className="w-4 h-4 ml-2" />
                       </>
                     )}
                   </Button>
@@ -783,85 +810,8 @@ export const CreateBotWorkflow = ({ open, onOpenChange }: CreateBotWorkflowProps
             </>
           )}
 
-          {step === 'tokenize' && botDetails && (
-            <>
-              <DialogHeader className="text-center space-y-3 pb-2">
-                <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Coins className="w-7 h-7 text-primary" />
-                </div>
-                <DialogTitle className="text-2xl">
-                  Tokenize Your Bot?
-                </DialogTitle>
-                <DialogDescription className="text-base">
-                  Launch a token for your bot community (optional)
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-6 py-4">
-                <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
-                  <p className="text-sm">
-                    <strong>What's this?</strong> You can create a token for your bot community on Base blockchain. This allows you to:
-                  </p>
-                  <ul className="text-sm space-y-1.5 list-disc list-inside text-muted-foreground">
-                    <li>Build community ownership and engagement</li>
-                    <li>Reward active members with tokens</li>
-                    <li>Create token-gated features</li>
-                  </ul>
-                  <p className="text-xs text-muted-foreground pt-2">
-                    Don't worry - you can always do this later from the settings page.
-                  </p>
-                </div>
-
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={handleCompleteSetup}
-                    className="flex-1"
-                    size="lg"
-                  >
-                    Skip for Now
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setWantsToken(true);
-                      // Close this dialog before opening token launch
-                      onOpenChange(false);
-                      // Small delay to ensure dialog closes smoothly
-                      setTimeout(() => setShowTokenLaunch(true), 100);
-                    }}
-                    className="flex-1 gradient-primary"
-                    size="lg"
-                  >
-                    <Coins className="w-4 h-4 mr-2" />
-                    Launch Token
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
         </DialogContent>
       </Dialog>
-
-      {/* Token Launch Dialog - Standalone when called from workflow */}
-      {botDetails && (
-        <TokenLaunchDialog
-          open={showTokenLaunch}
-          onOpenChange={(open) => {
-            setShowTokenLaunch(open);
-            if (!open && wantsToken) {
-              // User completed or cancelled token launch - navigate to dashboard
-              handleCompleteSetup();
-            } else if (!open && !wantsToken) {
-              // User closed without launching - go back to tokenize step
-              onOpenChange(true);
-              setStep('tokenize');
-            }
-          }}
-          communityId={botDetails.communityId}
-          communityName={botDetails.name}
-          coverImageUrl={botDetails.photoUrl || null}
-        />
-      )}
     </>
   );
 };

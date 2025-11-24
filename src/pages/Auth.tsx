@@ -329,7 +329,7 @@ const Auth = () => {
             </Button>
             
             <Button
-              onClick={() => window.open('https://www.loom.com/share/39454b410c664fb2a185c766dadbbe38?sid=822920ef-b54e-4909-861c-0b8675e7aeba', '_blank')}
+              onClick={() => window.open('https://x.com/mielke_jack/status/1987942914618782115?s=20', '_blank')}
               variant="outline"
               size="lg"
               className="hover:bg-primary/10 hover:border-primary"

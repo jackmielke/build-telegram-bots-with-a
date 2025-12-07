@@ -10,6 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useConversation } from '@11labs/react';
 import CreateCommunityDialog from '@/components/CreateCommunityDialog';
 import { CreateBotWorkflow } from '@/components/dashboard/CreateBotWorkflow';
+import { CommunityAppTile } from '@/components/dashboard/CommunityAppTile';
+import { useIsMobile } from '@/hooks/use-mobile';
 import vibeLogo from '@/assets/vibe-logo.png';
 
 interface Community {
@@ -36,6 +38,7 @@ const Communities = () => {
   const [activeVoiceCall, setActiveVoiceCall] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const conversation = useConversation({
     onConnect: () => {
@@ -460,130 +463,158 @@ const Communities = () => {
                     Communities you manage and have full control over
                   </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {communities.filter(c => c.role === 'admin').map((community) => (
-                    <Card
-                      key={community.id}
-                      className="group cursor-pointer hover:shadow-glow transition-all duration-300 border-border/50 hover:border-primary/50"
-                      onClick={() => navigate(`/community/${community.id}`)}
+                {isMobile ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    {communities.filter(c => c.role === 'admin').map((community) => (
+                      <CommunityAppTile
+                        key={community.id}
+                        id={community.id}
+                        name={community.name}
+                        agentName={community.agent_name}
+                        coverImageUrl={community.cover_image_url}
+                        agentAvatarUrl={community.agent_avatar_url}
+                        isFavorited={community.is_favorited}
+                        onToggleFavorite={handleToggleFavorite}
+                        onClick={() => navigate(`/community/${community.id}`)}
+                      />
+                    ))}
+                    {/* Add new bot tile */}
+                    <div
+                      onClick={() => setShowCreateBotWorkflow(true)}
+                      className="flex flex-col items-center justify-center p-3 rounded-2xl border-2 border-dashed border-border/50 hover:border-primary/50 cursor-pointer transition-all duration-200 active:scale-95 min-h-[120px]"
                     >
-                      <CardHeader className="space-y-3">
-                        <div className="flex items-start space-x-3">
-                          <div className="w-16 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center flex-shrink-0">
-                            {community.cover_image_url && community.cover_image_url.trim() !== '' ? (
-                              <img 
-                                src={community.cover_image_url} 
-                                alt={community.name}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none';
-                                  const parent = e.currentTarget.parentElement;
-                                  if (parent) {
-                                    const icon = document.createElement('div');
-                                    icon.className = 'w-6 h-6 text-primary flex items-center justify-center';
-                                    icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
-                                    parent.appendChild(icon);
-                                  }
-                                }}
-                              />
-                            ) : community.agent_avatar_url && community.agent_avatar_url.trim() !== '' ? (
-                              <img 
-                                src={community.agent_avatar_url} 
-                                alt={community.agent_name || community.name}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none';
-                                  const parent = e.currentTarget.parentElement;
-                                  if (parent) {
-                                    const icon = document.createElement('div');
-                                    icon.className = 'w-6 h-6 text-primary flex items-center justify-center';
-                                    icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="14" y="3" rx="1"/><path d="M10 21V8a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H3"/></svg>';
-                                    parent.appendChild(icon);
-                                  }
-                                }}
-                              />
-                            ) : (
-                              <Bot className="w-6 h-6 text-primary" />
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center justify-between">
-                              <CardTitle className="text-lg group-hover:text-primary transition-colors truncate">
-                                {community.name}
-                              </CardTitle>
-                              <button
-                                onClick={(e) => handleToggleFavorite(e, community.id)}
-                                className="p-1 hover:bg-muted rounded-md transition-colors"
-                              >
-                                <Heart 
-                                  className={`w-4 h-4 transition-colors ${
-                                    community.is_favorited 
-                                      ? 'fill-red-500 text-red-500' 
-                                      : 'text-muted-foreground hover:text-red-500'
-                                  }`}
+                      <div className="w-14 h-14 rounded-xl bg-muted/50 flex items-center justify-center mb-2">
+                        <Plus className="w-6 h-6 text-muted-foreground" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">New Bot</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {communities.filter(c => c.role === 'admin').map((community) => (
+                      <Card
+                        key={community.id}
+                        className="group cursor-pointer hover:shadow-glow transition-all duration-300 border-border/50 hover:border-primary/50"
+                        onClick={() => navigate(`/community/${community.id}`)}
+                      >
+                        <CardHeader className="space-y-3">
+                          <div className="flex items-start space-x-3">
+                            <div className="w-16 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center flex-shrink-0">
+                              {community.cover_image_url && community.cover_image_url.trim() !== '' ? (
+                                <img 
+                                  src={community.cover_image_url} 
+                                  alt={community.name}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    const parent = e.currentTarget.parentElement;
+                                    if (parent) {
+                                      const icon = document.createElement('div');
+                                      icon.className = 'w-6 h-6 text-primary flex items-center justify-center';
+                                      icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+                                      parent.appendChild(icon);
+                                    }
+                                  }}
                                 />
-                              </button>
+                              ) : community.agent_avatar_url && community.agent_avatar_url.trim() !== '' ? (
+                                <img 
+                                  src={community.agent_avatar_url} 
+                                  alt={community.agent_name || community.name}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    const parent = e.currentTarget.parentElement;
+                                    if (parent) {
+                                      const icon = document.createElement('div');
+                                      icon.className = 'w-6 h-6 text-primary flex items-center justify-center';
+                                      icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="14" y="3" rx="1"/><path d="M10 21V8a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H3"/></svg>';
+                                      parent.appendChild(icon);
+                                    }
+                                  }}
+                                />
+                              ) : (
+                                <Bot className="w-6 h-6 text-primary" />
+                              )}
                             </div>
-                            {community.agent_name && (
-                              <p className="text-sm text-muted-foreground truncate">
-                                Agent: {community.agent_name}
-                              </p>
-                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between">
+                                <CardTitle className="text-lg group-hover:text-primary transition-colors truncate">
+                                  {community.name}
+                                </CardTitle>
+                                <button
+                                  onClick={(e) => handleToggleFavorite(e, community.id)}
+                                  className="p-1 hover:bg-muted rounded-md transition-colors"
+                                >
+                                  <Heart 
+                                    className={`w-4 h-4 transition-colors ${
+                                      community.is_favorited 
+                                        ? 'fill-red-500 text-red-500' 
+                                        : 'text-muted-foreground hover:text-red-500'
+                                    }`}
+                                  />
+                                </button>
+                              </div>
+                              {community.agent_name && (
+                                <p className="text-sm text-muted-foreground truncate">
+                                  Agent: {community.agent_name}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </CardHeader>
+                        </CardHeader>
 
-                      <CardContent>
-                        <CardDescription className="line-clamp-2">
-                          {community.description || "No description available"}
-                        </CardDescription>
-                        
-                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
-                          <div className="flex items-center space-x-2">
-                            <Badge variant="outline" className="text-xs">
-                              {community.privacy_level}
-                            </Badge>
-                            <Badge variant="default" className="flex items-center space-x-1 text-xs">
-                              <Crown className="w-3 h-3" />
-                              <span>Admin</span>
-                            </Badge>
-                            {community.elevenlabs_agent_id && (
-                              <Badge 
-                                variant="secondary" 
-                                className={`flex items-center space-x-1 text-xs cursor-pointer transition-all ${
-                                  activeVoiceCall === community.id
-                                    ? 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30 hover:bg-red-500/30'
-                                    : 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20 hover:bg-green-500/20'
-                                }`}
-                                onClick={(e) => 
-                                  activeVoiceCall === community.id 
-                                    ? endVoiceCall(e)
-                                    : startVoiceCall(e, community.id, community.elevenlabs_agent_id!)
-                                }
-                              >
-                                {activeVoiceCall === community.id ? (
-                                  <>
-                                    <PhoneOff className="w-3 h-3" />
-                                    <span>End Call</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Phone className="w-3 h-3" />
-                                    <span>Call</span>
-                                  </>
-                                )}
+                        <CardContent>
+                          <CardDescription className="line-clamp-2">
+                            {community.description || "No description available"}
+                          </CardDescription>
+                          
+                          <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
+                            <div className="flex items-center space-x-2">
+                              <Badge variant="outline" className="text-xs">
+                                {community.privacy_level}
                               </Badge>
-                            )}
+                              <Badge variant="default" className="flex items-center space-x-1 text-xs">
+                                <Crown className="w-3 h-3" />
+                                <span>Admin</span>
+                              </Badge>
+                              {community.elevenlabs_agent_id && (
+                                <Badge 
+                                  variant="secondary" 
+                                  className={`flex items-center space-x-1 text-xs cursor-pointer transition-all ${
+                                    activeVoiceCall === community.id
+                                      ? 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30 hover:bg-red-500/30'
+                                      : 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20 hover:bg-green-500/20'
+                                  }`}
+                                  onClick={(e) => 
+                                    activeVoiceCall === community.id 
+                                      ? endVoiceCall(e)
+                                      : startVoiceCall(e, community.id, community.elevenlabs_agent_id!)
+                                  }
+                                >
+                                  {activeVoiceCall === community.id ? (
+                                    <>
+                                      <PhoneOff className="w-3 h-3" />
+                                      <span>End Call</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Phone className="w-3 h-3" />
+                                      <span>Call</span>
+                                    </>
+                                  )}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Click to manage →
+                            </div>
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            Click to manage →
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                  <CreateCommunityDialog asCard onCommunityCreated={() => fetchCommunities(user?.id)} />
-                </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                    <CreateCommunityDialog asCard onCommunityCreated={() => fetchCommunities(user?.id)} />
+                  </div>
+                )}
               </div>
             )}
 
@@ -602,110 +633,128 @@ const Communities = () => {
                     Communities you're a member of (view-only access)
                   </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {communities.filter(c => c.role !== 'admin').map((community) => (
-                <Card 
-                  key={community.id}
-                  className="group cursor-pointer hover:shadow-glow transition-all duration-300 border-border/50 hover:border-primary/50"
-                  onClick={() => navigate(`/community/${community.id}`)}
-                >
-                <CardHeader className="space-y-3">
-                  <div className="flex items-start space-x-3">
-                    <div className="w-16 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center flex-shrink-0">
-                      {community.cover_image_url ? (
-                        <img 
-                          src={community.cover_image_url} 
-                          alt={community.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : community.agent_avatar_url ? (
-                        <img 
-                          src={community.agent_avatar_url} 
-                          alt={community.agent_name || community.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <Bot className="w-6 h-6 text-primary" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg group-hover:text-primary transition-colors truncate">
-                          {community.name}
-                        </CardTitle>
-                        <button
-                          onClick={(e) => handleToggleFavorite(e, community.id)}
-                          className="p-1 hover:bg-muted rounded-md transition-colors"
-                        >
-                          <Heart 
-                            className={`w-4 h-4 transition-colors ${
-                              community.is_favorited 
-                                ? 'fill-red-500 text-red-500' 
-                                : 'text-muted-foreground hover:text-red-500'
-                            }`}
-                          />
-                        </button>
-                      </div>
-                      {community.agent_name && (
-                        <p className="text-sm text-muted-foreground truncate">
-                          Agent: {community.agent_name}
-                        </p>
-                      )}
-                    </div>
+                {isMobile ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    {communities.filter(c => c.role !== 'admin').map((community) => (
+                      <CommunityAppTile
+                        key={community.id}
+                        id={community.id}
+                        name={community.name}
+                        agentName={community.agent_name}
+                        coverImageUrl={community.cover_image_url}
+                        agentAvatarUrl={community.agent_avatar_url}
+                        isFavorited={community.is_favorited}
+                        onToggleFavorite={handleToggleFavorite}
+                        onClick={() => navigate(`/community/${community.id}`)}
+                      />
+                    ))}
                   </div>
-                </CardHeader>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {communities.filter(c => c.role !== 'admin').map((community) => (
+                      <Card 
+                        key={community.id}
+                        className="group cursor-pointer hover:shadow-glow transition-all duration-300 border-border/50 hover:border-primary/50"
+                        onClick={() => navigate(`/community/${community.id}`)}
+                      >
+                        <CardHeader className="space-y-3">
+                          <div className="flex items-start space-x-3">
+                            <div className="w-16 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center flex-shrink-0">
+                              {community.cover_image_url ? (
+                                <img 
+                                  src={community.cover_image_url} 
+                                  alt={community.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : community.agent_avatar_url ? (
+                                <img 
+                                  src={community.agent_avatar_url} 
+                                  alt={community.agent_name || community.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <Bot className="w-6 h-6 text-primary" />
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between">
+                                <CardTitle className="text-lg group-hover:text-primary transition-colors truncate">
+                                  {community.name}
+                                </CardTitle>
+                                <button
+                                  onClick={(e) => handleToggleFavorite(e, community.id)}
+                                  className="p-1 hover:bg-muted rounded-md transition-colors"
+                                >
+                                  <Heart 
+                                    className={`w-4 h-4 transition-colors ${
+                                      community.is_favorited 
+                                        ? 'fill-red-500 text-red-500' 
+                                        : 'text-muted-foreground hover:text-red-500'
+                                    }`}
+                                  />
+                                </button>
+                              </div>
+                              {community.agent_name && (
+                                <p className="text-sm text-muted-foreground truncate">
+                                  Agent: {community.agent_name}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </CardHeader>
 
-                   <CardContent>
-                     <CardDescription className="line-clamp-2">
-                       {community.description || "No description available"}
-                     </CardDescription>
-                     
-                     <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
-                       <div className="flex items-center space-x-2">
-                         <Badge variant="outline" className="text-xs">
-                           {community.privacy_level}
-                         </Badge>
-                         <Badge variant={getRoleBadgeVariant(community.role)} className="flex items-center space-x-1 text-xs">
-                           {getRoleIcon(community.role)}
-                           <span className="capitalize">{community.role}</span>
-                         </Badge>
-                            {community.elevenlabs_agent_id && (
-                              <Badge 
-                                variant="secondary" 
-                                className={`flex items-center space-x-1 text-xs cursor-pointer transition-all ${
-                                  activeVoiceCall === community.id
-                                    ? 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30 hover:bg-red-500/30'
-                                    : 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20 hover:bg-green-500/20'
-                                }`}
-                                onClick={(e) => 
-                                  activeVoiceCall === community.id 
-                                    ? endVoiceCall(e)
-                                    : startVoiceCall(e, community.id, community.elevenlabs_agent_id!)
-                                }
-                              >
-                                {activeVoiceCall === community.id ? (
-                                  <>
-                                    <PhoneOff className="w-3 h-3" />
-                                    <span>End Call</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Phone className="w-3 h-3" />
-                                    <span>Call</span>
-                                  </>
-                                )}
+                        <CardContent>
+                          <CardDescription className="line-clamp-2">
+                            {community.description || "No description available"}
+                          </CardDescription>
+                          
+                          <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
+                            <div className="flex items-center space-x-2">
+                              <Badge variant="outline" className="text-xs">
+                                {community.privacy_level}
                               </Badge>
-                            )}
-                       </div>
-                       <div className="text-xs text-muted-foreground">
-                         Click to view →
-                       </div>
-                     </div>
-                   </CardContent>
-                     </Card>
-                   ))}
-                   <CreateCommunityDialog asCard onCommunityCreated={() => fetchCommunities(user?.id)} />
-                </div>
+                              <Badge variant={getRoleBadgeVariant(community.role)} className="flex items-center space-x-1 text-xs">
+                                {getRoleIcon(community.role)}
+                                <span className="capitalize">{community.role}</span>
+                              </Badge>
+                              {community.elevenlabs_agent_id && (
+                                <Badge 
+                                  variant="secondary" 
+                                  className={`flex items-center space-x-1 text-xs cursor-pointer transition-all ${
+                                    activeVoiceCall === community.id
+                                      ? 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30 hover:bg-red-500/30'
+                                      : 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20 hover:bg-green-500/20'
+                                  }`}
+                                  onClick={(e) => 
+                                    activeVoiceCall === community.id 
+                                      ? endVoiceCall(e)
+                                      : startVoiceCall(e, community.id, community.elevenlabs_agent_id!)
+                                  }
+                                >
+                                  {activeVoiceCall === community.id ? (
+                                    <>
+                                      <PhoneOff className="w-3 h-3" />
+                                      <span>End Call</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Phone className="w-3 h-3" />
+                                      <span>Call</span>
+                                    </>
+                                  )}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Click to view →
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                    <CreateCommunityDialog asCard onCommunityCreated={() => fetchCommunities(user?.id)} />
+                  </div>
+                )}
               </div>
             )}
 
@@ -724,68 +773,86 @@ const Communities = () => {
                     Most recently active communities you can explore
                   </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {activeCommunities.map((community) => (
-                    <Card
-                      key={community.id}
-                      className="group cursor-pointer hover:shadow-glow transition-all duration-300 border-border/50 hover:border-primary/50"
-                      onClick={() => navigate(`/explore`)}
-                    >
-                      <CardHeader className="space-y-3">
-                        <div className="flex items-start space-x-3">
-                          <div className="w-16 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center flex-shrink-0">
-                            {community.cover_image_url ? (
-                              <img 
-                                src={community.cover_image_url} 
-                                alt={community.name}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : community.agent_avatar_url ? (
-                              <img 
-                                src={community.agent_avatar_url} 
-                                alt={community.agent_name || community.name}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <Bot className="w-6 h-6 text-primary" />
-                            )}
+                {isMobile ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    {activeCommunities.map((community) => (
+                      <CommunityAppTile
+                        key={community.id}
+                        id={community.id}
+                        name={community.name}
+                        agentName={community.agent_name}
+                        coverImageUrl={community.cover_image_url}
+                        agentAvatarUrl={community.agent_avatar_url}
+                        isFavorited={community.is_favorited}
+                        onToggleFavorite={handleToggleFavorite}
+                        onClick={() => navigate(`/explore`)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {activeCommunities.map((community) => (
+                      <Card
+                        key={community.id}
+                        className="group cursor-pointer hover:shadow-glow transition-all duration-300 border-border/50 hover:border-primary/50"
+                        onClick={() => navigate(`/explore`)}
+                      >
+                        <CardHeader className="space-y-3">
+                          <div className="flex items-start space-x-3">
+                            <div className="w-16 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center flex-shrink-0">
+                              {community.cover_image_url ? (
+                                <img 
+                                  src={community.cover_image_url} 
+                                  alt={community.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : community.agent_avatar_url ? (
+                                <img 
+                                  src={community.agent_avatar_url} 
+                                  alt={community.agent_name || community.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <Bot className="w-6 h-6 text-primary" />
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <CardTitle className="text-lg group-hover:text-primary transition-colors truncate">
+                                {community.name}
+                              </CardTitle>
+                              {community.agent_name && (
+                                <p className="text-sm text-muted-foreground truncate">
+                                  Agent: {community.agent_name}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <CardTitle className="text-lg group-hover:text-primary transition-colors truncate">
-                              {community.name}
-                            </CardTitle>
-                            {community.agent_name && (
-                              <p className="text-sm text-muted-foreground truncate">
-                                Agent: {community.agent_name}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </CardHeader>
+                        </CardHeader>
 
-                      <CardContent>
-                        <CardDescription className="line-clamp-2">
-                          {community.description || "No description available"}
-                        </CardDescription>
-                        
-                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
-                          <div className="flex items-center space-x-2">
-                            <Badge variant="outline" className="text-xs">
-                              {community.privacy_level}
-                            </Badge>
-                            <Badge variant="secondary" className="flex items-center space-x-1 text-xs">
-                              <Activity className="w-3 h-3" />
-                              <span>Active</span>
-                            </Badge>
+                        <CardContent>
+                          <CardDescription className="line-clamp-2">
+                            {community.description || "No description available"}
+                          </CardDescription>
+                          
+                          <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
+                            <div className="flex items-center space-x-2">
+                              <Badge variant="outline" className="text-xs">
+                                {community.privacy_level}
+                              </Badge>
+                              <Badge variant="secondary" className="flex items-center space-x-1 text-xs">
+                                <Activity className="w-3 h-3" />
+                                <span>Active</span>
+                              </Badge>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Explore →
+                            </div>
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            Explore →
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

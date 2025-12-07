@@ -66,13 +66,6 @@ export function CommunityAppTile({
       <p className="text-sm font-medium text-center truncate w-full group-hover:text-primary transition-colors">
         {name}
       </p>
-
-      {/* Agent Name */}
-      {agentName && (
-        <p className="text-xs text-muted-foreground text-center truncate w-full">
-          {agentName}
-        </p>
-      )}
     </div>
   );
 }

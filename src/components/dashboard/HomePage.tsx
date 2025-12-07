@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Users, MessageSquare, DollarSign, Bot, Zap, TrendingUp, Activity, Calendar, ArrowRight, Sparkles, Plus, ExternalLink, ChevronDown, ChevronUp, Brain, Code, Copy, Settings } from 'lucide-react';
+import { Users, MessageSquare, DollarSign, Bot, Zap, TrendingUp, Activity, Calendar, ArrowRight, Sparkles, Plus, ExternalLink, ChevronDown, ChevronUp, Brain, Code, Copy, Settings, Bell, Send, Edit3 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { TelegramBotDialog } from '@/components/TelegramBotDialog';
 import BotOnboarding from '@/components/dashboard/BotOnboarding';
@@ -402,15 +402,30 @@ const HomePage = ({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Button onClick={() => onNavigate('agent')} className="w-full" variant="outline">
-              <Bot className="mr-2 h-4 w-4" />
-              Bot Settings
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <Button onClick={() => onNavigate('settings')} className="w-full flex flex-col items-center gap-2 h-auto py-4" variant="outline">
+              <Bell className="h-5 w-5 text-primary" />
+              <span className="text-xs">Daily Notifications</span>
             </Button>
             
-            <Button onClick={() => onNavigate('settings')} className="w-full" variant="outline">
-              <Settings className="mr-2 h-4 w-4" />
-              Community Settings
+            <Button onClick={() => onNavigate('members')} className="w-full flex flex-col items-center gap-2 h-auto py-4" variant="outline">
+              <Send className="h-5 w-5 text-primary" />
+              <span className="text-xs">Broadcast Message</span>
+            </Button>
+            
+            <Button onClick={() => onNavigate('agent')} className="w-full flex flex-col items-center gap-2 h-auto py-4" variant="outline">
+              <Edit3 className="h-5 w-5 text-primary" />
+              <span className="text-xs">Edit Agent Prompt</span>
+            </Button>
+            
+            <Button onClick={() => onNavigate('agent')} className="w-full flex flex-col items-center gap-2 h-auto py-4" variant="outline">
+              <Bot className="h-5 w-5 text-primary" />
+              <span className="text-xs">Bot Settings</span>
+            </Button>
+            
+            <Button onClick={() => onNavigate('settings')} className="w-full flex flex-col items-center gap-2 h-auto py-4" variant="outline">
+              <Settings className="h-5 w-5 text-primary" />
+              <span className="text-xs">Community</span>
             </Button>
           </div>
         </CardContent>

@@ -14,6 +14,265 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_emails: {
+        Row: {
+          created_at: string
+          email: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+        }
+        Relationships: []
+      }
+      agent_chat_logs: {
+        Row: {
+          agent_id: string
+          agent_response: string
+          community_id: string
+          completion_tokens: number | null
+          cost_credits: number | null
+          created_at: string | null
+          id: string
+          openrouter_model: string | null
+          prompt_tokens: number | null
+          session_key: string | null
+          telegram_chat_id: number | null
+          telegram_user_id: number | null
+          telegram_username: string | null
+          tokens_used: number | null
+          total_tokens: number | null
+          usage_json: Json | null
+          user_message: string
+        }
+        Insert: {
+          agent_id: string
+          agent_response: string
+          community_id: string
+          completion_tokens?: number | null
+          cost_credits?: number | null
+          created_at?: string | null
+          id?: string
+          openrouter_model?: string | null
+          prompt_tokens?: number | null
+          session_key?: string | null
+          telegram_chat_id?: number | null
+          telegram_user_id?: number | null
+          telegram_username?: string | null
+          tokens_used?: number | null
+          total_tokens?: number | null
+          usage_json?: Json | null
+          user_message: string
+        }
+        Update: {
+          agent_id?: string
+          agent_response?: string
+          community_id?: string
+          completion_tokens?: number | null
+          cost_credits?: number | null
+          created_at?: string | null
+          id?: string
+          openrouter_model?: string | null
+          prompt_tokens?: number | null
+          session_key?: string | null
+          telegram_chat_id?: number | null
+          telegram_user_id?: number | null
+          telegram_username?: string | null
+          tokens_used?: number | null
+          total_tokens?: number | null
+          usage_json?: Json | null
+          user_message?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_chat_logs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_chat_logs_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_skills: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          is_enabled: boolean
+          label: string
+          name: string
+          prompt: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description: string
+          id?: string
+          is_enabled?: boolean
+          label: string
+          name: string
+          prompt: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_enabled?: boolean
+          label?: string
+          name?: string
+          prompt?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      agent_tools: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          is_enabled: boolean
+          label: string
+          name: string
+          required_secrets: string[]
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description: string
+          id?: string
+          is_enabled?: boolean
+          label: string
+          name: string
+          required_secrets?: string[]
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_enabled?: boolean
+          label?: string
+          name?: string
+          required_secrets?: string[]
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      agents: {
+        Row: {
+          avatar_url: string | null
+          community_id: string
+          created_at: string | null
+          created_by: string | null
+          digest_enabled: boolean | null
+          digest_hour_utc: number | null
+          digest_timezone: string | null
+          elevenlabs_agent_id: string | null
+          elevenlabs_voice_id: string | null
+          id: string
+          intro_message: string | null
+          is_active: boolean | null
+          last_digest_sent_at: string | null
+          max_tokens: number | null
+          model: string
+          name: string
+          skills: Json | null
+          system_prompt: string
+          telegram_enabled: boolean | null
+          temperature: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          community_id: string
+          created_at?: string | null
+          created_by?: string | null
+          digest_enabled?: boolean | null
+          digest_hour_utc?: number | null
+          digest_timezone?: string | null
+          elevenlabs_agent_id?: string | null
+          elevenlabs_voice_id?: string | null
+          id?: string
+          intro_message?: string | null
+          is_active?: boolean | null
+          last_digest_sent_at?: string | null
+          max_tokens?: number | null
+          model?: string
+          name?: string
+          skills?: Json | null
+          system_prompt?: string
+          telegram_enabled?: boolean | null
+          temperature?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          community_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          digest_enabled?: boolean | null
+          digest_hour_utc?: number | null
+          digest_timezone?: string | null
+          elevenlabs_agent_id?: string | null
+          elevenlabs_voice_id?: string | null
+          id?: string
+          intro_message?: string | null
+          is_active?: boolean | null
+          last_digest_sent_at?: string | null
+          max_tokens?: number | null
+          model?: string
+          name?: string
+          skills?: Json | null
+          system_prompt?: string
+          telegram_enabled?: boolean | null
+          temperature?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agents_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       ai_chat_sessions: {
         Row: {
           chat_type: string
@@ -75,12 +334,126 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "ai_chat_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      api_keys: {
+        Row: {
+          app_id: string
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          rate_limit_per_minute: number | null
+          scopes: Database["public"]["Enums"]["api_scope"][] | null
+        }
+        Insert: {
+          app_id: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          rate_limit_per_minute?: number | null
+          scopes?: Database["public"]["Enums"]["api_scope"][] | null
+        }
+        Update: {
+          app_id?: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          rate_limit_per_minute?: number | null
+          scopes?: Database["public"]["Enums"]["api_scope"][] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_keys_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "registered_apps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_request_logs: {
+        Row: {
+          api_key_id: string | null
+          app_id: string | null
+          created_at: string | null
+          endpoint: string
+          id: string
+          ip_address: string | null
+          method: string
+          response_time_ms: number | null
+          status_code: number | null
+          user_agent: string | null
+        }
+        Insert: {
+          api_key_id?: string | null
+          app_id?: string | null
+          created_at?: string | null
+          endpoint: string
+          id?: string
+          ip_address?: string | null
+          method: string
+          response_time_ms?: number | null
+          status_code?: number | null
+          user_agent?: string | null
+        }
+        Update: {
+          api_key_id?: string | null
+          app_id?: string | null
+          created_at?: string | null
+          endpoint?: string
+          id?: string
+          ip_address?: string | null
+          method?: string
+          response_time_ms?: number | null
+          status_code?: number | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_request_logs_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_request_logs_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "registered_apps"
+            referencedColumns: ["id"]
+          },
         ]
       }
       applications: {
         Row: {
           accept_invitation: boolean | null
           anything_else: string | null
+          available_from: string | null
+          available_to: string | null
+          background_experience: string[] | null
           cancellation_policy: boolean | null
           community_id: string | null
           confirmation_status: string | null
@@ -92,21 +465,35 @@ export type Database = {
           excited_to_build: string | null
           food_preferences: string | null
           full_name: string
+          github_url: string | null
           hotel_room: string | null
           housing_option: string | null
+          housing_sorted: boolean | null
           id: string
+          instagram_handle: string | null
+          linkedin_url: string | null
           media_release: boolean | null
+          need_housing: boolean | null
           payment_method: string | null
           planning_dev_connect: boolean | null
+          portfolio_url: string | null
+          referral_source: string | null
+          residency_id: string | null
           residency_tier: string | null
           seeking_experiences: string[] | null
           suggested_experience: string | null
+          telegram_handle: string | null
           updated_at: string
           want_house_accommodation: boolean | null
+          website_url: string | null
+          x_handle: string | null
         }
         Insert: {
           accept_invitation?: boolean | null
           anything_else?: string | null
+          available_from?: string | null
+          available_to?: string | null
+          background_experience?: string[] | null
           cancellation_policy?: boolean | null
           community_id?: string | null
           confirmation_status?: string | null
@@ -118,21 +505,35 @@ export type Database = {
           excited_to_build?: string | null
           food_preferences?: string | null
           full_name: string
+          github_url?: string | null
           hotel_room?: string | null
           housing_option?: string | null
+          housing_sorted?: boolean | null
           id?: string
+          instagram_handle?: string | null
+          linkedin_url?: string | null
           media_release?: boolean | null
+          need_housing?: boolean | null
           payment_method?: string | null
           planning_dev_connect?: boolean | null
+          portfolio_url?: string | null
+          referral_source?: string | null
+          residency_id?: string | null
           residency_tier?: string | null
           seeking_experiences?: string[] | null
           suggested_experience?: string | null
+          telegram_handle?: string | null
           updated_at?: string
           want_house_accommodation?: boolean | null
+          website_url?: string | null
+          x_handle?: string | null
         }
         Update: {
           accept_invitation?: boolean | null
           anything_else?: string | null
+          available_from?: string | null
+          available_to?: string | null
+          background_experience?: string[] | null
           cancellation_policy?: boolean | null
           community_id?: string | null
           confirmation_status?: string | null
@@ -144,17 +545,28 @@ export type Database = {
           excited_to_build?: string | null
           food_preferences?: string | null
           full_name?: string
+          github_url?: string | null
           hotel_room?: string | null
           housing_option?: string | null
+          housing_sorted?: boolean | null
           id?: string
+          instagram_handle?: string | null
+          linkedin_url?: string | null
           media_release?: boolean | null
+          need_housing?: boolean | null
           payment_method?: string | null
           planning_dev_connect?: boolean | null
+          portfolio_url?: string | null
+          referral_source?: string | null
+          residency_id?: string | null
           residency_tier?: string | null
           seeking_experiences?: string[] | null
           suggested_experience?: string | null
+          telegram_handle?: string | null
           updated_at?: string
           want_house_accommodation?: boolean | null
+          website_url?: string | null
+          x_handle?: string | null
         }
         Relationships: [
           {
@@ -164,7 +576,165 @@ export type Database = {
             referencedRelation: "communities"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "applications_residency_id_fkey"
+            columns: ["residency_id"]
+            isOneToOne: false
+            referencedRelation: "residencies"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      automation_recipients: {
+        Row: {
+          automation_id: string
+          channel: string
+          chat_id: string
+          created_at: string
+          enabled: boolean
+          id: string
+          label: string | null
+        }
+        Insert: {
+          automation_id: string
+          channel?: string
+          chat_id: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          label?: string | null
+        }
+        Update: {
+          automation_id?: string
+          channel?: string
+          chat_id?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          label?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_recipients_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_runs: {
+        Row: {
+          automation_id: string
+          community_id: string
+          dry_run: boolean
+          duration_ms: number | null
+          error: string | null
+          finished_at: string | null
+          http_status: number | null
+          id: string
+          recipients_count: number | null
+          result: Json | null
+          started_at: string
+          status: string
+          triggered_by: string
+        }
+        Insert: {
+          automation_id: string
+          community_id: string
+          dry_run?: boolean
+          duration_ms?: number | null
+          error?: string | null
+          finished_at?: string | null
+          http_status?: number | null
+          id?: string
+          recipients_count?: number | null
+          result?: Json | null
+          started_at?: string
+          status: string
+          triggered_by?: string
+        }
+        Update: {
+          automation_id?: string
+          community_id?: string
+          dry_run?: boolean
+          duration_ms?: number | null
+          error?: string | null
+          finished_at?: string | null
+          http_status?: number | null
+          id?: string
+          recipients_count?: number | null
+          result?: Json | null
+          started_at?: string
+          status?: string
+          triggered_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_runs_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automations: {
+        Row: {
+          community_id: string
+          config: Json
+          created_at: string
+          description: string | null
+          edge_function: string
+          enabled: boolean
+          id: string
+          last_run_at: string | null
+          last_run_error: string | null
+          last_run_status: string | null
+          name: string
+          prompt: string | null
+          schedule_cron: string | null
+          schedule_label: string | null
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          community_id: string
+          config?: Json
+          created_at?: string
+          description?: string | null
+          edge_function: string
+          enabled?: boolean
+          id?: string
+          last_run_at?: string | null
+          last_run_error?: string | null
+          last_run_status?: string | null
+          name: string
+          prompt?: string | null
+          schedule_cron?: string | null
+          schedule_label?: string | null
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          community_id?: string
+          config?: Json
+          created_at?: string
+          description?: string | null
+          edge_function?: string
+          enabled?: boolean
+          id?: string
+          last_run_at?: string | null
+          last_run_error?: string | null
+          last_run_status?: string | null
+          name?: string
+          prompt?: string | null
+          schedule_cron?: string | null
+          schedule_label?: string | null
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       blog_posts: {
         Row: {
@@ -274,6 +844,13 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "bot_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       bot_tokens: {
@@ -352,80 +929,12 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      bot_videos: {
-        Row: {
-          community_id: string
-          completed_at: string | null
-          created_at: string
-          created_by: string | null
-          duration: number | null
-          error_message: string | null
-          generation_metadata: Json | null
-          id: string
-          model: string
-          prompt: string
-          resolution: string | null
-          source_image_url: string | null
-          status: string
-          thumbnail_url: string | null
-          updated_at: string
-          video_type: string
-          video_url: string | null
-        }
-        Insert: {
-          community_id: string
-          completed_at?: string | null
-          created_at?: string
-          created_by?: string | null
-          duration?: number | null
-          error_message?: string | null
-          generation_metadata?: Json | null
-          id?: string
-          model?: string
-          prompt: string
-          resolution?: string | null
-          source_image_url?: string | null
-          status?: string
-          thumbnail_url?: string | null
-          updated_at?: string
-          video_type?: string
-          video_url?: string | null
-        }
-        Update: {
-          community_id?: string
-          completed_at?: string | null
-          created_at?: string
-          created_by?: string | null
-          duration?: number | null
-          error_message?: string | null
-          generation_metadata?: Json | null
-          id?: string
-          model?: string
-          prompt?: string
-          resolution?: string | null
-          source_image_url?: string | null
-          status?: string
-          thumbnail_url?: string | null
-          updated_at?: string
-          video_type?: string
-          video_url?: string | null
-        }
-        Relationships: [
           {
-            foreignKeyName: "bot_videos_community_id_fkey"
-            columns: ["community_id"]
-            isOneToOne: false
-            referencedRelation: "communities"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "bot_videos_created_by_fkey"
+            foreignKeyName: "bot_tokens_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -483,6 +992,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "characters_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -627,53 +1143,10 @@ export type Database = {
         }
         Relationships: []
       }
-      community_join_requests: {
-        Row: {
-          community_id: string
-          created_at: string
-          id: string
-          message: string | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          status: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          community_id: string
-          created_at?: string
-          id?: string
-          message?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          community_id?: string
-          created_at?: string
-          id?: string
-          message?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "community_join_requests_community_id_fkey"
-            columns: ["community_id"]
-            isOneToOne: false
-            referencedRelation: "communities"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       community_members: {
         Row: {
           community_id: string
+          display_order: number | null
           group_name: string | null
           id: string
           joined_at: string
@@ -685,6 +1158,7 @@ export type Database = {
         }
         Insert: {
           community_id: string
+          display_order?: number | null
           group_name?: string | null
           id?: string
           joined_at?: string
@@ -696,6 +1170,7 @@ export type Database = {
         }
         Update: {
           community_id?: string
+          display_order?: number | null
           group_name?: string | null
           id?: string
           joined_at?: string
@@ -721,11 +1196,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "community_members_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "community_members_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -766,6 +1255,305 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      contact_submissions: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          message: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          message: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      crm_activities: {
+        Row: {
+          body: string | null
+          campaign_id: string | null
+          contact_id: string
+          created_at: string
+          created_by: string | null
+          direction: string | null
+          from_email: string | null
+          id: string
+          metadata: Json
+          occurred_at: string
+          subject: string | null
+          to_email: string | null
+          type: string
+        }
+        Insert: {
+          body?: string | null
+          campaign_id?: string | null
+          contact_id: string
+          created_at?: string
+          created_by?: string | null
+          direction?: string | null
+          from_email?: string | null
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          subject?: string | null
+          to_email?: string | null
+          type: string
+        }
+        Update: {
+          body?: string | null
+          campaign_id?: string | null
+          contact_id?: string
+          created_at?: string
+          created_by?: string | null
+          direction?: string | null
+          from_email?: string | null
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          subject?: string | null
+          to_email?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_activities_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "crm_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_activities_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_admin_telegram: {
+        Row: {
+          created_at: string
+          id: string
+          notify_stale_replies: boolean
+          telegram_chat_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notify_stale_replies?: boolean
+          telegram_chat_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notify_stale_replies?: boolean
+          telegram_chat_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      crm_campaigns: {
+        Row: {
+          color: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      crm_contact_campaigns: {
+        Row: {
+          added_at: string
+          campaign_id: string
+          contact_id: string
+        }
+        Insert: {
+          added_at?: string
+          campaign_id: string
+          contact_id: string
+        }
+        Update: {
+          added_at?: string
+          campaign_id?: string
+          contact_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_contact_campaigns_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "crm_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_contact_campaigns_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_contacts: {
+        Row: {
+          company: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          email_normalized: string | null
+          full_name: string
+          id: string
+          last_activity_at: string | null
+          linkedin_url: string | null
+          location: string | null
+          needs_reply_since: string | null
+          notes: string | null
+          owner_user_id: string | null
+          phone: string | null
+          primary_campaign_id: string | null
+          source: string | null
+          status: string
+          tags: string[]
+          title: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          email_normalized?: string | null
+          full_name: string
+          id?: string
+          last_activity_at?: string | null
+          linkedin_url?: string | null
+          location?: string | null
+          needs_reply_since?: string | null
+          notes?: string | null
+          owner_user_id?: string | null
+          phone?: string | null
+          primary_campaign_id?: string | null
+          source?: string | null
+          status?: string
+          tags?: string[]
+          title?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          email_normalized?: string | null
+          full_name?: string
+          id?: string
+          last_activity_at?: string | null
+          linkedin_url?: string | null
+          location?: string | null
+          needs_reply_since?: string | null
+          notes?: string | null
+          owner_user_id?: string | null
+          phone?: string | null
+          primary_campaign_id?: string | null
+          source?: string | null
+          status?: string
+          tags?: string[]
+          title?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_contacts_primary_campaign_id_fkey"
+            columns: ["primary_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "crm_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_email_accounts: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          domain: string | null
+          email_address: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          provider: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          domain?: string | null
+          email_address: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          provider?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          domain?: string | null
+          email_address?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          provider?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       custom_tool_logs: {
         Row: {
@@ -828,6 +1616,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_tool_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -917,42 +1712,147 @@ export type Database = {
           },
         ]
       }
-      embedding_batch_progress: {
+      daily_recaps: {
         Row: {
-          batch_size: number | null
-          completed_at: string | null
-          error_message: string | null
-          failed_embeddings: number | null
+          brief: string
+          community_id: string
+          created_at: string
+          delivered_to: string | null
+          delivery_status: string | null
           id: string
-          processed_users: number | null
-          started_at: string | null
-          status: string | null
-          successful_embeddings: number | null
-          total_users: number
+          source_message_count: number
+          window_end: string
+          window_start: string
         }
         Insert: {
-          batch_size?: number | null
-          completed_at?: string | null
-          error_message?: string | null
-          failed_embeddings?: number | null
+          brief: string
+          community_id: string
+          created_at?: string
+          delivered_to?: string | null
+          delivery_status?: string | null
           id?: string
-          processed_users?: number | null
-          started_at?: string | null
-          status?: string | null
-          successful_embeddings?: number | null
-          total_users: number
+          source_message_count?: number
+          window_end: string
+          window_start: string
         }
         Update: {
-          batch_size?: number | null
-          completed_at?: string | null
-          error_message?: string | null
-          failed_embeddings?: number | null
+          brief?: string
+          community_id?: string
+          created_at?: string
+          delivered_to?: string | null
+          delivery_status?: string | null
           id?: string
-          processed_users?: number | null
-          started_at?: string | null
-          status?: string | null
-          successful_embeddings?: number | null
-          total_users?: number
+          source_message_count?: number
+          window_end?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
+      edm_guestbook: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      email_send_log: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          message_id: string | null
+          metadata: Json | null
+          recipient_email: string
+          status: string
+          template_name: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          metadata?: Json | null
+          recipient_email: string
+          status: string
+          template_name: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          metadata?: Json | null
+          recipient_email?: string
+          status?: string
+          template_name?: string
+        }
+        Relationships: []
+      }
+      email_send_state: {
+        Row: {
+          auth_email_ttl_minutes: number
+          batch_size: number
+          id: number
+          retry_after_until: string | null
+          send_delay_ms: number
+          transactional_email_ttl_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          auth_email_ttl_minutes?: number
+          batch_size?: number
+          id?: number
+          retry_after_until?: string | null
+          send_delay_ms?: number
+          transactional_email_ttl_minutes?: number
+          updated_at?: string
+        }
+        Update: {
+          auth_email_ttl_minutes?: number
+          batch_size?: number
+          id?: number
+          retry_after_until?: string | null
+          send_delay_ms?: number
+          transactional_email_ttl_minutes?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      email_unsubscribe_tokens: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          token?: string
+          used_at?: string | null
         }
         Relationships: []
       }
@@ -1002,6 +1902,13 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "event_attendees_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       events: {
@@ -1019,6 +1926,7 @@ export type Database = {
           event_type: string | null
           hosted_by: string | null
           id: string
+          is_featured: boolean | null
           is_public: boolean | null
           max_attendees: number | null
           metadata: Json | null
@@ -1041,6 +1949,7 @@ export type Database = {
           event_type?: string | null
           hosted_by?: string | null
           id?: string
+          is_featured?: boolean | null
           is_public?: boolean | null
           max_attendees?: number | null
           metadata?: Json | null
@@ -1063,6 +1972,7 @@ export type Database = {
           event_type?: string | null
           hosted_by?: string | null
           id?: string
+          is_featured?: boolean | null
           is_public?: boolean | null
           max_attendees?: number | null
           metadata?: Json | null
@@ -1086,26 +1996,320 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
-      game_leaderboard: {
+      gallery_photos: {
+        Row: {
+          community_id: string
+          created_at: string
+          description: string | null
+          display_order: number | null
+          id: string
+          image_url: string
+          is_visible: boolean
+          residency_name: string | null
+          tags: string[] | null
+          title: string | null
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          community_id: string
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          image_url: string
+          is_visible?: boolean
+          residency_name?: string | null
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          community_id?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          image_url?: string
+          is_visible?: boolean
+          residency_name?: string | null
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gallery_photos_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gallery_photos_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gallery_photos_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      github_agent_actions: {
+        Row: {
+          action: string
+          actor_auth_id: string | null
+          actor_name: string | null
+          commit_sha: string | null
+          commit_url: string | null
+          created_at: string
+          error: string | null
+          id: string
+          message: string | null
+          meta: Json | null
+          ok: boolean
+          path: string | null
+          ref: string | null
+          repo: string
+        }
+        Insert: {
+          action: string
+          actor_auth_id?: string | null
+          actor_name?: string | null
+          commit_sha?: string | null
+          commit_url?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          message?: string | null
+          meta?: Json | null
+          ok?: boolean
+          path?: string | null
+          ref?: string | null
+          repo: string
+        }
+        Update: {
+          action?: string
+          actor_auth_id?: string | null
+          actor_name?: string | null
+          commit_sha?: string | null
+          commit_url?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          message?: string | null
+          meta?: Json | null
+          ok?: boolean
+          path?: string | null
+          ref?: string | null
+          repo?: string
+        }
+        Relationships: []
+      }
+      heartbeat_runs: {
+        Row: {
+          automation_id: string | null
+          created_at: string
+          delivery_status: string | null
+          dry_run: boolean
+          duration_ms: number | null
+          error: string | null
+          final_message: string | null
+          finished_at: string | null
+          id: string
+          intermediate_thoughts: Json
+          kind: string
+          model: string | null
+          recipient_chat_id: string | null
+          recipient_label: string | null
+          recipient_user_id: string | null
+          seed_prompt: string | null
+          status: string
+          system_prompt: string | null
+          tokens_completion: number | null
+          tokens_prompt: number | null
+          tokens_total: number | null
+          tool_calls: Json
+          triggered_by: string
+        }
+        Insert: {
+          automation_id?: string | null
+          created_at?: string
+          delivery_status?: string | null
+          dry_run?: boolean
+          duration_ms?: number | null
+          error?: string | null
+          final_message?: string | null
+          finished_at?: string | null
+          id?: string
+          intermediate_thoughts?: Json
+          kind: string
+          model?: string | null
+          recipient_chat_id?: string | null
+          recipient_label?: string | null
+          recipient_user_id?: string | null
+          seed_prompt?: string | null
+          status?: string
+          system_prompt?: string | null
+          tokens_completion?: number | null
+          tokens_prompt?: number | null
+          tokens_total?: number | null
+          tool_calls?: Json
+          triggered_by?: string
+        }
+        Update: {
+          automation_id?: string | null
+          created_at?: string
+          delivery_status?: string | null
+          dry_run?: boolean
+          duration_ms?: number | null
+          error?: string | null
+          final_message?: string | null
+          finished_at?: string | null
+          id?: string
+          intermediate_thoughts?: Json
+          kind?: string
+          model?: string | null
+          recipient_chat_id?: string | null
+          recipient_label?: string | null
+          recipient_user_id?: string | null
+          seed_prompt?: string | null
+          status?: string
+          system_prompt?: string | null
+          tokens_completion?: number | null
+          tokens_prompt?: number | null
+          tokens_total?: number | null
+          tool_calls?: Json
+          triggered_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "heartbeat_runs_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "heartbeat_runs_recipient_user_id_fkey"
+            columns: ["recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "heartbeat_runs_recipient_user_id_fkey"
+            columns: ["recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      heartbeat_subscriptions: {
         Row: {
           created_at: string
+          enabled: boolean
           id: string
-          player_name: string
-          score: number
+          kind: string
+          telegram_chat_id: string | null
+          updated_at: string
+          user_id: string
         }
         Insert: {
           created_at?: string
+          enabled?: boolean
           id?: string
-          player_name: string
-          score?: number
+          kind: string
+          telegram_chat_id?: string | null
+          updated_at?: string
+          user_id: string
         }
         Update: {
           created_at?: string
+          enabled?: boolean
           id?: string
-          player_name?: string
-          score?: number
+          kind?: string
+          telegram_chat_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "heartbeat_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "heartbeat_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      inquiries: {
+        Row: {
+          business: string | null
+          created_at: string
+          email: string
+          id: string
+          message: string | null
+          name: string
+          notes: string | null
+          phone: string | null
+          sms_opt_in: boolean
+          source: string
+          status: string
+          workshop_weeks: number[]
+        }
+        Insert: {
+          business?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          message?: string | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          sms_opt_in?: boolean
+          source?: string
+          status?: string
+          workshop_weeks?: number[]
+        }
+        Update: {
+          business?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          sms_opt_in?: boolean
+          source?: string
+          status?: string
+          workshop_weeks?: number[]
         }
         Relationships: []
       }
@@ -1152,6 +2356,13 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "magic_link_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       memories: {
@@ -1163,6 +2374,7 @@ export type Database = {
           id: string
           metadata: Json | null
           tags: string[] | null
+          title: string | null
           updated_at: string
         }
         Insert: {
@@ -1173,6 +2385,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           tags?: string[] | null
+          title?: string | null
           updated_at?: string
         }
         Update: {
@@ -1183,6 +2396,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           tags?: string[] | null
+          title?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1199,6 +2413,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memories_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1276,6 +2497,71 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      notes: {
+        Row: {
+          community_id: string
+          content: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_pinned: boolean | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          community_id: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_pinned?: boolean | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          community_id?: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_pinned?: boolean | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notes_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       orders: {
@@ -1320,59 +2606,83 @@ export type Database = {
         }
         Relationships: []
       }
-      outreach_logs: {
+      partners: {
         Row: {
-          ai_prompt: string | null
-          chat_session_id: string
+          amount_paid: number | null
           community_id: string
+          contact_email: string | null
+          contact_name: string | null
+          contract_value: number | null
           created_at: string
-          error_message: string | null
+          currency: string
+          description: string | null
+          display_order: number | null
           id: string
-          message_sent: string
-          metadata: Json | null
-          success: boolean | null
-          telegram_chat_id: number
-          trigger_type: string
+          is_active: boolean
+          logo_url: string | null
+          name: string
+          notes: string | null
+          partner_type: string
+          payment_status: string
+          residency_id: string | null
+          updated_at: string
+          website_url: string | null
         }
         Insert: {
-          ai_prompt?: string | null
-          chat_session_id: string
+          amount_paid?: number | null
           community_id: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contract_value?: number | null
           created_at?: string
-          error_message?: string | null
+          currency?: string
+          description?: string | null
+          display_order?: number | null
           id?: string
-          message_sent: string
-          metadata?: Json | null
-          success?: boolean | null
-          telegram_chat_id: number
-          trigger_type: string
+          is_active?: boolean
+          logo_url?: string | null
+          name: string
+          notes?: string | null
+          partner_type?: string
+          payment_status?: string
+          residency_id?: string | null
+          updated_at?: string
+          website_url?: string | null
         }
         Update: {
-          ai_prompt?: string | null
-          chat_session_id?: string
+          amount_paid?: number | null
           community_id?: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contract_value?: number | null
           created_at?: string
-          error_message?: string | null
+          currency?: string
+          description?: string | null
+          display_order?: number | null
           id?: string
-          message_sent?: string
-          metadata?: Json | null
-          success?: boolean | null
-          telegram_chat_id?: number
-          trigger_type?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name?: string
+          notes?: string | null
+          partner_type?: string
+          payment_status?: string
+          residency_id?: string | null
+          updated_at?: string
+          website_url?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "outreach_logs_chat_session_id_fkey"
-            columns: ["chat_session_id"]
-            isOneToOne: false
-            referencedRelation: "telegram_chat_sessions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "outreach_logs_community_id_fkey"
+            foreignKeyName: "partners_community_id_fkey"
             columns: ["community_id"]
             isOneToOne: false
             referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partners_residency_id_fkey"
+            columns: ["residency_id"]
+            isOneToOne: false
+            referencedRelation: "residencies"
             referencedColumns: ["id"]
           },
         ]
@@ -1515,41 +2825,12 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      project_likes: {
-        Row: {
-          created_at: string
-          id: string
-          project_id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          project_id: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          project_id?: string
-          user_id?: string
-        }
-        Relationships: [
           {
-            foreignKeyName: "project_likes_project_id_fkey"
-            columns: ["project_id"]
+            foreignKeyName: "profile_claim_requests_user_profile_id_fkey"
+            columns: ["user_profile_id"]
             isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "project_likes_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1559,6 +2840,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          display_order: number | null
           id: string
           image_url: string | null
           is_featured: boolean | null
@@ -1573,6 +2855,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          display_order?: number | null
           id?: string
           image_url?: string | null
           is_featured?: boolean | null
@@ -1587,6 +2870,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          display_order?: number | null
           id?: string
           image_url?: string | null
           is_featured?: boolean | null
@@ -1611,38 +2895,179 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "projects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
-      push_subscriptions: {
+      registered_apps: {
         Row: {
-          auth: string
-          created_at: string
-          endpoint: string
+          allowed_origins: string[] | null
+          created_at: string | null
+          description: string | null
           id: string
-          p256dh: string
-          updated_at: string
-          user_agent: string | null
-          user_id: string
+          is_active: boolean | null
+          name: string
+          owner_user_id: string | null
+          redirect_uris: string[] | null
+          updated_at: string | null
         }
         Insert: {
-          auth: string
-          created_at?: string
-          endpoint: string
+          allowed_origins?: string[] | null
+          created_at?: string | null
+          description?: string | null
           id?: string
-          p256dh: string
-          updated_at?: string
-          user_agent?: string | null
-          user_id: string
+          is_active?: boolean | null
+          name: string
+          owner_user_id?: string | null
+          redirect_uris?: string[] | null
+          updated_at?: string | null
         }
         Update: {
-          auth?: string
-          created_at?: string
-          endpoint?: string
+          allowed_origins?: string[] | null
+          created_at?: string | null
+          description?: string | null
           id?: string
-          p256dh?: string
+          is_active?: boolean | null
+          name?: string
+          owner_user_id?: string | null
+          redirect_uris?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registered_apps_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registered_apps_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      residencies: {
+        Row: {
+          background_image_url: string | null
+          community_id: string | null
+          country: string | null
+          created_at: string
+          currency: string | null
+          description: string | null
+          display_order: number | null
+          end_date: string | null
+          external_url: string | null
+          gradient_from: string | null
+          gradient_to: string | null
+          id: string
+          internal_path: string | null
+          is_visible: boolean
+          location: string
+          name: string
+          start_date: string | null
+          status: string
+          total_budget: number | null
+          total_expenses: number | null
+          total_revenue: number | null
+          updated_at: string
+        }
+        Insert: {
+          background_image_url?: string | null
+          community_id?: string | null
+          country?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          display_order?: number | null
+          end_date?: string | null
+          external_url?: string | null
+          gradient_from?: string | null
+          gradient_to?: string | null
+          id?: string
+          internal_path?: string | null
+          is_visible?: boolean
+          location: string
+          name: string
+          start_date?: string | null
+          status?: string
+          total_budget?: number | null
+          total_expenses?: number | null
+          total_revenue?: number | null
           updated_at?: string
-          user_agent?: string | null
-          user_id?: string
+        }
+        Update: {
+          background_image_url?: string | null
+          community_id?: string | null
+          country?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          display_order?: number | null
+          end_date?: string | null
+          external_url?: string | null
+          gradient_from?: string | null
+          gradient_to?: string | null
+          id?: string
+          internal_path?: string | null
+          is_visible?: boolean
+          location?: string
+          name?: string
+          start_date?: string | null
+          status?: string
+          total_budget?: number | null
+          total_expenses?: number | null
+          total_revenue?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "residencies_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_send_log: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          message: string
+          recipient_phone: string
+          sent_by: string | null
+          status: string
+          twilio_sid: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message: string
+          recipient_phone: string
+          sent_by?: string | null
+          status: string
+          twilio_sid?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message?: string
+          recipient_phone?: string
+          sent_by?: string | null
+          status?: string
+          twilio_sid?: string | null
         }
         Relationships: []
       }
@@ -1679,6 +3104,78 @@ export type Database = {
           phone?: string | null
           sponsorship_level?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      suppressed_emails: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          metadata: Json | null
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          metadata?: Json | null
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          metadata?: Json | null
+          reason?: string
+        }
+        Relationships: []
+      }
+      suppressed_phones: {
+        Row: {
+          created_at: string
+          metadata: Json | null
+          phone: string
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          metadata?: Json | null
+          phone: string
+          reason?: string
+        }
+        Update: {
+          created_at?: string
+          metadata?: Json | null
+          phone?: string
+          reason?: string
+        }
+        Relationships: []
+      }
+      survey_responses: {
+        Row: {
+          business_name: string | null
+          contact_email: string | null
+          contact_name: string | null
+          created_at: string
+          id: string
+          payload: Json
+        }
+        Insert: {
+          business_name?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          created_at?: string
+          id?: string
+          payload: Json
+        }
+        Update: {
+          business_name?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          created_at?: string
+          id?: string
+          payload?: Json
         }
         Relationships: []
       }
@@ -1792,6 +3289,99 @@ export type Database = {
           },
         ]
       }
+      telegram_dm_settings: {
+        Row: {
+          created_at: string
+          disabled_at: string | null
+          display_name: string | null
+          enabled: boolean
+          enabled_at: string | null
+          enabled_by: string | null
+          mode: string
+          notes: string | null
+          telegram_user_id: number
+          telegram_username: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          disabled_at?: string | null
+          display_name?: string | null
+          enabled?: boolean
+          enabled_at?: string | null
+          enabled_by?: string | null
+          mode?: string
+          notes?: string | null
+          telegram_user_id: number
+          telegram_username?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          disabled_at?: string | null
+          display_name?: string | null
+          enabled?: boolean
+          enabled_at?: string | null
+          enabled_by?: string | null
+          mode?: string
+          notes?: string | null
+          telegram_user_id?: number
+          telegram_username?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      telegram_group_settings: {
+        Row: {
+          added_at: string
+          bot_username: string
+          chat_id: number
+          chat_title: string | null
+          disabled_at: string | null
+          enabled: boolean
+          enabled_at: string | null
+          enabled_by: string | null
+          mode: string
+        }
+        Insert: {
+          added_at?: string
+          bot_username?: string
+          chat_id: number
+          chat_title?: string | null
+          disabled_at?: string | null
+          enabled?: boolean
+          enabled_at?: string | null
+          enabled_by?: string | null
+          mode?: string
+        }
+        Update: {
+          added_at?: string
+          bot_username?: string
+          chat_id?: number
+          chat_title?: string | null
+          disabled_at?: string | null
+          enabled?: boolean
+          enabled_at?: string | null
+          enabled_by?: string | null
+          mode?: string
+        }
+        Relationships: []
+      }
+      telegram_processed_updates: {
+        Row: {
+          processed_at: string
+          update_id: number
+        }
+        Insert: {
+          processed_at?: string
+          update_id: number
+        }
+        Update: {
+          processed_at?: string
+          update_id?: number
+        }
+        Relationships: []
+      }
       user_embeddings: {
         Row: {
           bio_embedding: string | null
@@ -1834,6 +3424,106 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_embeddings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      user_locations: {
+        Row: {
+          accuracy_m: number | null
+          created_at: string
+          expires_at: string | null
+          heading: number | null
+          id: string
+          lat: number | null
+          lng: number | null
+          sharing_mode: Database["public"]["Enums"]["location_sharing_mode"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accuracy_m?: number | null
+          created_at?: string
+          expires_at?: string | null
+          heading?: number | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          sharing_mode?: Database["public"]["Enums"]["location_sharing_mode"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accuracy_m?: number | null
+          created_at?: string
+          expires_at?: string | null
+          heading?: number | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          sharing_mode?: Database["public"]["Enums"]["location_sharing_mode"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_locations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_locations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      user_preferences: {
+        Row: {
+          app_order: Json
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          app_order?: Json
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          app_order?: Json
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       user_roles: {
@@ -1863,6 +3553,13 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       users: {
@@ -1878,6 +3575,7 @@ export type Database = {
           intentions: string | null
           interests_skills: string[] | null
           is_claimed: boolean | null
+          is_vibe_resident: boolean
           name: string | null
           original_item_id: number | null
           phone_number: string | null
@@ -1891,6 +3589,7 @@ export type Database = {
           universal_id: string
           updated_at: string
           username: string | null
+          vibe_resident_at: string | null
           vibecoin_balance: number
           wallet_address: string | null
           wallet_connected_at: string | null
@@ -1911,6 +3610,7 @@ export type Database = {
           intentions?: string | null
           interests_skills?: string[] | null
           is_claimed?: boolean | null
+          is_vibe_resident?: boolean
           name?: string | null
           original_item_id?: number | null
           phone_number?: string | null
@@ -1924,6 +3624,7 @@ export type Database = {
           universal_id: string
           updated_at?: string
           username?: string | null
+          vibe_resident_at?: string | null
           vibecoin_balance?: number
           wallet_address?: string | null
           wallet_connected_at?: string | null
@@ -1944,6 +3645,7 @@ export type Database = {
           intentions?: string | null
           interests_skills?: string[] | null
           is_claimed?: boolean | null
+          is_vibe_resident?: boolean
           name?: string | null
           original_item_id?: number | null
           phone_number?: string | null
@@ -1957,6 +3659,7 @@ export type Database = {
           universal_id?: string
           updated_at?: string
           username?: string | null
+          vibe_resident_at?: string | null
           vibecoin_balance?: number
           wallet_address?: string | null
           wallet_connected_at?: string | null
@@ -2016,10 +3719,635 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "vibecoin_pickups_collected_by_fkey"
+            columns: ["collected_by"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "vibecoin_pickups_community_id_fkey"
             columns: ["community_id"]
             isOneToOne: false
             referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vibey_journal_entries: {
+        Row: {
+          body: string
+          community_id: string
+          created_at: string
+          id: string
+          message_count: number | null
+          mood: string | null
+          reflection_seed: Json | null
+          source_summary: string | null
+        }
+        Insert: {
+          body: string
+          community_id: string
+          created_at?: string
+          id?: string
+          message_count?: number | null
+          mood?: string | null
+          reflection_seed?: Json | null
+          source_summary?: string | null
+        }
+        Update: {
+          body?: string
+          community_id?: string
+          created_at?: string
+          id?: string
+          message_count?: number | null
+          mood?: string | null
+          reflection_seed?: Json | null
+          source_summary?: string | null
+        }
+        Relationships: []
+      }
+      vibey_relationships: {
+        Row: {
+          agent_id: string
+          community_id: string
+          created_at: string
+          display_name: string | null
+          id: string
+          interaction_count: number | null
+          last_interaction_at: string | null
+          last_scheduled_send_at: string | null
+          relationship_notes: string | null
+          schedule_cron: string | null
+          schedule_enabled: boolean | null
+          scheduled_message: string | null
+          telegram_user_id: number | null
+          telegram_username: string | null
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          community_id: string
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          interaction_count?: number | null
+          last_interaction_at?: string | null
+          last_scheduled_send_at?: string | null
+          relationship_notes?: string | null
+          schedule_cron?: string | null
+          schedule_enabled?: boolean | null
+          scheduled_message?: string | null
+          telegram_user_id?: number | null
+          telegram_username?: string | null
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          community_id?: string
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          interaction_count?: number | null
+          last_interaction_at?: string | null
+          last_scheduled_send_at?: string | null
+          relationship_notes?: string | null
+          schedule_cron?: string | null
+          schedule_enabled?: boolean | null
+          scheduled_message?: string | null
+          telegram_user_id?: number | null
+          telegram_username?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vibey_relationships_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vibey_relationships_community_id_fkey"
+            columns: ["community_id"]
+            isOneToOne: false
+            referencedRelation: "communities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vibey_research_log: {
+        Row: {
+          community_id: string
+          error: string | null
+          excerpt: string | null
+          fetched_at: string
+          id: string
+          ok: boolean
+          source_label: string
+          summary: string
+          title: string | null
+          url: string
+        }
+        Insert: {
+          community_id: string
+          error?: string | null
+          excerpt?: string | null
+          fetched_at?: string
+          id?: string
+          ok?: boolean
+          source_label: string
+          summary: string
+          title?: string | null
+          url: string
+        }
+        Update: {
+          community_id?: string
+          error?: string | null
+          excerpt?: string | null
+          fetched_at?: string
+          id?: string
+          ok?: boolean
+          source_label?: string
+          summary?: string
+          title?: string | null
+          url?: string
+        }
+        Relationships: []
+      }
+      vibey_seeds: {
+        Row: {
+          author_name: string | null
+          author_user_id: string | null
+          community_id: string
+          consumed_at: string | null
+          consumed_entry_id: string | null
+          created_at: string
+          id: string
+          status: string
+          text: string
+        }
+        Insert: {
+          author_name?: string | null
+          author_user_id?: string | null
+          community_id: string
+          consumed_at?: string | null
+          consumed_entry_id?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          text: string
+        }
+        Update: {
+          author_name?: string | null
+          author_user_id?: string | null
+          community_id?: string
+          consumed_at?: string | null
+          consumed_entry_id?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          text?: string
+        }
+        Relationships: []
+      }
+      vibey_soul_drafts: {
+        Row: {
+          agent_id: string | null
+          community_id: string
+          created_at: string
+          diff_summary: string | null
+          id: string
+          proposed_addition: string | null
+          proposed_replacement: string | null
+          reasoning: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_entry_id: string | null
+          status: string
+        }
+        Insert: {
+          agent_id?: string | null
+          community_id: string
+          created_at?: string
+          diff_summary?: string | null
+          id?: string
+          proposed_addition?: string | null
+          proposed_replacement?: string | null
+          reasoning?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_entry_id?: string | null
+          status?: string
+        }
+        Update: {
+          agent_id?: string | null
+          community_id?: string
+          created_at?: string
+          diff_summary?: string | null
+          id?: string
+          proposed_addition?: string | null
+          proposed_replacement?: string | null
+          reasoning?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_entry_id?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      vibey_vents: {
+        Row: {
+          acknowledged_at: string | null
+          context: string | null
+          created_at: string
+          delivered: boolean
+          delivery_error: string | null
+          id: string
+          message: string
+          source: string | null
+          telegram_message_id: number | null
+          urgency: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          context?: string | null
+          created_at?: string
+          delivered?: boolean
+          delivery_error?: string | null
+          id?: string
+          message: string
+          source?: string | null
+          telegram_message_id?: number | null
+          urgency: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          context?: string | null
+          created_at?: string
+          delivered?: boolean
+          delivery_error?: string | null
+          id?: string
+          message?: string
+          source?: string | null
+          telegram_message_id?: number | null
+          urgency?: string
+        }
+        Relationships: []
+      }
+      wc_bids: {
+        Row: {
+          away_pred: number
+          created_at: string
+          home_pred: number
+          id: string
+          match_id: string
+          settled: boolean
+          stake: number
+          updated_at: string
+          user_id: string
+          won: boolean | null
+        }
+        Insert: {
+          away_pred: number
+          created_at?: string
+          home_pred: number
+          id?: string
+          match_id: string
+          settled?: boolean
+          stake: number
+          updated_at?: string
+          user_id: string
+          won?: boolean | null
+        }
+        Update: {
+          away_pred?: number
+          created_at?: string
+          home_pred?: number
+          id?: string
+          match_id?: string
+          settled?: boolean
+          stake?: number
+          updated_at?: string
+          user_id?: string
+          won?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wc_bids_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wc_bids_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      wc_matches: {
+        Row: {
+          away_score: number | null
+          away_team: string
+          created_at: string
+          home_score: number | null
+          home_team: string
+          id: string
+          kickoff_at: string
+          stage: string
+          status: string
+          updated_at: string
+          venue: string | null
+        }
+        Insert: {
+          away_score?: number | null
+          away_team: string
+          created_at?: string
+          home_score?: number | null
+          home_team: string
+          id?: string
+          kickoff_at: string
+          stage?: string
+          status?: string
+          updated_at?: string
+          venue?: string | null
+        }
+        Update: {
+          away_score?: number | null
+          away_team?: string
+          created_at?: string
+          home_score?: number | null
+          home_team?: string
+          id?: string
+          kickoff_at?: string
+          stage?: string
+          status?: string
+          updated_at?: string
+          venue?: string | null
+        }
+        Relationships: []
+      }
+      wc_profiles: {
+        Row: {
+          balance: number
+          created_at: string
+          display_name_override: string | null
+          favorite_team: string
+          losses: number
+          updated_at: string
+          user_id: string
+          wins: number
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          display_name_override?: string | null
+          favorite_team: string
+          losses?: number
+          updated_at?: string
+          user_id: string
+          wins?: number
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          display_name_override?: string | null
+          favorite_team?: string
+          losses?: number
+          updated_at?: string
+          user_id?: string
+          wins?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wc_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wc_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      wc_results_ledger: {
+        Row: {
+          bid_id: string | null
+          created_at: string
+          delta: number
+          id: string
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          bid_id?: string | null
+          created_at?: string
+          delta: number
+          id?: string
+          reason: string
+          user_id: string
+        }
+        Update: {
+          bid_id?: string | null
+          created_at?: string
+          delta?: number
+          id?: string
+          reason?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wc_results_ledger_bid_id_fkey"
+            columns: ["bid_id"]
+            isOneToOne: false
+            referencedRelation: "wc_bids"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wc_results_ledger_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wc_results_ledger_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      workshops: {
+        Row: {
+          capacity: number
+          cover_image_url: string | null
+          created_at: string
+          date_label: string
+          id: string
+          is_published: boolean
+          live_demo: string | null
+          prototype_build: string | null
+          slug: string
+          sort_order: number
+          starts_at: string | null
+          subtitle: string | null
+          takeaway: string | null
+          title: string
+          tool: string | null
+          updated_at: string
+          week: number
+          what_it_is: string | null
+        }
+        Insert: {
+          capacity?: number
+          cover_image_url?: string | null
+          created_at?: string
+          date_label: string
+          id?: string
+          is_published?: boolean
+          live_demo?: string | null
+          prototype_build?: string | null
+          slug: string
+          sort_order?: number
+          starts_at?: string | null
+          subtitle?: string | null
+          takeaway?: string | null
+          title: string
+          tool?: string | null
+          updated_at?: string
+          week: number
+          what_it_is?: string | null
+        }
+        Update: {
+          capacity?: number
+          cover_image_url?: string | null
+          created_at?: string
+          date_label?: string
+          id?: string
+          is_published?: boolean
+          live_demo?: string | null
+          prototype_build?: string | null
+          slug?: string
+          sort_order?: number
+          starts_at?: string | null
+          subtitle?: string | null
+          takeaway?: string | null
+          title?: string
+          tool?: string | null
+          updated_at?: string
+          week?: number
+          what_it_is?: string | null
+        }
+        Relationships: []
+      }
+      world_agents: {
+        Row: {
+          agent_key: string
+          color: string
+          created_at: string
+          id: string
+          last_seen_at: string
+          metadata: Json
+          name: string
+          prompt: string | null
+          room_id: string
+          status: string
+          updated_at: string
+          x: number
+          y: number
+        }
+        Insert: {
+          agent_key: string
+          color?: string
+          created_at?: string
+          id?: string
+          last_seen_at?: string
+          metadata?: Json
+          name: string
+          prompt?: string | null
+          room_id: string
+          status?: string
+          updated_at?: string
+          x?: number
+          y?: number
+        }
+        Update: {
+          agent_key?: string
+          color?: string
+          created_at?: string
+          id?: string
+          last_seen_at?: string
+          metadata?: Json
+          name?: string
+          prompt?: string | null
+          room_id?: string
+          status?: string
+          updated_at?: string
+          x?: number
+          y?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_agents_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "world_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      world_messages: {
+        Row: {
+          agent_id: string | null
+          body: string
+          created_at: string
+          id: string
+          kind: string
+          room_id: string
+          speaker: string
+        }
+        Insert: {
+          agent_id?: string | null
+          body: string
+          created_at?: string
+          id?: string
+          kind?: string
+          room_id: string
+          speaker: string
+        }
+        Update: {
+          agent_id?: string | null
+          body?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          room_id?: string
+          speaker?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_messages_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "world_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "world_rooms"
             referencedColumns: ["id"]
           },
         ]
@@ -2070,6 +4398,276 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "world_objects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      world_rooms: {
+        Row: {
+          created_at: string
+          description: string | null
+          height: number
+          id: string
+          name: string
+          slug: string
+          spawn_x: number
+          spawn_y: number
+          updated_at: string
+          width: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          height?: number
+          id: string
+          name: string
+          slug: string
+          spawn_x?: number
+          spawn_y?: number
+          updated_at?: string
+          width?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          height?: number
+          id?: string
+          name?: string
+          slug?: string
+          spawn_x?: number
+          spawn_y?: number
+          updated_at?: string
+          width?: number
+        }
+        Relationships: []
+      }
+      world_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      worlds: {
+        Row: {
+          blurb: string | null
+          created_at: string
+          creator_id: string | null
+          github_url: string | null
+          hero_model_url: string | null
+          id: string
+          is_featured: boolean
+          name: string
+          play_count: number
+          preview_url: string | null
+          route: string
+          slug: string
+          sort_order: number
+          status: string
+          tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          blurb?: string | null
+          created_at?: string
+          creator_id?: string | null
+          github_url?: string | null
+          hero_model_url?: string | null
+          id?: string
+          is_featured?: boolean
+          name: string
+          play_count?: number
+          preview_url?: string | null
+          route: string
+          slug: string
+          sort_order?: number
+          status?: string
+          tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          blurb?: string | null
+          created_at?: string
+          creator_id?: string | null
+          github_url?: string | null
+          hero_model_url?: string | null
+          id?: string
+          is_featured?: boolean
+          name?: string
+          play_count?: number
+          preview_url?: string | null
+          route?: string
+          slug?: string
+          sort_order?: number
+          status?: string
+          tags?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worlds_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worlds_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      x_mentions: {
+        Row: {
+          author_id: string | null
+          author_username: string | null
+          created_at_x: string | null
+          fetched_at: string
+          id: string
+          in_reply_to_tweet_id: string | null
+          replied_draft_id: string | null
+          seen: boolean
+          text: string
+          tweet_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          author_username?: string | null
+          created_at_x?: string | null
+          fetched_at?: string
+          id?: string
+          in_reply_to_tweet_id?: string | null
+          replied_draft_id?: string | null
+          seen?: boolean
+          text: string
+          tweet_id: string
+        }
+        Update: {
+          author_id?: string | null
+          author_username?: string | null
+          created_at_x?: string | null
+          fetched_at?: string
+          id?: string
+          in_reply_to_tweet_id?: string | null
+          replied_draft_id?: string | null
+          seen?: boolean
+          text?: string
+          tweet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "x_mentions_replied_draft_id_fkey"
+            columns: ["replied_draft_id"]
+            isOneToOne: false
+            referencedRelation: "x_post_drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      x_post_drafts: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          automation_id: string | null
+          created_at: string
+          created_by: string | null
+          error: string | null
+          id: string
+          posted_at: string | null
+          posted_tweet_id: string | null
+          reply_to_tweet_id: string | null
+          source: string
+          status: string
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          automation_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          id?: string
+          posted_at?: string | null
+          posted_tweet_id?: string | null
+          reply_to_tweet_id?: string | null
+          source?: string
+          status?: string
+          text: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          automation_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          id?: string
+          posted_at?: string | null
+          posted_tweet_id?: string | null
+          reply_to_tweet_id?: string | null
+          source?: string
+          status?: string
+          text?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "x_post_drafts_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "x_post_drafts_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "x_post_drafts_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "x_post_drafts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "x_post_drafts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "wc_leaderboard"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
     }
@@ -2095,12 +4693,75 @@ export type Database = {
           },
         ]
       }
+      wc_leaderboard: {
+        Row: {
+          avatar_url: string | null
+          balance: number | null
+          display_name: string | null
+          favorite_team: string | null
+          losses: number | null
+          user_id: string | null
+          wins: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      admin_auto_merge_telegram_username_duplicates: {
+        Args: { dry_run?: boolean }
+        Returns: {
+          merged_count: number
+          primary_id: string
+          tg_username: string
+        }[]
+      }
+      admin_list_survey_responses: {
+        Args: { _password: string }
+        Returns: {
+          business_name: string
+          contact_email: string
+          contact_name: string
+          created_at: string
+          id: string
+          payload: Json
+        }[]
+      }
+      admin_list_workshop_inquiries: {
+        Args: { _password: string }
+        Returns: {
+          business: string
+          created_at: string
+          email: string
+          id: string
+          message: string
+          name: string
+          phone: string
+          sms_opt_in: boolean
+          status: string
+          workshop_weeks: number[]
+        }[]
+      }
+      admin_merge_user_pair: {
+        Args: { loser_id: string; primary_id: string }
+        Returns: undefined
+      }
+      admin_preview_telegram_username_duplicate_groups: {
+        Args: never
+        Returns: {
+          n: number
+          rows: Json
+          tg_username: string
+        }[]
+      }
+      admin_set_inquiry_status: {
+        Args: { _id: string; _password: string; _status: string }
+        Returns: undefined
+      }
       auto_join_community_as_admin: {
         Args: { target_community_id: string }
         Returns: boolean
       }
+      bump_world_play_count: { Args: { _world_id: string }; Returns: undefined }
       can_view_community_user: {
         Args: { target_user_id: string; viewer_auth_id: string }
         Returns: boolean
@@ -2108,6 +4769,14 @@ export type Database = {
       check_community_membership: {
         Args: { _auth_user_id: string; _community_id: string }
         Returns: boolean
+      }
+      delete_email: {
+        Args: { message_id: number; queue_name: string }
+        Returns: boolean
+      }
+      enqueue_email: {
+        Args: { payload: Json; queue_name: string }
+        Returns: number
       }
       ensure_unique_universal_id: {
         Args: { table_name: string }
@@ -2150,6 +4819,13 @@ export type Database = {
           privacy_level: string
         }[]
       }
+      get_community_credentials: {
+        Args: { _community_id: string }
+        Returns: {
+          telegram_bot_token: string
+          webhook_api_key: string
+        }[]
+      }
       get_current_user_from_context: { Args: never; Returns: string }
       get_user_id_from_auth: { Args: { auth_user_id: string }; Returns: string }
       get_user_public_profile: {
@@ -2166,7 +4842,20 @@ export type Database = {
           username: string
         }[]
       }
+      get_workshop_week_counts: {
+        Args: never
+        Returns: {
+          capacity: number
+          registered_count: number
+          seats_left: number
+          slug: string
+          title: string
+          week: number
+        }[]
+      }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
+      invoke_process_email_queue: { Args: never; Returns: undefined }
+      is_admin: { Args: never; Returns: boolean }
       is_community_admin: {
         Args: { community_id_param: string; user_auth_id: string }
         Returns: boolean
@@ -2174,6 +4863,23 @@ export type Database = {
       is_community_member: {
         Args: { community_id_param: string; user_id_param: string }
         Returns: boolean
+      }
+      move_to_dlq: {
+        Args: {
+          dlq_name: string
+          message_id: number
+          payload: Json
+          source_queue: string
+        }
+        Returns: number
+      }
+      read_email_batch: {
+        Args: { batch_size: number; queue_name: string; vt: number }
+        Returns: {
+          message: Json
+          msg_id: number
+          read_ct: number
+        }[]
       }
       semantic_search_users: {
         Args: {
@@ -2191,9 +4897,31 @@ export type Database = {
           user_id: string
         }[]
       }
+      verify_admin_password: { Args: { _password: string }; Returns: boolean }
+      verify_api_key: {
+        Args: { key_hash: string; key_prefix: string }
+        Returns: {
+          app_id: string
+          app_name: string
+          is_valid: boolean
+          rate_limit: number
+          scopes: Database["public"]["Enums"]["api_scope"][]
+        }[]
+      }
+      viewer_shares_community_with_user: {
+        Args: { _other_user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
+      api_scope:
+        | "read:users"
+        | "write:users"
+        | "read:profile"
+        | "auth:login"
+        | "auth:verify"
       app_role: "admin" | "moderator" | "member"
+      location_sharing_mode: "off" | "precise" | "approximate"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2321,7 +5049,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      api_scope: [
+        "read:users",
+        "write:users",
+        "read:profile",
+        "auth:login",
+        "auth:verify",
+      ],
       app_role: ["admin", "moderator", "member"],
+      location_sharing_mode: ["off", "precise", "approximate"],
     },
   },
 } as const
